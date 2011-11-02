@@ -1,0 +1,45 @@
+From 116e5e654ea571d93e3cd6a74d827d47d7042eb8 Mon Sep 17 00:00:00 2001
+Message-Id: <116e5e654ea571d93e3cd6a74d827d47d7042eb8.1241484428.git.john.williams@petalogix.com>
+In-Reply-To: <930a7bf07b58a3d6a48393a6419b2c958fc9dc2a.1241484427.git.john.williams@petalogix.com>
+References: <930a7bf07b58a3d6a48393a6419b2c958fc9dc2a.1241484427.git.john.williams@petalogix.com>
+From: John Williams <john.williams@petalogix.com>
+Date: Tue, 28 Apr 2009 14:39:23 +1000
+Subject: [PATCH 21/63] microblaze: Remove dup dbx flags
+
+---
+ gcc/config/microblaze/microblaze.h |    4 ++++
+ 1 files changed, 4 insertions(+), 0 deletions(-)
+
+diff --git a/gcc/config/microblaze/microblaze.h b/gcc/config/microblaze/microblaze.h
+index 3294bfd..396306e 100644
+--- a/gcc/config/microblaze/microblaze.h
++++ b/gcc/config/microblaze/microblaze.h
+@@ -188,9 +188,11 @@ extern char *microblaze_no_clearbss;
+    to debug the resulting code.  */
+ #define NO_DBX_FUNCTION_END TARGET_FILE_SWITCHING
+ 
++#if 0
+ /* Added by Sid for mb-objdump problem */
+ #define DBX_FUNCTION_FIRST 1
+ #define DBX_BLOCKS_FUNCTION_RELATIVE 1
++#endif
+ 
+ /* Just to preserve old code */
+ #define TARGET_SINGLE_FLOAT             0
+@@ -624,11 +626,13 @@ while (0)
+ /* /\* Unknown tags are also allowed.  *\/ */
+ /* #define SDB_ALLOW_UNKNOWN_REFERENCES */
+ 
++#if 0
+ #define DBX_DEBUGGING_INFO		/* generate stabs (OSF/rose) */
+ 
+ /* On Sun 4, this limit is 2048.  We use 1500 to be safe,
+    since the length can run past this up to a continuation point.  */
+ #define DBX_CONTIN_LENGTH 1500
++#endif
+ 
+ /* How to renumber registers for dbx and gdb. */
+ #define DBX_REGISTER_NUMBER(REGNO) microblaze_dbx_regno[ (REGNO) ]
+-- 
+1.5.3.8
+

@@ -1,0 +1,28 @@
+From dccc4b7f90a5fdb67323e4afd57c610573013dcf Mon Sep 17 00:00:00 2001
+Message-Id: <dccc4b7f90a5fdb67323e4afd57c610573013dcf.1241484430.git.john.williams@petalogix.com>
+In-Reply-To: <930a7bf07b58a3d6a48393a6419b2c958fc9dc2a.1241484427.git.john.williams@petalogix.com>
+References: <930a7bf07b58a3d6a48393a6419b2c958fc9dc2a.1241484427.git.john.williams@petalogix.com>
+From: John Williams <john.williams@petalogix.com>
+Date: Tue, 28 Apr 2009 14:40:08 +1000
+Subject: [PATCH 49/63] microblaze: No multilib in libgloss & newlib
+
+---
+ Makefile.in |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/Makefile.in b/Makefile.in
+index b982ecc..e4a3437 100644
+--- a/Makefile.in
++++ b/Makefile.in
+@@ -29271,7 +29271,7 @@ configure-target-newlib: $(TARGET_SUBDIR)/newlib/multilib.out
+ 	libsrcdir="$$s/newlib"; \
+ 	rm -f no-such-file || : ; \
+ 	CONFIG_SITE=no-such-file $(SHELL) $${libsrcdir}/configure \
+-	  $(TARGET_CONFIGARGS) $${srcdiroption}  \
++	  $(TARGET_CONFIGARGS) --disable-multilib $${srcdiroption}  \
+ 	  || exit 1
+ @endif target-newlib
+ 
+-- 
+1.5.3.8
+

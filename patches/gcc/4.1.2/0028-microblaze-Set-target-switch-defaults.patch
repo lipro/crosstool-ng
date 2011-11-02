@@ -1,0 +1,127 @@
+From 15bdbdfbbb83b084ba7b0875d66184e8f77ee322 Mon Sep 17 00:00:00 2001
+Message-Id: <15bdbdfbbb83b084ba7b0875d66184e8f77ee322.1241484428.git.john.williams@petalogix.com>
+In-Reply-To: <930a7bf07b58a3d6a48393a6419b2c958fc9dc2a.1241484427.git.john.williams@petalogix.com>
+References: <930a7bf07b58a3d6a48393a6419b2c958fc9dc2a.1241484427.git.john.williams@petalogix.com>
+From: John Williams <john.williams@petalogix.com>
+Date: Tue, 28 Apr 2009 14:39:34 +1000
+Subject: [PATCH 28/63] microblaze: Set target switch defaults
+
+---
+ gcc/config/microblaze/microblaze.c |   38 ++++++++++++++++++------------------
+ gcc/config/microblaze/microblaze.h |    8 -------
+ 2 files changed, 19 insertions(+), 27 deletions(-)
+
+diff --git a/gcc/config/microblaze/microblaze.c b/gcc/config/microblaze/microblaze.c
+index f5d1e24..761a71e 100644
+--- a/gcc/config/microblaze/microblaze.c
++++ b/gcc/config/microblaze/microblaze.c
+@@ -222,12 +222,7 @@ static int microblaze_must_save_register 	PARAMS ((int));
+ 
+ /* Global variables for machine-dependent things.  */
+ 
+-struct microblaze_cpu_select microblaze_select =
+-{
+-  MICROBLAZE_DEFAULT_CPU,                 /* CPU      */
+-  "none",                                 /* Tuning   */
+-  0                                       /* Flags    */
+-};
++static unsigned int microblaze_select_flags = 0;
+ 
+ /* Toggle which pipleline interface to use */
+ int microblaze_sched_use_dfa = 0;
+@@ -583,6 +578,9 @@ static int microblaze_save_volatiles (tree);
+ #undef TARGET_HANDLE_OPTION
+ #define TARGET_HANDLE_OPTION		microblaze_handle_option
+ 
++#undef TARGET_DEFAULT_TARGET_FLAGS
++#define TARGET_DEFAULT_TARGET_FLAGS	TARGET_DEFAULT
++
+ struct gcc_target targetm = TARGET_INITIALIZER;
+ 
+ /* Return truth value if a CONST_DOUBLE is ok to be a legitimate constant.  */
+@@ -1855,7 +1853,7 @@ microblaze_rtx_costs (
+     case LSHIFTRT:	
+     {
+       if (TARGET_BARREL_SHIFT) {
+-        if (microblaze_version_compare (microblaze_select.cpu, "v5.00.a") >= 0)
++        if (microblaze_version_compare (microblaze_select_cpu, "v5.00.a") >= 0)
+           *total = COSTS_N_INSNS (1);                                         
+         else
+           *total = COSTS_N_INSNS (2);
+@@ -1901,7 +1899,7 @@ microblaze_rtx_costs (
+         if (TARGET_HARD_FLOAT)
+           *total = COSTS_N_INSNS (6);					
+       }
+-      else if (!TARGET_SOFT_MUL) {                                                       if (microblaze_version_compare (microblaze_select.cpu, "v5.00.a") >= 0)
++      else if (!TARGET_SOFT_MUL) {                                                       if (microblaze_version_compare (microblaze_select_cpu, "v5.00.a") >= 0)
+          *total = COSTS_N_INSNS (1);
+       else
+           *total = COSTS_N_INSNS (3);
+@@ -2964,32 +2962,34 @@ override_options (void)
+   microblaze_section_threshold = g_switch_set ? g_switch_value : MICROBLAZE_DEFAULT_GVALUE;
+ 
+   /* Check the Microblaze CPU version for any special action that needs to be done */
+-  ver = microblaze_version_to_int (microblaze_select.cpu);
++  if (microblaze_select_cpu == NULL) 
++    microblaze_select_cpu = MICROBLAZE_DEFAULT_CPU;
++  ver = microblaze_version_to_int (microblaze_select_cpu);
+   if (ver == -1) {
+-    error ("(%s) is an invalid argument to -mcpu=\n", microblaze_select.cpu);
++    error ("(%s) is an invalid argument to -mcpu=\n", microblaze_select_cpu);
+   }
+ 
+-  ver = microblaze_version_compare (microblaze_select.cpu, "v3.00.a");
++  ver = microblaze_version_compare (microblaze_select_cpu, "v3.00.a");
+   if (ver < 0) {                                                        /* No hardware exceptions in earlier versions. So no worries */
+-    microblaze_select.flags &= ~(MICROBLAZE_MASK_NO_UNSAFE_DELAY);
++    microblaze_select_flags &= ~(MICROBLAZE_MASK_NO_UNSAFE_DELAY);
+     microblaze_no_unsafe_delay = 0;
+     microblaze_pipe = MICROBLAZE_PIPE_3;
+-  } else if (ver == 0 || (microblaze_version_compare (microblaze_select.cpu, "v4.00.b") == 0)) {
+-    microblaze_select.flags |= (MICROBLAZE_MASK_NO_UNSAFE_DELAY);
++  } else if (ver == 0 || (microblaze_version_compare (microblaze_select_cpu, "v4.00.b") == 0)) {
++    microblaze_select_flags |= (MICROBLAZE_MASK_NO_UNSAFE_DELAY);
+     microblaze_no_unsafe_delay = 1;
+     microblaze_pipe = MICROBLAZE_PIPE_3;
+   } else {
+-    microblaze_select.flags &= ~(MICROBLAZE_MASK_NO_UNSAFE_DELAY);
++    microblaze_select_flags &= ~(MICROBLAZE_MASK_NO_UNSAFE_DELAY);
+     microblaze_no_unsafe_delay = 0;
+     microblaze_pipe = MICROBLAZE_PIPE_5;                                /* We agree to use 5 pipe-stage model even on area optimized 3 pipe-stage variants. */
+-    if (microblaze_version_compare (microblaze_select.cpu, "v5.00.a") == 0 ||
+-        microblaze_version_compare (microblaze_select.cpu, "v5.00.b") == 0 ||
+-        microblaze_version_compare (microblaze_select.cpu, "v5.00.c") == 0) {
++    if (microblaze_version_compare (microblaze_select_cpu, "v5.00.a") == 0 ||
++        microblaze_version_compare (microblaze_select_cpu, "v5.00.b") == 0 ||
++        microblaze_version_compare (microblaze_select_cpu, "v5.00.c") == 0) {
+         target_flags |= MASK_PATTERN_COMPARE;                           /* Pattern compares are to be turned on by default only when compiling for MB v5.00.'z' */
+     }
+   }
+ 
+-  ver = microblaze_version_compare (microblaze_select.cpu, "v6.00.a");
++  ver = microblaze_version_compare (microblaze_select_cpu, "v6.00.a");
+   if (ver < 0) {
+       if (TARGET_MULTIPLY_HIGH)
+           warning (0, "-mxl-multiply-high can be used only with -mcpu=v6.00.a or greater.\n");
+diff --git a/gcc/config/microblaze/microblaze.h b/gcc/config/microblaze/microblaze.h
+index 016a51d..ef113c7 100644
+--- a/gcc/config/microblaze/microblaze.h
++++ b/gcc/config/microblaze/microblaze.h
+@@ -85,14 +85,6 @@ enum block_move_type {
+     BLOCK_MOVE_LAST			/* generate just the last store */
+ };
+ 
+-/* microblaze_cpu_select contains CPU info */
+-struct microblaze_cpu_select
+-{
+-    const char *cpu;
+-    const char *tune;
+-    unsigned int flags;
+-};
+-
+ #define MICROBLAZE_MASK_NO_UNSAFE_DELAY         0x00000001
+ 
+ extern char microblaze_reg_names[][8];          /* register names (a0 vs. $4). */
+-- 
+1.5.3.8
+

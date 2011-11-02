@@ -1,0 +1,28 @@
+From 36b0769e211f2a970d0897b1be44e83e5e1dba11 Mon Sep 17 00:00:00 2001
+Message-Id: <36b0769e211f2a970d0897b1be44e83e5e1dba11.1241484428.git.john.williams@petalogix.com>
+In-Reply-To: <930a7bf07b58a3d6a48393a6419b2c958fc9dc2a.1241484427.git.john.williams@petalogix.com>
+References: <930a7bf07b58a3d6a48393a6419b2c958fc9dc2a.1241484427.git.john.williams@petalogix.com>
+From: John Williams <john.williams@petalogix.com>
+Date: Tue, 28 Apr 2009 14:39:32 +1000
+Subject: [PATCH 27/63] microblaze: Fix dwarf configuration
+
+---
+ gcc/configure |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/gcc/configure b/gcc/configure
+index 550a7c5..4c1a23a 100755
+--- a/gcc/configure
++++ b/gcc/configure
+@@ -15777,7 +15777,7 @@ esac
+ case "$target" in
+   i?86*-*-* | mips*-*-* | alpha*-*-* | powerpc*-*-* | sparc*-*-* | m68*-*-* \
+   | x86_64*-*-* | hppa*-*-* | arm*-*-* | strongarm*-*-* | xscale*-*-* \
+-  | xstormy16*-*-* | cris-*-* | xtensa-*-* | bfin-*-*)
++  | xstormy16*-*-* | cris-*-* | xtensa-*-* | bfin-*-* | microblaze-*-*)
+     insn="nop"
+     ;;
+   ia64*-*-* | s390*-*-*)
+-- 
+1.5.3.8
+

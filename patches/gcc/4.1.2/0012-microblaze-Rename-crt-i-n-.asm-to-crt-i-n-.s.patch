@@ -1,0 +1,35 @@
+From 8485f73c2373af80e6cd9a9893f6877abd904876 Mon Sep 17 00:00:00 2001
+Message-Id: <8485f73c2373af80e6cd9a9893f6877abd904876.1241484427.git.john.williams@petalogix.com>
+In-Reply-To: <930a7bf07b58a3d6a48393a6419b2c958fc9dc2a.1241484427.git.john.williams@petalogix.com>
+References: <930a7bf07b58a3d6a48393a6419b2c958fc9dc2a.1241484427.git.john.williams@petalogix.com>
+From: John Williams <john.williams@petalogix.com>
+Date: Tue, 28 Apr 2009 14:39:09 +1000
+Subject: [PATCH 12/63] microblaze: Rename crt{i,n}.asm to crt{i,n}.s
+
+---
+ gcc/config/microblaze/t-microblaze |    8 ++++----
+ 1 files changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/gcc/config/microblaze/t-microblaze b/gcc/config/microblaze/t-microblaze
+index d7b2e4e..d126ae2 100644
+--- a/gcc/config/microblaze/t-microblaze
++++ b/gcc/config/microblaze/t-microblaze
+@@ -11,11 +11,11 @@ LIB2FUNCS_EXTRA = $(srcdir)/config/microblaze/divsi3_table.c \
+ EXTRA_MULTILIB_PARTS = crtbegin$(objext) crtend$(objext) crti$(objext) crtn$(objext) 
+ 
+ # Build multiple copies of ?crt{i,n}.o, one for each target switch.
+-$(T)crti$(objext): $(srcdir)/config/microblaze/crti.asm
+-	$(GCC_FOR_TARGET) $(GCC_CFLAGS) $(INCLUDES) $(MULTILIB_CFLAGS) -c $(srcdir)/config/microblaze/crti.asm -o $(T)crti$(objext)
++$(T)crti$(objext): $(srcdir)/config/microblaze/crti.s
++	$(GCC_FOR_TARGET) $(GCC_CFLAGS) $(INCLUDES) $(MULTILIB_CFLAGS) -c $(srcdir)/config/microblaze/crti.s -o $(T)crti$(objext)
+ 
+-$(T)crtn$(objext): $(srcdir)/config/microblaze/crtn.asm
+-	$(GCC_FOR_TARGET) $(GCC_CFLAGS) $(INCLUDES) $(MULTILIB_CFLAGS) -c $(srcdir)/config/microblaze/crtn.asm -o $(T)crtn$(objext)
++$(T)crtn$(objext): $(srcdir)/config/microblaze/crtn.s
++	$(GCC_FOR_TARGET) $(GCC_CFLAGS) $(INCLUDES) $(MULTILIB_CFLAGS) -c $(srcdir)/config/microblaze/crtn.s -o $(T)crtn$(objext)
+ 
+ # We want fine grained libraries, so use the new code
+ # to build the floating point emulation libraries.
+-- 
+1.5.3.8
+

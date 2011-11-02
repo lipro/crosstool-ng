@@ -1,0 +1,101 @@
+From 597f209e8c402e98c96b7a9520ae48a6520d322c Mon Sep 17 00:00:00 2001
+Message-Id: <597f209e8c402e98c96b7a9520ae48a6520d322c.1241484427.git.john.williams@petalogix.com>
+In-Reply-To: <930a7bf07b58a3d6a48393a6419b2c958fc9dc2a.1241484427.git.john.williams@petalogix.com>
+References: <930a7bf07b58a3d6a48393a6419b2c958fc9dc2a.1241484427.git.john.williams@petalogix.com>
+From: John Williams <john.williams@petalogix.com>
+Date: Tue, 28 Apr 2009 14:39:15 +1000
+Subject: [PATCH 16/63] microblaze: Rewrite savereg macro
+
+---
+ gcc/config/microblaze/microblaze.c |   38 ++++++++++++++++++++++++++++++++++++
+ gcc/config/microblaze/microblaze.h |   21 +------------------
+ 2 files changed, 39 insertions(+), 20 deletions(-)
+
+diff --git a/gcc/config/microblaze/microblaze.c b/gcc/config/microblaze/microblaze.c
+index 84c72fa..d5d28f7 100644
+--- a/gcc/config/microblaze/microblaze.c
++++ b/gcc/config/microblaze/microblaze.c
+@@ -218,6 +218,7 @@ int microblaze_valid_machine_decl_attribute 	PARAMS ((tree, tree, tree, tree));
+ static bool microblaze_handle_option 		PARAMS ((size_t, const char *, int));
+ int microblaze_is_interrupt_handler		PARAMS ((void));
+ int microblaze_const_double_ok 			PARAMS ((rtx, enum machine_mode));
++static int microblaze_must_save_register 	PARAMS ((int));
+ 
+ /* Global variables for machine-dependent things.  */
+ 
+@@ -5191,3 +5192,40 @@ microblaze_encode_section_info (
+     }									
+   }									
+ }
++
++
++/* Determine of register must be saved/restored in call. */
++static int
++microblaze_must_save_register (int regno)
++{
++  if (regs_ever_live[regno] && !call_used_regs[regno]) return 1;
++
++  if (frame_pointer_needed && 
++      (regno == HARD_FRAME_POINTER_REGNUM)) return 1;
++
++  if (!current_function_is_leaf)
++  {
++      if (regno == MB_ABI_SUB_RETURN_ADDR_REGNUM) return 1;
++      if ((interrupt_handler || save_volatiles) &&
++          (regno >= 3 && regno <= 12)) return 1;
++  }
++
++  if (interrupt_handler) 
++  {
++    if ((regs_ever_live[regno]) ||
++        (regno == MB_ABI_MSR_SAVE_REG) ||
++        (regno == MB_ABI_ASM_TEMP_REGNUM) ||
++        (regno == MB_ABI_EXCEPTION_RETURN_ADDR_REGNUM))
++       return 1;
++  }
++
++  if (save_volatiles) 
++  {
++    if ((regs_ever_live[regno]) ||
++        (regno == MB_ABI_ASM_TEMP_REGNUM) ||
++        (regno == MB_ABI_EXCEPTION_RETURN_ADDR_REGNUM))
++       return 1;
++  }
++
++  return 0;
++}
+diff --git a/gcc/config/microblaze/microblaze.h b/gcc/config/microblaze/microblaze.h
+index 3d144bd..4320aa4 100644
+--- a/gcc/config/microblaze/microblaze.h
++++ b/gcc/config/microblaze/microblaze.h
+@@ -1875,26 +1875,7 @@ typedef struct microblaze_args {
+   function_arg( &CUM, MODE, TYPE, NAMED)
+ 
+ /* Tell prologue and epilogue if register REGNO should be saved / restored.  */
+-
+-/* Added the link register for functions which are not leaf */
+-/* Also added the interrupt_handler temp reg save, which is being used for saving the MSR */
+-
+-/* [02/13/02] : Added interrupt and exception registers to the list of
+-   registers being saved on interrupts */
+-
+-/* [05/28/02] : Modified to make interrupt_handler save all the registers */
+-/* Save all volatiles if you have the interrupt handler attribute */
+-
+-#define MUST_SAVE_REGISTER(regno) \
+- (((regs_ever_live[regno] && !call_used_regs[regno])			\
+-  || ((regno == HARD_FRAME_POINTER_REGNUM) && frame_pointer_needed)       \
+-  || (((regs_ever_live[regno] || ((regno == MB_ABI_MSR_SAVE_REG)) && interrupt_handler)))   \
+-  || (regs_ever_live[regno] && save_volatiles)                 \
+-  || ((regno == MB_ABI_ASM_TEMP_REGNUM) && ( save_volatiles || interrupt_handler)) \
+-  || ((regno == MB_ABI_EXCEPTION_RETURN_ADDR_REGNUM) && ( save_volatiles || interrupt_handler)) \
+-  || ((regno == MB_ABI_SUB_RETURN_ADDR_REGNUM) && (!current_function_is_leaf))) \
+-  || ((regno >= 3 && regno <= 12) && (interrupt_handler || save_volatiles) && (!current_function_is_leaf))\
+-    && regno != 0)
++#define MUST_SAVE_REGISTER(regno) microblaze_must_save_register(regno)
+ 
+ /* Define this macro if the mcount subroutine on your system does not need 
+    a counter variable allocated for each function. This is true for almost 
+-- 
+1.5.3.8
+

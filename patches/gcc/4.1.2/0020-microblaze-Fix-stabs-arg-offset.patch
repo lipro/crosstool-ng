@@ -1,0 +1,29 @@
+From 28d54313b045bb4eb197e6330f774a43d2ac6a10 Mon Sep 17 00:00:00 2001
+Message-Id: <28d54313b045bb4eb197e6330f774a43d2ac6a10.1241484428.git.john.williams@petalogix.com>
+In-Reply-To: <930a7bf07b58a3d6a48393a6419b2c958fc9dc2a.1241484427.git.john.williams@petalogix.com>
+References: <930a7bf07b58a3d6a48393a6419b2c958fc9dc2a.1241484427.git.john.williams@petalogix.com>
+From: John Williams <john.williams@petalogix.com>
+Date: Tue, 28 Apr 2009 14:39:22 +1000
+Subject: [PATCH 20/63] microblaze: Fix stabs arg offset
+
+---
+ gcc/dbxout.c |    3 +++
+ 1 files changed, 3 insertions(+), 0 deletions(-)
+
+diff --git a/gcc/dbxout.c b/gcc/dbxout.c
+index 9ffced0..94ce524 100644
+--- a/gcc/dbxout.c
++++ b/gcc/dbxout.c
+@@ -3200,6 +3200,9 @@ dbxout_parms (tree parms)
+ 		&& GET_MODE_SIZE (TYPE_MODE (TREE_TYPE (parms))) < UNITS_PER_WORD)
+ 	      number += (GET_MODE_SIZE (GET_MODE (DECL_RTL (parms)))
+ 			 - GET_MODE_SIZE (TYPE_MODE (TREE_TYPE (parms))));
++
++	    number = DEBUGGER_ARG_OFFSET (number,
++					  XEXP (XEXP (DECL_RTL (parms), 0), 0));
+ 	  }
+ 	else
+ 	  /* ??? We don't know how to represent this argument.  */
+-- 
+1.5.3.8
+

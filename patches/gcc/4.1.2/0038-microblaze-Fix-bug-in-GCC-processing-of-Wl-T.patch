@@ -1,0 +1,79 @@
+From 3359e399b1f47e4935acfd4ddc42d357bf52d069 Mon Sep 17 00:00:00 2001
+Message-Id: <3359e399b1f47e4935acfd4ddc42d357bf52d069.1241484429.git.john.williams@petalogix.com>
+In-Reply-To: <930a7bf07b58a3d6a48393a6419b2c958fc9dc2a.1241484427.git.john.williams@petalogix.com>
+References: <930a7bf07b58a3d6a48393a6419b2c958fc9dc2a.1241484427.git.john.williams@petalogix.com>
+From: John Williams <john.williams@petalogix.com>
+Date: Tue, 28 Apr 2009 14:39:52 +1000
+Subject: [PATCH 38/63] microblaze: Fix bug in GCC processing of -Wl,-T
+
+---
+ gcc/gcc.c      |   31 +++++++++++++++++++++++++++++++
+ gcc/gcc.c.orig |    3 +++
+ 2 files changed, 34 insertions(+), 0 deletions(-)
+
+diff --git a/gcc/gcc.c b/gcc/gcc.c
+index 81faf22..5c92d3e 100644
+--- a/gcc/gcc.c
++++ b/gcc/gcc.c
+@@ -3965,6 +3965,37 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n"
+       else if (strncmp (argv[i], "-Wl,", 4) == 0)
+ 	{
+ 	  int prev, j;
++	  /* Check for linker script, translate to -Tscript. */
++	  if (strncmp (argv[i], "-Wl,-T",6) == 0)
++	    {
++	      char *opt;
++	      if (argv[i][6] == ',') 
++		{
++	          opt = xmalloc(1 + strlen(&argv[i][7]) + 1); 
++		  opt[0] = 'T';
++		  strcpy(&opt[1], &argv[i][7]);
++		  switches[n_switches].part1 = opt;
++		}
++	      else 
++	        {
++		  if (argv[i+1] && strncmp (argv[i+1], "-Wl,", 4) == 0)
++		    {
++	              opt = xmalloc(1 + strlen(&argv[i+1][4]) + 1); 
++		      opt[0] = 'T';
++		      strcpy(&opt[1], &argv[i+1][4]);
++		      switches[n_switches].part1 = opt;
++		      i++;
++		    }
++		  else 
++		    error ("linker specification is malformed");
++		    
++		}
++	     switches[n_switches].args = 0;
++	     switches[n_switches].live_cond = SWITCH_OK;
++	     switches[n_switches].validated = 0;
++	     n_switches++;
++	     continue;
++	    }
+ 	  /* Split the argument at commas.  */
+ 	  prev = 4;
+ 	  for (j = 4; argv[i][j]; j++)
+diff --git a/gcc/gcc.c.orig b/gcc/gcc.c.orig
+index 08fc3a8..81faf22 100644
+--- a/gcc/gcc.c.orig
++++ b/gcc/gcc.c.orig
+@@ -86,6 +86,7 @@ compilation is specified by a string called a "spec".  */
+ #include "prefix.h"
+ #include "gcc.h"
+ #include "flags.h"
++#include "opts.h"
+ 
+ /* By default there is no special suffix for target executables.  */
+ /* FIXME: when autoconf is fixed, remove the host check - dj */
+@@ -6035,6 +6036,8 @@ main (int argc, const char **argv)
+ 
+   xmalloc_set_program_name (programname);
+ 
++  prune_options (&argc, &argv);
++
+ #ifdef GCC_DRIVER_HOST_INITIALIZATION
+   /* Perform host dependent initialization when needed.  */
+   GCC_DRIVER_HOST_INITIALIZATION;
+-- 
+1.5.3.8
+

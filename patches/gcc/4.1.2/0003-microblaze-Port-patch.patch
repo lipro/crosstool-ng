@@ -1,0 +1,102 @@
+From 3004d33abd6894b7499e96908175b5491f31e043 Mon Sep 17 00:00:00 2001
+Message-Id: <3004d33abd6894b7499e96908175b5491f31e043.1241484427.git.john.williams@petalogix.com>
+In-Reply-To: <930a7bf07b58a3d6a48393a6419b2c958fc9dc2a.1241484427.git.john.williams@petalogix.com>
+References: <930a7bf07b58a3d6a48393a6419b2c958fc9dc2a.1241484427.git.john.williams@petalogix.com>
+From: John Williams <john.williams@petalogix.com>
+Date: Tue, 28 Apr 2009 14:38:58 +1000
+Subject: [PATCH 03/63] microblaze: Port patch
+
+---
+ gcc/config/microblaze/microblaze.h   |   19 -------------------
+ gcc/config/microblaze/microblaze.opt |   10 +++++-----
+ 2 files changed, 5 insertions(+), 24 deletions(-)
+
+diff --git a/gcc/config/microblaze/microblaze.h b/gcc/config/microblaze/microblaze.h
+index 7cdd1ac..870fb72 100644
+--- a/gcc/config/microblaze/microblaze.h
++++ b/gcc/config/microblaze/microblaze.h
+@@ -171,36 +171,17 @@ extern char *microblaze_no_clearbss;
+ /* Macros used in the machine description to test the flags.  */
+ 
+ /* Bits for real switches */
+-#define MASK_SOFT_DIV           0x00000002      /* Mask for Soft Divide                         */
+ #define MASK_MEMCPY             0x00000008      /* Call memcpy instead of inline code           */
+ #define MASK_GAS                0x00000010	/* Gas used instead of MICROBLAZE as            */
+ #define MASK_EMPTY1             0x00000020	/* Empty 1 */
+ #define MASK_STATS              0x00000040	/* print statistics to stderr                   */
+-#define MASK_PATTERN_COMPARE    0x00000080      /* Use extended pattern compare instructions    */
+-#define MASK_SOFT_FLOAT         0x00000100	/* software floating point                      */
+-#define MASK_STACK_CHECK        0x00000200      /* Do Stack checking                            */ 
+ #define MASK_ABICALLS           0x00000400	/* emit .abicalls/.cprestore/.cpload            */
+ #define MASK_HALF_PIC           0x00000800	/* Emit OSF-style pic refs to externs           */
+ #define MASK_LONG_CALLS         0x00001000	/* Always call through a register               */
+-#define MASK_BARREL_SHIFT       0x00002000      /* Use a barrel shifter as this is being provided with MicroBlaze */
+ #define MASK_EMBEDDED_PIC       0x00004000	/* Generate embedded PIC code                   */
+ #define MASK_EMBEDDED_DATA      0x00008000	/* Reduce RAM usage, not fast code              */
+ #define MASK_BIG_ENDIAN         0x00010000	/* Generate big endian code                     */
+-#define MASK_XLGPOPT            0x00020000	/* Optimize for Xilinx global pointer           */ 
+-#define MASK_SOFT_MUL           0x00040000      /* Use software multiply instead of hardware    */
+ #define MASK_SMALL_DIVIDES      0x10000000      /* Use table lookup for divides.                */
+-                                                /* Dummy switches used only in spec's           */
+-/* Debug & special switches for internal testing. Not documented  */
+-#define MASK_DEBUG              0                       /* Eliminate version # in .s file               */
+-#define MASK_DEBUG_A            0x40000000              /* don't allow <label>($reg) addrs              */
+-#define MASK_DEBUG_B            0x20000000              /* GO_IF_LEGITIMATE_ADDRESS debug               */
+-#define MASK_DEBUG_D            0                       /* don't do define_split's                      */
+-#define MASK_DEBUG_E            0                       /* function_arg debug                           */
+-#define MASK_DEBUG_F            0
+-#define MASK_DEBUG_G            0                       /* don't support 64 bit arithmetic              */
+-#define MASK_DEBUG_H            0                       /* allow ints in FP registers                   */
+-#define MASK_DEBUG_I            0                       /* unused                                       */
+-
+ 
+ #define TARGET_GAS		(target_flags & MASK_GAS)
+ #define TARGET_UNIX_ASM		(!TARGET_GAS)
+diff --git a/gcc/config/microblaze/microblaze.opt b/gcc/config/microblaze/microblaze.opt
+index 4160617..0b705a7 100644
+--- a/gcc/config/microblaze/microblaze.opt
++++ b/gcc/config/microblaze/microblaze.opt
+@@ -24,11 +24,11 @@ Target Mask(SOFT_MUL)
+ Use the soft multiply emulation
+ 
+ mxl-soft-div
+-Target Mask(MASK_SOFT_DIV)
++Target Mask(SOFT_DIV)
+ Use the soft divide emulation
+ 
+ mxl-barrel-shift
+-Target Mask(MASK_BARREL_SHIFT)
++Target Mask(BARREL_SHIFT)
+ Use the hardware barrel shifter instead of emulation
+ 
+ msoft-float
+@@ -40,7 +40,7 @@ Target Report RejectNegative InverseMask(SOFT_FLOAT, HARD_FLOAT)
+ Allow the use of hardware floating-point instructions
+ 
+ mxl-pattern-compare
+-Target Joined Mask(MASK_PATTERN_COMPARE)
++Target Mask(PATTERN_COMPARE)
+ Use pattern compare instructions
+ 
+ msmall-divides
+@@ -48,7 +48,7 @@ Target Joined
+ Use table lookup optimization for small signed integer divisions
+ 
+ mxl-stack-check
+-Target Joined Mask(MASK_STACK_CHECK)
++Target Mask(STACK_CHECK)
+ Check Stack at runtime
+ 
+ mmemcpy
+@@ -56,7 +56,7 @@ Target Joined
+ Don't optimize block moves
+ 
+ mxl-gp-opt
+-Target Joined Mask(MASK_XLGPOPT)
++Target Mask(XLGPOPT)
+ Use GP relative sdata/sbss sections[for xlnx]
+ 
+ mstats
+-- 
+1.5.3.8
+

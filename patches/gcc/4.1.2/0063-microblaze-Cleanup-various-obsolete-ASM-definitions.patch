@@ -1,0 +1,306 @@
+From bb2744c9ae7ecb3652913ce2087fd3cda171767f Mon Sep 17 00:00:00 2001
+Message-Id: <bb2744c9ae7ecb3652913ce2087fd3cda171767f.1241484432.git.john.williams@petalogix.com>
+In-Reply-To: <930a7bf07b58a3d6a48393a6419b2c958fc9dc2a.1241484427.git.john.williams@petalogix.com>
+References: <930a7bf07b58a3d6a48393a6419b2c958fc9dc2a.1241484427.git.john.williams@petalogix.com>
+From: John Williams <john.williams@petalogix.com>
+Date: Tue, 28 Apr 2009 14:40:29 +1000
+Subject: [PATCH 63/63] microblaze: Cleanup various obsolete ASM definitions
+
+---
+ gcc/config/microblaze/microblaze.c |  209 ------------------------------------
+ gcc/config/microblaze/microblaze.h |   14 +---
+ 2 files changed, 1 insertions(+), 222 deletions(-)
+
+diff --git a/gcc/config/microblaze/microblaze.c b/gcc/config/microblaze/microblaze.c
+index 7b78abd..4306920 100644
+--- a/gcc/config/microblaze/microblaze.c
++++ b/gcc/config/microblaze/microblaze.c
+@@ -150,8 +150,6 @@ static void microblaze_encode_section_info	PARAMS ((tree, rtx, int));
+ static void microblaze_globalize_label          PARAMS ((FILE*, const char*));
+ static void microblaze_function_prologue        PARAMS ((FILE*, int));
+ static void microblaze_function_epilogue        PARAMS ((FILE*, HOST_WIDE_INT));
+-static void microblaze_asm_file_start           PARAMS ((void));
+-static void microblaze_asm_file_end             PARAMS ((void));
+ static char* microblaze_fill_delay_slot         PARAMS ((char *, enum delay_type ,rtx [],rtx ));
+ static void microblaze_count_memory_refs        PARAMS ((rtx, int));
+ static rtx embedded_pic_fnaddr_reg              PARAMS ((void));
+@@ -191,7 +189,6 @@ static int microblaze_version_compare           PARAMS ((const char *, const cha
+ void microblaze_order_regs_for_local_alloc 	PARAMS ((void));
+ void print_operand 				PARAMS ((FILE *, rtx, int));
+ void print_operand_address 			PARAMS ((FILE *, rtx));
+-int microblaze_output_external 			PARAMS ((FILE *, tree, char *));
+ void final_prescan_insn 			PARAMS ((rtx, rtx *, int));
+ void microblaze_internal_label 			PARAMS ((FILE *, const char*, unsigned long));
+ void microblaze_output_float 			PARAMS ((FILE *, REAL_VALUE_TYPE value));
+@@ -250,24 +247,6 @@ int sym_lineno = 0;
+    handle .files inside of functions.  */
+ int inside_function = 0;
+ 
+-/* Files to separate the text and the data output, so that all of the data
+-   can be emitted before the text, which will mean that the assembler will
+-   generate smaller code, based on the global pointer.  */
+-FILE *asm_out_data_file;
+-FILE *asm_out_text_file;
+-
+-
+-/* Linked list of all externals that are to be emitted when optimizing
+-   for the global pointer if they haven't been declared by the end of
+-   the program with an appropriate .comm or initialization.  */
+-
+-struct extern_list
+-{
+-  struct extern_list *next;	/* next external */
+-  char *name;			/* name of the external */
+-  int size;			/* size in bytes */
+-} *extern_head = 0;
+-
+ /* Name of the file containing the current function.  */
+ const char *current_function_file = "";
+ 
+@@ -535,12 +514,6 @@ static int microblaze_save_volatiles (tree);
+ #undef TARGET_ASM_INTERNAL_LABEL
+ #define TARGET_ASM_INTERNAL_LABEL       microblaze_internal_label
+ 
+-#undef TARGET_ASM_FILE_START
+-#define TARGET_ASM_FILE_START           microblaze_asm_file_start 
+-
+-#undef TARGET_ASM_FILE_END
+-#define TARGET_ASM_FILE_END             microblaze_asm_file_end
+-
+ #undef TARGET_RTX_COSTS          
+ #define TARGET_RTX_COSTS                microblaze_rtx_costs
+ 
+@@ -3267,79 +3240,6 @@ print_operand_address (
+   }
+ }
+ 
+-/* If optimizing for the global pointer, keep track of all of the externs, so
+-   that at the end of the file, we can emit the appropriate .extern
+-   declaration for them, before writing out the text section.  We assume all
+-   names passed to us are in the permanent obstack, so they will be valid at
+-   the end of the compilation.
+-
+-   If we have -G 0, or the extern size is unknown, or the object is in a user
+-   specified section that is not .sbss/.sdata, don't bother emitting the
+-   .externs.  In the case of user specified sections this behaviour is
+-   required as otherwise GAS will think the object lives in .sbss/.sdata.  */
+-
+-int
+-microblaze_output_external (
+-  FILE *file ATTRIBUTE_UNUSED,
+-  tree decl,
+-  char *name)
+-{
+-  register struct extern_list *p;
+-  int len;
+-  tree section_name;
+-
+-  if (TARGET_GP_OPT
+-      && TREE_CODE (decl) != FUNCTION_DECL
+-      && (len = int_size_in_bytes (TREE_TYPE (decl))) > 0
+-      && ((section_name = DECL_SECTION_NAME (decl)) == NULL
+-          || strcmp (TREE_STRING_POINTER (section_name), ".sbss") == 0
+-          || strcmp (TREE_STRING_POINTER (section_name), ".sdata") == 0))
+-  {
+-    p = (struct extern_list *) /* permalloc */ xmalloc (sizeof (struct extern_list));
+-    p->next = extern_head;
+-    p->name = name;
+-    p->size = len;
+-    extern_head = p;
+-  }
+-
+-#ifdef ASM_OUTPUT_UNDEF_FUNCTION
+-  if (TREE_CODE (decl) == FUNCTION_DECL
+-      /* ??? Don't include alloca, since gcc will always expand it
+-         inline.  If we don't do this, the C++ library fails to build.  */
+-      && strcmp (name, "alloca")
+-      /* ??? Don't include __builtin_next_arg, because then gcc will not
+-         bootstrap under Irix 5.1.  */
+-      && strcmp (name, "__builtin_next_arg"))
+-  {
+-    p = (struct extern_list *) /* permalloc */ xmalloc (sizeof (struct extern_list));
+-    p->next = extern_head;
+-    p->name = name;
+-    p->size = -1;
+-    extern_head = p;
+-  }
+-#endif
+-
+-  return 0;
+-}
+-
+-#ifdef ASM_OUTPUT_UNDEF_FUNCTION
+-int
+-microblaze_output_external_libcall (file, name)
+-  FILE *file;
+-  char *name;
+-{
+-  register struct extern_list *p;
+-
+-  p = (struct extern_list *) /* permalloc */ xmalloc (sizeof (struct extern_list));
+-  p->next = extern_head;
+-  p->name = name;
+-  p->size = -1;
+-  extern_head = p;
+-
+-  return 0;
+-}
+-#endif
+-
+ /* Compute a string to use as a temporary file name.  */
+ 
+ /* On MSDOS, write temp files in current dir
+@@ -3453,115 +3353,6 @@ final_prescan_insn (rtx insn,
+     dslots_jump_total++;
+ }
+ 
+-
+-/* Output at beginning of assembler file.
+-
+-If we are optimizing to use the global pointer, create a temporary file to
+-hold all of the text stuff, and write it out to the end. This is needed
+-because the MICROBLAZE assembler is evidently one pass, and if it hasn't seen the
+-relevant .comm/.lcomm/.extern/.sdata declaration when the code is
+-processed, it generates a two instruction sequence.  */
+-
+-void
+-microblaze_asm_file_start (void)
+-{
+-  default_file_start ();
+-  /* GCC 3.4.1
+-   * Removed. Caused segfaults.
+-   */
+-  /* ASM_OUTPUT_SOURCE_FILENAME (asm_out_file, main_input_filename); */
+-    
+-  /* Generate the pseudo ops that System V.4 wants.  */
+-#ifndef ABICALLS_ASM_OP
+-#define ABICALLS_ASM_OP ".abicalls"
+-#endif
+-    
+-  /* This code exists so that we can put all externs before all symbol
+-     references.  This is necessary for the MICROBLAZE assembler's global pointer
+-     optimizations to work.  */
+-  if (TARGET_FILE_SWITCHING )
+-  {
+-    asm_out_data_file = asm_out_file;
+-    /* asm_out_text_file = xlnx_make_temp_file (); */
+-    asm_out_text_file = tmpfile ();
+-  }
+-
+-  else
+-    asm_out_data_file = asm_out_text_file = asm_out_file;
+-
+-  if (flag_verbose_asm)
+-    fprintf (asm_out_file, "\n%s -G value = %d\n",
+-             ASM_COMMENT_START,
+-             microblaze_section_threshold);
+-}
+-
+-/* If we are optimizing the global pointer, emit the text section now and any
+-   small externs which did not have .comm, etc that are needed.  Also, give a
+-   warning if the data area is more than 32K and -pic because 3 instructions
+-   are needed to reference the data pointers.  */
+-
+-void
+-microblaze_asm_file_end (void)
+-{
+-  char buffer[8192];
+-  tree name_tree;
+-  struct extern_list *p;
+-  int len;
+-
+-  if (HALF_PIC_P ())
+-  {
+-    HALF_PIC_FINISH (asm_out_file);
+-  }
+-
+-  if (extern_head)
+-  {
+-    fputs ("\n", asm_out_file);
+-
+-    for (p = extern_head; p != 0; p = p->next)
+-    {
+-      name_tree = get_identifier (p->name);
+-
+-      /* Positively ensure only one .extern for any given symbol.  */
+-      if (! TREE_ASM_WRITTEN (name_tree))
+-      {
+-        TREE_ASM_WRITTEN (name_tree) = 1;
+-#ifdef ASM_OUTPUT_UNDEF_FUNCTION
+-        if (p->size == -1)
+-          ASM_OUTPUT_UNDEF_FUNCTION (asm_out_file, p->name);
+-        else
+-#endif
+-        {
+-          fputs ("\t.extern\t", asm_out_file);
+-          assemble_name (asm_out_file, p->name);
+-          fprintf (asm_out_file, ", %d\n", p->size);
+-        }
+-      }
+-    }
+-  }
+-      
+-  if (TARGET_FILE_SWITCHING )
+-  {
+-    fprintf (asm_out_file, "\n\t.text\n");
+-    rewind (asm_out_text_file);
+-    if (ferror (asm_out_text_file))
+-      fatal_error ("can't rewind asm text file");
+-
+-    while ((len = fread (buffer, 1, sizeof (buffer), asm_out_text_file)) > 0)
+-      if ((int) fwrite (buffer, 1, len, asm_out_file) != len)
+-        fatal_error ("while reading asm text file");
+-
+-    if (len < 0)
+-      fatal_error ("while reading asm text file");
+-
+-    if (fclose (asm_out_text_file) != 0)
+-      fatal_error ("closing asm text file");
+-
+-#ifdef __MSDOS__
+-    unlink (temp_filename);
+-#endif
+-  }
+-}
+-
+ /* Output an element in the table of global constructors. */
+ void 
+ microblaze_asm_constructor (rtx symbol ATTRIBUTE_UNUSED, int priority) 
+diff --git a/gcc/config/microblaze/microblaze.h b/gcc/config/microblaze/microblaze.h
+index 6900793..938424f 100644
+--- a/gcc/config/microblaze/microblaze.h
++++ b/gcc/config/microblaze/microblaze.h
+@@ -162,14 +162,10 @@ extern char *microblaze_no_clearbss;
+ /* Optimize for Sdata/Sbss */
+ #define TARGET_XLGP_OPT		(target_flags & MASK_XLGPOPT)
+ 
+-/* This is true if we must enable the assembly language file switching
+-   code.  */
+-#define TARGET_FILE_SWITCHING	0
+-
+ /* We must disable the function end stabs when doing the file switching trick,
+    because the Lscope stabs end up in the wrong place, making it impossible
+    to debug the resulting code.  */
+-#define NO_DBX_FUNCTION_END TARGET_FILE_SWITCHING
++#define NO_DBX_FUNCTION_END 0
+ 
+ #if 0
+ /* Added by Sid for mb-objdump problem */
+@@ -2772,14 +2768,6 @@ do {									\
+   ASM_OUTPUT_ALIGNED_LOCAL (FILE, NAME, SIZE, ALIGN);			\
+ } while (0)
+ 
+-/* This says how to output an external.  It would be possible not to
+-   output anything and let undefined symbol become external. However
+-   the assembler uses length information on externals to allocate in
+-   data/sdata bss/sbss, thereby saving exec time.  */
+-
+-#define ASM_OUTPUT_EXTERNAL(STREAM,DECL,NAME) \
+-  microblaze_output_external(STREAM,DECL,NAME)
+-
+ /* This is how to declare a function name.  The actual work of
+    emitting the label is moved to function_prologue, so that we can
+    get the line number correctly emitted before the .ent directive,
+-- 
+1.5.3.8
+

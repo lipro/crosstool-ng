@@ -1,0 +1,174 @@
+From fe768f77f39d6b53a6f53183e78d4c53b67a7832 Mon Sep 17 00:00:00 2001
+Message-Id: <fe768f77f39d6b53a6f53183e78d4c53b67a7832.1241484430.git.john.williams@petalogix.com>
+In-Reply-To: <930a7bf07b58a3d6a48393a6419b2c958fc9dc2a.1241484427.git.john.williams@petalogix.com>
+References: <930a7bf07b58a3d6a48393a6419b2c958fc9dc2a.1241484427.git.john.williams@petalogix.com>
+From: John Williams <john.williams@petalogix.com>
+Date: Tue, 28 Apr 2009 14:40:12 +1000
+Subject: [PATCH 51/63] microblaze: Fixed table jump in PIC mode
+
+---
+ gcc/config/microblaze/microblaze.h      |    4 ++
+ gcc/config/microblaze/microblaze.h.orig |   49 +++++++++----------------------
+ gcc/config/microblaze/microblaze.md     |    4 +-
+ 3 files changed, 20 insertions(+), 37 deletions(-)
+
+diff --git a/gcc/config/microblaze/microblaze.h b/gcc/config/microblaze/microblaze.h
+index 4006321..db0d5f6 100644
+--- a/gcc/config/microblaze/microblaze.h
++++ b/gcc/config/microblaze/microblaze.h
+@@ -2849,6 +2849,10 @@ do {									\
+     fprintf (STREAM, "\t%s\t%sL%d-%sLS%d\n",				\
+ 	     ".gpword",                                                 \
+ 	     LOCAL_LABEL_PREFIX, VALUE, LOCAL_LABEL_PREFIX, REL);	\
++  else if (flag_pic == 2)                                               \
++    fprintf (STREAM, "\t%s\t%sL%d@GOTOFF\n",                            \
++	     ".gpword",                                                 \
++	     LOCAL_LABEL_PREFIX, VALUE);				\
+   else                                                                  \
+     fprintf (STREAM, "\t%s\t%sL%d\n",					\
+ 	     ".gpword",                                                 \
+diff --git a/gcc/config/microblaze/microblaze.h.orig b/gcc/config/microblaze/microblaze.h.orig
+index 1f0eecb..4006321 100644
+--- a/gcc/config/microblaze/microblaze.h.orig
++++ b/gcc/config/microblaze/microblaze.h.orig
+@@ -76,15 +76,6 @@ enum microblaze_abicalls_type {
+ /* Recast the abicalls class to be the abicalls attribute.  */
+ #define microblaze_abicalls_attr ((enum attr_abicalls)microblaze_abicalls)
+ 
+-/* Which type of block move to do (whether or not the last store is
+-   split out so it can fill a branch delay slot).  */
+-
+-enum block_move_type {
+-    BLOCK_MOVE_NORMAL,			/* generate complete block move */
+-    BLOCK_MOVE_NOT_LAST,			/* generate all but last store */
+-    BLOCK_MOVE_LAST			/* generate just the last store */
+-};
+-
+ #define MICROBLAZE_MASK_NO_UNSAFE_DELAY         0x00000001
+ 
+ extern char microblaze_reg_names[][8];          /* register names (a0 vs. $4). */
+@@ -438,7 +429,8 @@ while (0)
+ /* ??? The bestGnum will never be passed to the linker, because the gcc driver
+    will interpret it as a -b option.  */
+ 
+-#define LINK_SPEC "-relax -N %{Zxl-mode-xmdstub:-defsym _TEXT_START_ADDR=0x800} %{!Wl,-T*: %{!T*: -T xilinx.ld%s}}"
++#define LINK_SPEC "%{shared:-shared} -relax %{Zxl-mode-xmdstub:-defsym _TEXT_START_ADDR=0x800} \
++  %{!mxl-gp-opt: -G 0} %{!Wl,-T*: %{!T*: -T xilinx.ld%s}}"
+ 
+ /* Specs for the compiler proper */
+ 
+@@ -635,7 +627,7 @@ while (0)
+ #endif
+ 
+ /* The DWARF 2 CFA column which tracks the return address.  */
+-#define DWARF_FRAME_RETURN_COLUMN (FP_REG_LAST + 1)
++#define DWARF_FRAME_RETURN_COLUMN (GP_REG_FIRST + MB_ABI_SUB_RETURN_ADDR_REGNUM)
+ 
+ /* Initial state of return address on entry to func = R15.
+    Actually, the RA is at R15+8, but gcc doesn't know how 
+@@ -999,8 +991,8 @@ while (0)
+    
+    We handle QImode arrays specially. It enables string operations
+    to be optimally handled using pattern comparator instructions */
+-#define LOCAL_ALIGNMENT(TYPE, ALIGN)                                            \
+-    ((TREE_CODE (TYPE) == ARRAY_TYPE && TYPE_MODE (TREE_TYPE (TYPE)) == QImode	\
++#define LOCAL_ALIGNMENT(TYPE, ALIGN)                                                \
++    (((TREE_CODE (TYPE) == ARRAY_TYPE && TYPE_MODE (TREE_TYPE (TYPE)) == QImode)    \
+      && (ALIGN) < BITS_PER_WORD) ? BITS_PER_WORD : (ALIGN))
+ 
+ /* Define if operations between registers always perform the operation
+@@ -1224,7 +1216,8 @@ extern char microblaze_hard_regno_mode_ok[][FIRST_PSEUDO_REGISTER];
+    this macro is not defined, it is up to the machine-dependent
+    files to allocate such a register (if necessary).  */
+ #define PIC_OFFSET_TABLE_REGNUM         \
+-        (GP_REG_FIRST + MB_ABI_PIC_ADDR_REGNUM)
++        (flag_pic ? (GP_REG_FIRST + MB_ABI_PIC_ADDR_REGNUM) : \
++        INVALID_REGNUM)
+ 
+ #define PIC_FUNCTION_ADDR_REGNUM        \
+         (GP_REG_FIRST + MB_ABI_PIC_FUNC_REGNUM)
+@@ -1425,14 +1418,15 @@ contain (16 bit zero-extended integers).
+ #define SMALL_INT_UNSIGNED(X) ((unsigned HOST_WIDE_INT) (INTVAL (X)) < 0x10000)
+ #define LARGE_INT(X) (((unsigned HOST_WIDE_INT) (INTVAL (X) + 0xffffffff)) \
+ 	== ((unsigned HOST_WIDE_INT) (INTVAL (X) + 0xffffffff)))
++#define PLT_ADDR_P(X) (GET_CODE (X) == UNSPEC && XINT (X,1) == UNSPEC_PLT)
+ /* Test for a valid operand for a call instruction.
+    Don't allow the arg pointer register or virtual regs
+    since they may change into reg + const, which the patterns
+    can't handle yet.  */
+-#define CALL_INSN_OP(X) (CONSTANT_ADDRESS_P (op)	\
+-                         || (GET_CODE (op) == REG && op != arg_pointer_rtx	\
+-                             && ! (REGNO (op) >= FIRST_PSEUDO_REGISTER	\
+-                             && REGNO (op) <= LAST_VIRTUAL_REGISTER)))
++#define CALL_INSN_OP(X) (CONSTANT_ADDRESS_P (X) \
++                         || (GET_CODE (X) == REG && X != arg_pointer_rtx\
++                             && ! (REGNO (X) >= FIRST_PSEUDO_REGISTER	\
++                             && REGNO (X) <= LAST_VIRTUAL_REGISTER)))
+ 
+ /* Deifinition of K changed for MicroBlaze specific code */
+ 
+@@ -1952,13 +1946,6 @@ typedef struct microblaze_args {
+ 
+ #define TRAMPOLINE_ALIGNMENT    32
+ 
+-/* INITIALIZE_TRAMPOLINE calls this library function to flush
+-   program and data caches.  */
+-
+-#ifndef CACHE_FLUSH_FUNC
+-#define CACHE_FLUSH_FUNC "_flush_cache"
+-#endif
+-
+ /* A C statement to initialize the variable parts of a trampoline. 
+    ADDR is an RTX for the address of the trampoline; FNADDR is an
+    RTX for the address of the nested function; STATIC_CHAIN is an
+@@ -1970,14 +1957,6 @@ typedef struct microblaze_args {
+   rtx addr = ADDR;							    \
+   emit_move_insn (gen_rtx_MEM (SImode, plus_constant (addr, 32)), FUNC);   \
+   emit_move_insn (gen_rtx_MEM (SImode, plus_constant (addr, 36)), CHAIN);  \
+-									    \
+-  /* Flush both caches.  We need to flush the data cache in case	    \
+-     the system has a write-back cache.  */				    \
+-  /* ??? Should check the return value for errors.  */			    \
+-  emit_library_call (gen_rtx_SYMBOL_REF (Pmode, CACHE_FLUSH_FUNC),	    \
+-		     0, VOIDmode, 3, addr, Pmode,			    \
+-		     GEN_INT (TRAMPOLINE_SIZE), TYPE_MODE (integer_type_node),\
+-		     GEN_INT (3), TYPE_MODE (integer_type_node));	    \
+ }
+ 
+ /* Addressing modes, and classification of registers for them.  */
+@@ -2231,8 +2210,8 @@ typedef struct microblaze_args {
+ 
+ /* Max number of bytes we can move from memory to memory
+    in one reasonably fast instruction.  */
+-#define MOVE_MAX 4
+-#define MAX_MOVE_MAX 8
++#define MOVE_MAX        4
++#define MAX_MOVE_MAX    8
+ 
+ /* Define this macro as a C expression which is nonzero if
+    accessing less than a word of memory (i.e. a `char' or a
+diff --git a/gcc/config/microblaze/microblaze.md b/gcc/config/microblaze/microblaze.md
+index 50b24e0..78f0c73 100644
+--- a/gcc/config/microblaze/microblaze.md
++++ b/gcc/config/microblaze/microblaze.md
+@@ -2869,7 +2869,7 @@
+                       (match_operand:SI 3 "pc_or_label_operand" "")
+                       (match_operand:SI 4 "pc_or_label_operand" "")))
+   (clobber(reg:SI R_TMP))]
+-  ""
++  "(flag_pic != 2 || GET_CODE (operands[2]) == CONST_INT)"
+   {
+     if (operands[3] != pc_rtx)                                  /* normal jump */
+     {                               
+@@ -2913,7 +2913,7 @@
+                       (match_operand:SI 3 "pc_or_label_operand" "")
+                       (match_operand:SI 4 "pc_or_label_operand" "")))
+   (clobber(reg:SI R_TMP))]
+-  ""
++  "(flag_pic != 2 || GET_CODE (operands[2]) == CONST_INT)"
+   {
+     if (operands[3] != pc_rtx) {                                /* normal jump */
+         switch (GET_CODE (operands[0]))
+-- 
+1.5.3.8
+

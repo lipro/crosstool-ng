@@ -1,0 +1,28 @@
+From f99cf7b9190c3b8b582656d48edc31c9927e7ab5 Mon Sep 17 00:00:00 2001
+Message-Id: <f99cf7b9190c3b8b582656d48edc31c9927e7ab5.1241484427.git.john.williams@petalogix.com>
+In-Reply-To: <930a7bf07b58a3d6a48393a6419b2c958fc9dc2a.1241484427.git.john.williams@petalogix.com>
+References: <930a7bf07b58a3d6a48393a6419b2c958fc9dc2a.1241484427.git.john.williams@petalogix.com>
+From: John Williams <john.williams@petalogix.com>
+Date: Tue, 28 Apr 2009 14:39:16 +1000
+Subject: [PATCH 17/63] microblaze: Replace -( -) with -start -end
+
+---
+ gcc/config/microblaze/microblaze.h |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/gcc/config/microblaze/microblaze.h b/gcc/config/microblaze/microblaze.h
+index 4320aa4..3294bfd 100644
+--- a/gcc/config/microblaze/microblaze.h
++++ b/gcc/config/microblaze/microblaze.h
+@@ -3300,7 +3300,7 @@ void FN ()
+ 
+ /* Don't set the target flags, this is done by the linker script */
+ #undef LIB_SPEC
+-#define LIB_SPEC "%{!pg:%{!nostdlib:%{!Zxl-no-libxil:-( -lxil -lc -lm -) }}} %{pg:%{!nostdlib:-( -lxilprofile -lxil -lc -lm -) }} %{Zxl-no-libxil: %{!nostdlib: -( -lc -lm -) }}"        /* Xilinx: We need to group -lm as well, since some Newlib math functions reference __errno! */
++#define LIB_SPEC "%{!pg:%{!nostdlib:%{!Zxl-no-libxil:-start-group -lxil -lc -lm -end-group }}} %{pg:%{!nostdlib:-start-group -lxilprofile -lxil -lc -lm -end-group }} %{Zxl-no-libxil: %{!nostdlib: -start-group -lc -lm -end-group }}"        /* Xilinx: We need to group -lm as well, since some Newlib math functions reference __errno! */
+ 
+ #undef  ENDFILE_SPEC
+ #define ENDFILE_SPEC "crtend.o%s crtn.o%s"
+-- 
+1.5.3.8
+

@@ -1,0 +1,34 @@
+From b93b38841e4d7e98ada6a7015e6d8cca2fed5e6a Mon Sep 17 00:00:00 2001
+Message-Id: <b93b38841e4d7e98ada6a7015e6d8cca2fed5e6a.1241484427.git.john.williams@petalogix.com>
+In-Reply-To: <930a7bf07b58a3d6a48393a6419b2c958fc9dc2a.1241484427.git.john.williams@petalogix.com>
+References: <930a7bf07b58a3d6a48393a6419b2c958fc9dc2a.1241484427.git.john.williams@petalogix.com>
+From: John Williams <john.williams@petalogix.com>
+Date: Tue, 28 Apr 2009 14:39:07 +1000
+Subject: [PATCH 10/63] microblaze: Fix move_operand predicate
+
+---
+ gcc/config/microblaze/predicates.md |    8 ++++++--
+ 1 files changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/gcc/config/microblaze/predicates.md b/gcc/config/microblaze/predicates.md
+index a9a8afe..94d409e 100644
+--- a/gcc/config/microblaze/predicates.md
++++ b/gcc/config/microblaze/predicates.md
+@@ -76,8 +76,12 @@
+ 
+ ;; Return if OPERAND is valid as a source operand for a move instruction.
+ (define_predicate "move_operand"
+-  (ior (and (match_code "plus")
+-            (not (match_test "(GET_CODE (XEXP (op, 0)) == REG) ^ (GET_CODE (XEXP (op,1)) == REG)")))
++  (and (
++     not (
++       and (match_code "plus")
++           (not (match_test "(GET_CODE (XEXP (op, 0)) == REG) ^ (GET_CODE (XEXP (op,1)) == REG)"))
++	 )
++       )
+        (match_operand 0 "general_operand")))
+ 
+ ;; Return if OPERAND is valid as a source operand for movdi.
+-- 
+1.5.3.8
+

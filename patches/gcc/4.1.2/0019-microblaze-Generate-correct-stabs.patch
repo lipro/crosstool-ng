@@ -1,0 +1,28 @@
+From 7ff43080f4927532f8389948c5c7957369c731de Mon Sep 17 00:00:00 2001
+Message-Id: <7ff43080f4927532f8389948c5c7957369c731de.1241484428.git.john.williams@petalogix.com>
+In-Reply-To: <930a7bf07b58a3d6a48393a6419b2c958fc9dc2a.1241484427.git.john.williams@petalogix.com>
+References: <930a7bf07b58a3d6a48393a6419b2c958fc9dc2a.1241484427.git.john.williams@petalogix.com>
+From: John Williams <john.williams@petalogix.com>
+Date: Tue, 28 Apr 2009 14:39:20 +1000
+Subject: [PATCH 19/63] microblaze: Generate correct stabs
+
+---
+ gcc/config.gcc |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/gcc/config.gcc b/gcc/config.gcc
+index 5f3e29d..8ca18d6 100644
+--- a/gcc/config.gcc
++++ b/gcc/config.gcc
+@@ -1449,7 +1449,7 @@ mcore-*-pe*)
+ 	use_fixproto=yes
+ 	;;
+ microblaze*-*-*)
+-        tm_file="microblaze/microblaze.h"
++        tm_file="dbxelf.h microblaze/microblaze.h"
+         tmake_file=microblaze/t-microblaze
+         ;;
+ mips-sgi-irix[56]*)
+-- 
+1.5.3.8
+

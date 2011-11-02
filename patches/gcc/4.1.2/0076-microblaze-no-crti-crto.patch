@@ -1,0 +1,22 @@
+--- gcc/gcc/config/microblaze/t-microblaze	2009-05-18 13:54:54.000000000 -0600
++++ gcc/gcc/config/microblaze/t-microblaze.new	2009-05-20 10:57:18.000000000 -0600
+@@ -8,14 +8,12 @@ LIB2FUNCS_EXTRA = $(srcdir)/config/micro
+ 		  $(srcdir)/config/microblaze/udivsi3.asm 
+ 
+ # For C++ crtstuff
+-EXTRA_MULTILIB_PARTS = crtbegin$(objext) crtend$(objext) crti$(objext) crtn$(objext) 
+ 
+-# Build multiple copies of ?crt{i,n}.o, one for each target switch.
+-$(T)crti$(objext): $(srcdir)/config/microblaze/crti.s
+-	$(GCC_FOR_TARGET) $(GCC_CFLAGS) $(INCLUDES) $(MULTILIB_CFLAGS) -c $(srcdir)/config/microblaze/crti.s -o $(T)crti$(objext)
+-
+-$(T)crtn$(objext): $(srcdir)/config/microblaze/crtn.s
+-	$(GCC_FOR_TARGET) $(GCC_CFLAGS) $(INCLUDES) $(MULTILIB_CFLAGS) -c $(srcdir)/config/microblaze/crtn.s -o $(T)crtn$(objext)
++# Don't build crti.o and crtn.o for glibc as it causes linker errors
++# in the applications because the gcc crt files are found by the linker before
++# the glibc crt files
++ 
++EXTRA_MULTILIB_PARTS = crtbegin$(objext) crtend$(objext)
+ 
+ # We want fine grained libraries, so use the new code
+ # to build the floating point emulation libraries.

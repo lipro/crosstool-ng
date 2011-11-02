@@ -1,0 +1,532 @@
+From 4ae2f967d36398507ce14364afe3de2c4ed89017 Mon Sep 17 00:00:00 2001
+Message-Id: <4ae2f967d36398507ce14364afe3de2c4ed89017.1241484427.git.john.williams@petalogix.com>
+In-Reply-To: <930a7bf07b58a3d6a48393a6419b2c958fc9dc2a.1241484427.git.john.williams@petalogix.com>
+References: <930a7bf07b58a3d6a48393a6419b2c958fc9dc2a.1241484427.git.john.williams@petalogix.com>
+From: John Williams <john.williams@petalogix.com>
+Date: Tue, 28 Apr 2009 14:39:06 +1000
+Subject: [PATCH 09/63] microblaze: Delete obsolete stuff
+
+---
+ gcc/config/microblaze/microblaze.c   |   90 +++---------------
+ gcc/config/microblaze/microblaze.h   |   18 +---
+ gcc/config/microblaze/microblaze.md  |  171 +---------------------------------
+ gcc/config/microblaze/microblaze.opt |   27 ------
+ 4 files changed, 21 insertions(+), 285 deletions(-)
+
+diff --git a/gcc/config/microblaze/microblaze.c b/gcc/config/microblaze/microblaze.c
+index f716671..8bae6f5 100644
+--- a/gcc/config/microblaze/microblaze.c
++++ b/gcc/config/microblaze/microblaze.c
+@@ -2214,10 +2214,7 @@ expand_block_move (rtx operands[])
+   dest_reg = copy_addr_to_reg (XEXP (orig_dest, 0));
+   src_reg  = copy_addr_to_reg (XEXP (orig_src, 0));
+ 
+-  if (TARGET_MEMCPY) {
+-    block_move_call (dest_reg, src_reg, bytes_rtx);
+-  }
+-  else if (constp && bytes <= 2 * MAX_MOVE_BYTES
++  if (constp && bytes <= 2 * MAX_MOVE_BYTES
+            && align == UNITS_PER_WORD) {
+     move_by_pieces (orig_dest, orig_src, bytes, align, 0);                  
+   }	
+@@ -2989,19 +2986,7 @@ override_options (void)
+   if (TARGET_HALF_PIC)
+     HALF_PIC_INIT ();
+ 
+-  /* -fpic (-KPIC) is the default when TARGET_ABICALLS is defined.  We need
+-     to set flag_pic so that the LEGITIMATE_PIC_OPERAND_P macro will work.  */
+-  /* ??? -non_shared turns off pic code generation, but this is not
+-     implemented.  */
+-  if (TARGET_ABICALLS)
+-  {
+-    microblaze_abicalls = MICROBLAZE_ABICALLS_YES;
+-    flag_pic = 1;
+-    if (microblaze_section_threshold > 0)
+-      warning (0, "-G is incompatible with PIC code which is the default");
+-  }
+-  else
+-    microblaze_abicalls = MICROBLAZE_ABICALLS_NO;
++  microblaze_abicalls = MICROBLAZE_ABICALLS_NO;
+   /* printf("microblaze_abi %d microblaze_abicalls %d\n",
+      microblaze_abi, microblaze_abicalls); */
+   /* -membedded-pic is a form of PIC code suitable for embedded
+@@ -3014,8 +2999,6 @@ override_options (void)
+   if (TARGET_EMBEDDED_PIC)
+   {
+     flag_pic = 1;
+-    if (TARGET_ABICALLS)
+-      warning (0, "-membedded-pic and -mabicalls are incompatible");
+ 
+     if (g_switch_set)
+       warning (0, "-G and -membedded-pic are incompatible");
+@@ -3630,22 +3613,10 @@ microblaze_output_filename (
+   else if (name != current_function_file
+            && strcmp (name, current_function_file) != 0)
+   {
+-    if (inside_function && !TARGET_GAS)
+-    {
+-      if (!file_in_function_warning)
+-      {
+-        file_in_function_warning = 1;
+-        ignore_line_number = 1;
+-        warning (0, "MICROBLAZE ECOFF format does not allow changing filenames within functions with #line");
+-      }
+-    }
+-    else
+-    {
+-      SET_FILE_NUMBER ();
+-      current_function_file = name;
+-      fprintf (stream, "\t.file\t%d", num_source_filenames);
+-      output_quoted_string (stream, name);
+-    }
++    SET_FILE_NUMBER ();
++    current_function_file = name;
++    fprintf (stream, "\t.file\t%d", num_source_filenames);
++    output_quoted_string (stream, name);
+   }
+ }
+ 
+@@ -3734,10 +3705,6 @@ microblaze_asm_file_start (void)
+ #ifndef ABICALLS_ASM_OP
+ #define ABICALLS_ASM_OP ".abicalls"
+ #endif
+-  if (TARGET_ABICALLS)
+-    /* ??? but do not want this (or want pic0) if -non-shared? */
+-    fprintf (asm_out_file, "\t%s\n", ABICALLS_ASM_OP);
+-    
+     
+   /* This code exists so that we can put all externs before all symbol
+      references.  This is necessary for the MICROBLAZE assembler's global pointer
+@@ -4180,8 +4147,7 @@ save_restore_insns (int prologue)
+         insn = emit_move_insn (mem_rtx, reg_rtx);
+         RTX_FRAME_RELATED_P (insn) = 1;
+       }
+-      else if (!TARGET_ABICALLS 
+-               || regno != (PIC_OFFSET_TABLE_REGNUM - GP_REG_FIRST))
++      else if (regno != (PIC_OFFSET_TABLE_REGNUM - GP_REG_FIRST))
+       {
+         insn = emit_move_insn (reg_rtx, mem_rtx);
+         REG_NOTES (insn) = gen_rtx_EXPR_LIST (REG_MAYBE_DEAD, const0_rtx, NULL_RTX);
+@@ -4404,9 +4370,6 @@ microblaze_expand_prologue (void)
+     rtx ptr = stack_pointer_rtx;
+ 
+     /* If we are doing svr4-abi, sp has already been decremented by fsiz. */
+-    if (TARGET_ABICALLS)
+-      offset += fsiz;
+-
+     for (; regno <= GP_ARG_LAST; regno++)
+     {
+       if (offset != 0)
+@@ -4423,14 +4386,11 @@ microblaze_expand_prologue (void)
+   {
+     rtx fsiz_rtx = GEN_INT (fsiz);
+ 
+-    if (!TARGET_ABICALLS )
+-    {
+-      rtx insn = NULL;
+-      insn = emit_insn (gen_subsi3 (stack_pointer_rtx, stack_pointer_rtx,
+-                                    fsiz_rtx));
+-      if (insn)
+-        RTX_FRAME_RELATED_P (insn) = 1;
+-    }
++    rtx insn = NULL;
++    insn = emit_insn (gen_subsi3 (stack_pointer_rtx, stack_pointer_rtx,
++                                  fsiz_rtx));
++    if (insn)
++      RTX_FRAME_RELATED_P (insn) = 1;
+ 
+     /* Handle SUB_RETURN_ADDR_REGNUM specially at first */
+     if (!current_function_is_leaf || interrupt_handler) {
+@@ -4583,9 +4543,6 @@ microblaze_function_epilogue (
+   /* Restore the output file if optimizing the GP (optimizing the GP causes
+      the text to be diverted to a tempfile, so that data decls come before
+      references to the data).  */
+-
+-  if (TARGET_GP_OPT && ! TARGET_GAS)
+-    asm_out_file = asm_out_data_file;
+ }
+ 
+ /* Expand the epilogue into a bunch of separate insns.  */
+@@ -5097,18 +5054,6 @@ microblaze_unique_section (
+        get their address.  */
+     sec = 0;
+   }
+-  else if (TARGET_EMBEDDED_DATA)
+-  {
+-    /* For embedded applications, always put an object in read-only data
+-       if possible, in order to reduce RAM usage.  */
+-
+-    if (decl_readonly_section (decl, reloc))
+-      sec = 1;
+-    else if (size > 0 && size <= microblaze_section_threshold)
+-      sec = 3;
+-    else
+-      sec = 2;
+-  }
+   else
+   {
+     /* For hosted applications, always put an object in small data if
+@@ -5145,16 +5090,7 @@ microblaze_encode_section_info (
+   int new_decl_p ATTRIBUTE_UNUSED)
+ {
+    
+-  if (TARGET_EMBEDDED_DATA						
+-      && (TREE_CODE (DECL) == VAR_DECL				
+-          && TREE_READONLY (DECL) && !TREE_SIDE_EFFECTS (DECL))	
+-      && (!DECL_INITIAL (DECL)					
+-          || TREE_CONSTANT (DECL_INITIAL (DECL))))		
+-  {									
+-    SYMBOL_REF_FLAG (XEXP (rtl, 0)) = 0;		
+-  }									
+-									
+-  else if (TARGET_EMBEDDED_PIC)					
++  if (TARGET_EMBEDDED_PIC)					
+   {									
+     if (TREE_CODE (DECL) == VAR_DECL)				
+       SYMBOL_REF_FLAG (XEXP (rtl, 0)) = 1;		
+diff --git a/gcc/config/microblaze/microblaze.h b/gcc/config/microblaze/microblaze.h
+index e64813b..495688e 100644
+--- a/gcc/config/microblaze/microblaze.h
++++ b/gcc/config/microblaze/microblaze.h
+@@ -169,23 +169,18 @@ extern char *microblaze_no_clearbss;
+ /* Run-time compilation parameters selecting different hardware subsets.  */
+ 
+ /* Macros used in the machine description to test the flags.  */
+-#define TARGET_UNIX_ASM		(!TARGET_GAS)
++#define TARGET_UNIX_ASM		0
+ #define TARGET_MICROBLAZE_AS		TARGET_UNIX_ASM
+ /*#define TARGET_MICROBLAZE_ASM         (target_flags & MASK_LCC_ASM)  */
+ #define TARGET_MICROBLAZE_ASM   0
+ 
+ #define TARGET_GP_OPT            0       /* Vasanth: Cleanup */
+ 
+-/* call memcpy instead of inline code */
+-#define TARGET_MEMCPY		(target_flags & MASK_MEMCPY)
+-
+ /* Optimize for Sdata/Sbss */
+ #define TARGET_XLGP_OPT		(target_flags & MASK_XLGPOPT)
+ 
+ /* This is true if we must enable the assembly language file switching
+    code.  */
+-/* [Changed to False for microblaze {04/17/02}]
+-   #define TARGET_FILE_SWITCHING	(TARGET_GP_OPT && ! TARGET_GAS)*/
+ #define TARGET_FILE_SWITCHING	0
+ 
+ /* We must disable the function end stabs when doing the file switching trick,
+@@ -604,10 +599,6 @@ while (0)
+    that the MICROBLAZE assembler does not choke.  The microblaze-tfile program
+    will correctly put the stab into the object file.  */
+ 
+-/* #define ASM_STABS_OP	((TARGET_GAS) ? ".stabs" : " #.stabs") */
+-/* #define ASM_STABN_OP	((TARGET_GAS) ? ".stabn" : " #.stabn") */
+-/* #define ASM_STABD_OP	((TARGET_GAS) ? ".stabd" : " #.stabd") */
+-
+ #define ASM_STABS_OP	".stabs "  
+ #define ASM_STABN_OP	".stabn " 
+ #define ASM_STABD_OP	".stabd " 
+@@ -859,10 +850,10 @@ while (0)
+ #define BITS_BIG_ENDIAN 0
+ 
+ /* Define this if most significant byte of a word is the lowest numbered. */
+-#define BYTES_BIG_ENDIAN (TARGET_BIG_ENDIAN != 0)
++#define BYTES_BIG_ENDIAN 1
+ 
+ /* Define this if most significant word of a multiword number is the lowest. */
+-#define WORDS_BIG_ENDIAN (TARGET_BIG_ENDIAN != 0)
++#define WORDS_BIG_ENDIAN 1
+ 
+ /* Define this to set the endianness to use in libgcc2.c, which can
+    not depend on target_flags.  */
+@@ -3252,9 +3243,6 @@ do {									 \
+ #define ASM_WEAKEN_LABEL(FILE,NAME) ASM_OUTPUT_WEAK_ALIAS(FILE,NAME,0)
+ #define ASM_OUTPUT_WEAK_ALIAS(FILE,NAME,VALUE)	\
+   do {						\
+-  if (TARGET_GAS)                               \
+-  fputs ("\t.weak\t", FILE);		\
+-  else                                          \
+   fputs ("\t.weakext\t", FILE);		\
+   assemble_name (FILE, NAME);			\
+   if (VALUE)					\
+diff --git a/gcc/config/microblaze/microblaze.md b/gcc/config/microblaze/microblaze.md
+index 63c127c..9ccf2f7 100644
+--- a/gcc/config/microblaze/microblaze.md
++++ b/gcc/config/microblaze/microblaze.md
+@@ -3188,63 +3188,6 @@
+   (set_attr "length"	"2")])
+ 
+ 
+-(define_expand "builtin_setjmp_setup"
+-  [(unspec [(match_operand 0 "register_operand" "r")] 20)]
+-  "TARGET_ABICALLS"
+-  {
+-    if (Pmode == DImode)
+-        emit_insn (gen_builtin_setjmp_setup_64 (operands[0]));
+-    else
+-        emit_insn (gen_builtin_setjmp_setup_32 (operands[0]));
+-    DONE;
+-  }
+-)
+-
+-(define_expand "builtin_setjmp_setup_32"
+-  [(set (mem:SI (plus:SI (match_operand:SI 0 "register_operand" "r")
+-                         (const_int 12)))
+-        (reg:SI 28))]
+-  "TARGET_ABICALLS && ! (Pmode == DImode)"
+-  ""
+-)
+-
+-(define_expand "builtin_setjmp_setup_64"
+-  [(set (mem:DI (plus:DI (match_operand:DI 0 "register_operand" "r")
+-                         (const_int 24)))
+-        (reg:DI 28))]
+-  "TARGET_ABICALLS && Pmode == DImode"
+-  ""
+-)
+-
+-;; For o32/n32/n64, we need to arrange for longjmp to put the 
+-;; target address in t9 so that we can use it for loading $gp.
+-
+-(define_expand "builtin_longjmp"
+-  [(unspec_volatile [(match_operand 0 "register_operand" "r")] 3)]
+-  "TARGET_ABICALLS"
+-  {
+-    /* The elements of the buffer are, in order:  */
+-    int W = (Pmode == DImode ? 8 : 4);
+-    rtx fp = gen_rtx_MEM (Pmode, operands[0]);
+-    rtx lab = gen_rtx_MEM (Pmode, plus_constant (operands[0], 1*W));
+-    rtx stack = gen_rtx_MEM (Pmode, plus_constant (operands[0], 2*W));
+-    rtx gpv = gen_rtx_MEM (Pmode, plus_constant (operands[0], 3*W));
+-    rtx pv = gen_rtx_REG (Pmode, 25);
+-    rtx gp = gen_rtx_REG (Pmode, 28);
+-    
+-    /* This bit is the same as expand_builtin_longjmp.  */
+-    emit_move_insn (hard_frame_pointer_rtx, fp);
+-    emit_move_insn (pv, lab);
+-    emit_stack_restore (SAVE_NONLOCAL, stack, NULL_RTX);
+-    emit_move_insn (gp, gpv);
+-    emit_insn (gen_rtx_USE (VOIDmode, hard_frame_pointer_rtx));
+-    emit_insn (gen_rtx_USE (VOIDmode, stack_pointer_rtx));
+-    emit_insn (gen_rtx_USE (VOIDmode, gp));
+-    emit_indirect_jump (pv);
+-    DONE;
+-  }
+-)
+-
+ ;;----------------------------------------------------------------
+ ;; Function prologue/epilogue and stack allocation
+ ;;----------------------------------------------------------------
+@@ -3388,7 +3331,7 @@
+     if (operands[0])		/* eliminate unused code warnings */
+     {
+         addr = XEXP (operands[0], 0);
+-        if ((GET_CODE (addr) != REG && (!CONSTANT_ADDRESS_P (addr) || TARGET_LONG_CALLS))
++        if ((GET_CODE (addr) != REG && (!CONSTANT_ADDRESS_P (addr) ))
+ 	    || ! call_insn_operand (addr, VOIDmode))
+             XEXP (operands[0], 0) = copy_to_mode_reg (Pmode, addr);
+ 
+@@ -3431,7 +3374,7 @@
+   [(call (mem (match_operand:SI 0 "call_insn_operand" "ri"))
+ 	 (match_operand:SI 1 "" "i"))
+   (clobber (reg:SI R_SR))]
+-  "!TARGET_ABICALLS && !TARGET_LONG_CALLS"
++  ""
+   {
+     register rtx target = operands[0];
+     register rtx target2=gen_rtx_REG (Pmode,GP_REG_FIRST + MB_ABI_SUB_RETURN_ADDR_REGNUM);
+@@ -3452,82 +3395,6 @@
+   (set_attr "mode"	"none")
+   (set_attr "length"	"4")])
+ 
+-(define_insn "call_internal2"
+-  [(call (mem (match_operand 0 "call_insn_operand" "ri"))
+-	 (match_operand 1 "" "i"))
+-  (clobber (match_operand:SI 2 "register_operand" "=d"))]
+-  "TARGET_ABICALLS && !TARGET_LONG_CALLS"
+-  {
+-    register rtx target = operands[0];
+-    /*  fprintf(stderr,"expand \t call_internal2  \n");*/
+-    if (GET_CODE (target) == SYMBOL_REF)
+-    {
+-        if (GET_MODE (target) == SImode)
+-            return "la\t%^,%0\;brlid\t%2,%^";
+-        else
+-            return "dla\t%^,%0\;MICROBLAZEjal\t%2,%^";
+-    }
+-    else if (GET_CODE (target) == CONST_INT)
+-        return "li\t%^,%0\;MICROBLAZEjal\t%2,%^";
+-    else if (REGNO (target) != PIC_FUNCTION_ADDR_REGNUM)
+-        return "move\t%^,%0\;MICROBLAZEjal\t%2,%^";
+-    else
+-        return "MICROBLAZEjal\t%2,%0";
+-  }
+-  [(set_attr "type"	"call")
+-  (set_attr "mode"	"none")
+-  (set_attr "length"	"2")])
+-
+-(define_insn "call_internal3a"
+-  [(call (mem:SI (match_operand:SI 0 "register_operand" "r"))
+-	 (match_operand 1 "" "i"))
+-  (clobber (match_operand:SI 2 "register_operand" "=d"))]
+-  "!(Pmode == DImode) && !TARGET_ABICALLS && TARGET_LONG_CALLS"
+-  "MICROBLAZEjal\t%2,%0"
+-  [(set_attr "type"	"call")
+-  (set_attr "mode"	"none")
+-  (set_attr "length"	"1")])
+-
+-(define_insn "call_internal3b"
+-  [(call (mem:DI (match_operand:DI 0 "register_operand" "r"))
+-	 (match_operand 1 "" "i"))
+-  (clobber (match_operand:SI 2 "register_operand" "=d"))]
+-  "Pmode == DImode && !TARGET_ABICALLS && TARGET_LONG_CALLS"
+-  "MICROBLAZEjal\t%2,%0"
+-  [(set_attr "type"	"call")
+-  (set_attr "mode"	"none")
+-  (set_attr "length"	"1")])
+-
+-(define_insn "call_internal4a"
+-  [(call (mem:SI (match_operand:SI 0 "register_operand" "r"))
+-	 (match_operand 1 "" "i"))
+-  (clobber (match_operand:SI 2 "register_operand" "=d"))]
+-  "!(Pmode == DImode) && TARGET_ABICALLS && TARGET_LONG_CALLS"
+-  {
+-    if (REGNO (operands[0]) != PIC_FUNCTION_ADDR_REGNUM)
+-        return "move\t%^,%0\;MICROBLAZEjal\t%2,%^";
+-    else
+-        return "MICROBLAZEjal\t%2,%0";
+-  }
+-  [(set_attr "type"	"call")
+-  (set_attr "mode"	"none")
+-  (set_attr "length"	"2")])
+-
+-(define_insn "call_internal4b"
+-  [(call (mem:DI (match_operand:DI 0 "register_operand" "r"))
+-	 (match_operand 1 "" "i"))
+-  (clobber (match_operand:SI 2 "register_operand" "=d"))]
+-  "Pmode == DImode && TARGET_ABICALLS && TARGET_LONG_CALLS"
+-  {
+-    if (REGNO (operands[0]) != PIC_FUNCTION_ADDR_REGNUM)
+-        return "move\t%^,%0\;MICROBLAZEjal\t%2,%^";
+-    else
+-        return "MICROBLAZEjal\t%2,%0";
+-  }
+-  [(set_attr "type"	"call")
+-  (set_attr "mode"	"none")
+-  (set_attr "length"	"2")])
+-
+ ;; calls.c now passes a fourth argument, make saber happy
+ 
+ (define_expand "call_value"
+@@ -3542,7 +3409,7 @@
+     if (operands[0])		/* eliminate unused code warning */
+     {
+         addr = XEXP (operands[1], 0);
+-        if ((GET_CODE (addr) != REG && (!CONSTANT_ADDRESS_P (addr) || TARGET_LONG_CALLS))
++        if ((GET_CODE (addr) != REG && (!CONSTANT_ADDRESS_P (addr) ))
+             || ! call_insn_operand (addr, VOIDmode))
+             XEXP (operands[1], 0) = copy_to_mode_reg (Pmode, addr);
+ 
+@@ -3595,7 +3462,7 @@
+                   (call (mem (match_operand 1 "call_insn_operand" "ri"))
+                         (match_operand 2 "" "i")))
+              (clobber (match_operand:SI 3 "register_operand" "=d"))])]
+-  "!TARGET_ABICALLS && !TARGET_LONG_CALLS"
++  ""
+   {
+     register rtx target = operands[1];
+     register rtx target2=gen_rtx_REG (Pmode,GP_REG_FIRST + MB_ABI_SUB_RETURN_ADDR_REGNUM);
+@@ -3649,7 +3516,7 @@
+         (call (mem (match_operand 1 "call_insn_operand" "ri"))
+               (match_operand 2 "" "i")))
+   (clobber (match_operand:SI 3 "register_operand" "=d"))]
+-  "!TARGET_ABICALLS && !TARGET_LONG_CALLS"
++  ""
+   {
+     register rtx target = operands[1];
+ 
+@@ -3663,34 +3530,6 @@
+    (set_attr "length"	"4")]
+ )
+ 
+-(define_insn "call_value_internal2"
+-  [(set (match_operand 0 "register_operand" "=df")
+-        (call (mem (match_operand 1 "call_insn_operand" "ri"))
+-              (match_operand 2 "" "i")))
+-  (clobber (match_operand:SI 3 "register_operand" "=d"))]
+-  "TARGET_ABICALLS && !TARGET_LONG_CALLS"
+-  {
+-    register rtx target = operands[1];
+-
+-    if (GET_CODE (target) == SYMBOL_REF)
+-    {
+-        if (GET_MODE (target) == SImode)
+-            return "la\t%^,%1\;MICROBLAZEjal\t%3,%^";
+-        else
+-            return "dla\t%^,%1\;MICROBLAZEjal\t%3,%^";
+-    }
+-    else if (GET_CODE (target) == CONST_INT)
+-        return "li\t%^,%1\;MICROBLAZEjal\t%3,%^";
+-    else if (REGNO (target) != PIC_FUNCTION_ADDR_REGNUM)
+-        return "move\t%^,%1\;MICROBLAZEjal\t%3,%^";
+-    else
+-        return "MICROBLAZEjal\t%3,%1";
+-  }
+-  [(set_attr "type"	"call")
+-  (set_attr "mode"	"none")
+-  (set_attr "length"	"2")])
+-
+-
+ 
+ ;; Call subroutine returning any type.
+ (define_expand "untyped_call"
+diff --git a/gcc/config/microblaze/microblaze.opt b/gcc/config/microblaze/microblaze.opt
+index 1b254a6..97649df 100644
+--- a/gcc/config/microblaze/microblaze.opt
++++ b/gcc/config/microblaze/microblaze.opt
+@@ -51,10 +51,6 @@ mxl-stack-check
+ Target Mask(STACK_CHECK)
+ Check Stack at runtime
+ 
+-mmemcpy
+-Target Joined Mask(MEMCPY)
+-Don't optimize block moves
+-
+ mxl-gp-opt
+ Target Mask(XLGPOPT)
+ Use GP relative sdata/sbss sections[for xlnx]
+@@ -105,33 +101,10 @@ mno-clearbss
+ Target RejectNegative
+ Clear the BSS to zero and place zero initialized in BSS
+ 
+-mgas
+-Target Mask(GAS)
+-Use gas instead of MicroBlaze as
+-
+-mabicalls
+-Target Mask(ABICALLS)
+-Emit .abicalls/.cprestore/.cpload
+-
+ mhalf-pic
+ Target Mask(HALF_PIC)
+ Emit OSF-style pic refs to externs
+ 
+-mlong-calls
+-Target Mask(LONG_CALLS)
+-Always call through register
+-
+ membedded-pic
+ Target Mask(EMBEDDED_PIC)
+ -membedded-pic is a form of PIC code suitable for embedded systems
+-
+-membedded-data
+-Target Mask(EMBEDDED_DATA)
+-Reduce RAM usage, not fast code
+-
+-mbig-endian
+-Target RejectNegative Mask(BIG_ENDIAN)
+-Generate big endian code
+-
+-
+-
+-- 
+1.5.3.8
+

@@ -1,0 +1,1040 @@
+From 05714631fead94ae16be5a015c6f7b4ff9b7a9a7 Mon Sep 17 00:00:00 2001
+Message-Id: <05714631fead94ae16be5a015c6f7b4ff9b7a9a7.1241484427.git.john.williams@petalogix.com>
+In-Reply-To: <930a7bf07b58a3d6a48393a6419b2c958fc9dc2a.1241484427.git.john.williams@petalogix.com>
+References: <930a7bf07b58a3d6a48393a6419b2c958fc9dc2a.1241484427.git.john.williams@petalogix.com>
+From: John Williams <john.williams@petalogix.com>
+Date: Tue, 28 Apr 2009 14:38:56 +1000
+Subject: [PATCH 02/63] microblaze: Port patch
+
+---
+ gcc/config/microblaze/microblaze.c   |  346 +---------------------------------
+ gcc/config/microblaze/microblaze.h   |  245 ++----------------------
+ gcc/config/microblaze/microblaze.md  |    3 +-
+ gcc/config/microblaze/microblaze.opt |  106 +++++++++++
+ gcc/config/microblaze/predicates.md  |  100 ++++++++++
+ 5 files changed, 228 insertions(+), 572 deletions(-)
+ create mode 100644 gcc/config/microblaze/microblaze.opt
+ create mode 100644 gcc/config/microblaze/predicates.md
+
+diff --git a/gcc/config/microblaze/microblaze.c b/gcc/config/microblaze/microblaze.c
+index 7dc5190..e6ebd9c 100644
+--- a/gcc/config/microblaze/microblaze.c
++++ b/gcc/config/microblaze/microblaze.c
+@@ -555,17 +555,6 @@ static int microblaze_save_volatiles (tree);
+ 
+ struct gcc_target targetm = (struct gcc_target)TARGET_INITIALIZER;
+ 
+-/* Return truth value of whether OP can be used as an operands in arithmetic */
+-
+-int
+-arith_operand (rtx op, enum machine_mode mode)
+-{
+-  if (GET_CODE (op) == CONST_INT)
+-    return 1;
+-
+-  return register_operand (op, mode);
+-}
+-
+ /* Return truth value of whether OP is a integer which fits in 16 bits  */
+ 
+ int
+@@ -574,104 +563,6 @@ small_int (rtx op, enum machine_mode mode ATTRIBUTE_UNUSED)
+   return (GET_CODE (op) == CONST_INT && SMALL_INT (op));
+ }
+ 
+-
+-/* Return truth value of whether OP is a register or the constant 0 */
+-
+-int
+-reg_or_0_operand (rtx op, enum machine_mode mode)
+-{
+-  switch (GET_CODE (op))
+-  {
+-    case CONST_INT:
+-      return INTVAL (op) == 0;
+-
+-    case CONST_DOUBLE:
+-      return op == CONST0_RTX (mode);
+-
+-    case REG:
+-    case SUBREG:
+-      return register_operand (op, mode);
+-
+-    default:
+-      break;
+-  }
+-
+-  return 0;
+-}
+-
+-/* Return truth value if a CONST_DOUBLE is ok to be a legitimate constant.  */
+-
+-int
+-microblaze_const_double_ok (rtx op, enum machine_mode mode)
+-{
+-  REAL_VALUE_TYPE d;
+-
+-  if (GET_CODE (op) != CONST_DOUBLE)
+-    return 0;
+-
+-  if (mode == VOIDmode)
+-    return 1;
+-
+-  if (mode != SFmode && mode != DFmode)
+-    return 0;
+-
+-  if (op == CONST0_RTX (mode))
+-    return 1;
+-
+-  REAL_VALUE_FROM_CONST_DOUBLE (d, op);
+-
+-  if (REAL_VALUE_ISNAN (d))
+-    return FALSE;
+-
+-  if (REAL_VALUE_NEGATIVE (d))
+-    d = REAL_VALUE_NEGATE (d);
+-
+-  if (mode == DFmode)
+-  {
+-    if (REAL_VALUES_LESS (d, dfhigh)
+-        && REAL_VALUES_LESS (dflow, d))
+-      return 1;
+-  }
+-  else
+-  {
+-    if (REAL_VALUES_LESS (d, sfhigh)
+-        && REAL_VALUES_LESS (sflow, d))
+-      return 1;
+-  }
+-
+-  return 0;
+-}
+-
+-/* Accept the floating point constant 1 in the appropriate mode.  */
+-
+-int
+-const_float_1_operand (rtx op, enum machine_mode mode)
+-{
+-  REAL_VALUE_TYPE d;
+-  static REAL_VALUE_TYPE onedf;
+-  static REAL_VALUE_TYPE onesf;
+-  static int one_initialized;
+-
+-  if (GET_CODE (op) != CONST_DOUBLE
+-      || mode != GET_MODE (op)
+-      || (mode != DFmode && mode != SFmode))
+-    return 0;
+-
+-  REAL_VALUE_FROM_CONST_DOUBLE (d, op);
+-
+-  if (! one_initialized)
+-  {
+-    onedf = REAL_VALUE_ATOF ("1.0", DFmode);
+-    onesf = REAL_VALUE_ATOF ("1.0", SFmode);
+-    one_initialized = 1;
+-  }
+-
+-  if (mode == DFmode)
+-    return REAL_VALUES_EQUAL (d, onedf);
+-  else
+-    return REAL_VALUES_EQUAL (d, onesf);
+-}
+-
+ /* Return truth value if a memory operand fits in a single instruction
+    (ie, register + small offset) or (register + register).  */
+ 
+@@ -726,85 +617,6 @@ simple_memory_operand (rtx op, enum machine_mode mode ATTRIBUTE_UNUSED)
+   return 0;
+ }
+ 
+-/* This predicate is for testing if the operand will definitely need an imm instruction */
+-
+-int
+-imm_required_operand (rtx op, enum machine_mode mode)
+-{
+-
+-  rtx addr,plus0,plus1;
+-
+-  if (GET_CODE (op) != MEM
+-      || ! memory_operand (op, mode))
+-  {
+-    /* During reload, we accept a pseudo register if it has an
+-       appropriate memory address.  If we don't do this, we will
+-       wind up reloading into a register, and then reloading that
+-       register from memory, when we could just reload directly from
+-       memory.  */
+-    if (reload_in_progress
+-        && GET_CODE (op) == REG
+-        && REGNO (op) >= FIRST_PSEUDO_REGISTER
+-        && reg_renumber[REGNO (op)] < 0
+-        && reg_equiv_mem[REGNO (op)] != 0
+-        && double_memory_operand (reg_equiv_mem[REGNO (op)], mode))
+-      return 1;
+-    return 0;
+-  }
+-
+-  /* Make sure that 4 added to the address is a valid memory address.
+-     This essentially just checks for overflow in an added constant.  */
+-
+-  addr = XEXP (op, 0);
+-
+-  switch (GET_CODE (addr))
+-  {
+-    case REG:
+-      return 0;
+-
+-    case CONST_INT:
+-      if (!SMALL_INT(addr))
+-        return 1;
+-      else
+-        return 0;
+-
+-      /*    case CONST_INT:
+-            return SMALL_INT (op);
+-      */
+-    case PLUS:
+-      plus0 = XEXP (addr, 0);
+-      plus1 = XEXP (addr, 1);
+-      if (GET_CODE (plus0) == REG
+-          && GET_CODE (plus1) == CONST_INT && SMALL_INT (plus1)) {
+-        return 0;
+-      }
+-      
+-
+-      else if (GET_CODE (plus1) == REG  && GET_CODE (plus0) == CONST_INT){
+-        return 0;
+-      }
+-      
+-
+-      else
+-        return 1;
+-
+-    case SYMBOL_REF:
+-      return 1;
+-
+-    default:
+-      break;
+-  }
+-
+-  if (CONSTANT_ADDRESS_P (addr))
+-    return 1;
+-
+-  return memory_address_p ((GET_MODE_CLASS (mode) == MODE_INT
+-                            ? SImode
+-                            : SFmode),
+-                           plus_constant(addr, 4)); 
+-
+-}
+-
+ /* Return nonzero for a memory address that can be used to load or store
+    a doubleword.  */
+ 
+@@ -846,145 +658,6 @@ double_memory_operand (rtx op, enum machine_mode mode)
+ }
+ 
+ 
+-/* Return nonzero if the code of this rtx pattern is EQ or NE.  */
+-
+-int
+-equality_op (rtx op, enum machine_mode mode)
+-{
+-  if (mode != GET_MODE (op))
+-    return 0;
+-
+-  return GET_CODE (op) == EQ || GET_CODE (op) == NE;
+-}
+-
+-int
+-lessthan_op (rtx op, enum machine_mode mode)
+-{
+-  if (mode != GET_MODE (op))
+-    return 0;
+-
+-  return GET_CODE (op) == LT || GET_CODE (op) == LTU;
+-}
+-
+-/* Return nonzero if the code is a relational operations (EQ, LE, etc.) */
+-
+-int
+-cmp_op (rtx op, enum machine_mode mode)
+-{
+-  if (mode != GET_MODE (op))
+-    return 0;
+-
+-  return GET_RTX_CLASS (GET_CODE (op)) == '<';
+-}
+-
+-/* Returns nonzero, if the operator is unsigned compare op */
+-int
+-unsigned_cmp_op (rtx op, enum machine_mode mode)
+-{
+-  if (mode != GET_MODE (op))
+-    return 0;
+-
+-  return ( GET_RTX_CLASS (GET_CODE (op)) == '<'   && 
+-           (GET_CODE(op) == GTU ||
+-            GET_CODE(op) == LTU ||
+-            GET_CODE(op) == LEU ||
+-            GET_CODE(op) == GEU));
+-}
+-
+-/* Return nonzero , if the operator is signed compare op */
+-/* the check for class might not be necessary */
+-int
+-signed_cmp_op (rtx op, enum machine_mode mode)
+-{
+-  if (mode != GET_MODE (op))
+-    return 0;
+-
+-  return ( GET_RTX_CLASS (GET_CODE (op)) == '<'   && 
+-           (GET_CODE(op) == GT ||
+-            GET_CODE(op) == LT ||
+-            GET_CODE(op) == LE ||
+-            GET_CODE(op) == GE ||
+-            GET_CODE(op) == EQ ||
+-            GET_CODE(op) == NE ));
+-}
+-
+-/* Return nonzero if the operand is either the PC or a label_ref.  */
+-
+-int
+-pc_or_label_operand (rtx op, enum machine_mode mode ATTRIBUTE_UNUSED)
+-{
+-  if (op == pc_rtx)
+-    return 1;
+-
+-  if (GET_CODE (op) == LABEL_REF)
+-    return 1;
+-
+-  if ((GET_CODE (op) == SYMBOL_REF) && !(strcmp ((XSTR (op, 0)), "_stack_overflow_exit")))
+-    return 1;
+-
+-  return 0;
+-}
+-
+-/* Test for a valid operand for a call instruction.
+-   Don't allow the arg pointer register or virtual regs
+-   since they may change into reg + const, which the patterns
+-   can't handle yet.  */
+-
+-int
+-call_insn_operand (rtx op, enum machine_mode mode ATTRIBUTE_UNUSED)
+-{
+-  return (CONSTANT_ADDRESS_P (op)
+-          || (GET_CODE (op) == REG && op != arg_pointer_rtx
+-              && ! (REGNO (op) >= FIRST_PSEUDO_REGISTER
+-                    && REGNO (op) <= LAST_VIRTUAL_REGISTER)));
+-}
+-
+-/* Return nonzero if OPERAND is valid as a source operand for a move
+-   instruction.  */
+-
+-int
+-move_operand (rtx op, enum machine_mode mode)
+-{
+-  /* Accept any general operand after reload has started; doing so
+-     avoids losing if reload does an in-place replacement of a register
+-     with a SYMBOL_REF or CONST.  */
+-
+-  /* FIXME: What is this? Some temporary hack. 
+-     Check if we are losing out on optimal code */
+-  /* GCC 3.4.1 
+-   * Special check added 
+-   * Some of the aggressive operations are causing problems 
+-   */
+-  if ( GET_CODE(op) == PLUS )
+-    if (!(( GET_CODE(XEXP (op,0)) == REG ) ^ (GET_CODE (XEXP (op,1)) == REG)))
+-      return 0;
+-    
+-  return (general_operand (op, mode));
+-}
+-
+-
+-/* Return nonzero if OPERAND is valid as a source operand for movdi.
+-   This accepts not only general_operand, but also sign extended
+-   constants and registers.  We need to accept sign extended constants
+-   in case a sign extended register which is used in an expression,
+-   and is equivalent to a constant, is spilled.  */
+-
+-int
+-movdi_operand (rtx op, enum machine_mode mode)
+-{
+-  return (general_operand (op, mode));
+-}
+-
+-int 
+-immediate32_operand (rtx op, enum machine_mode mode ATTRIBUTE_UNUSED)
+-{
+-  int temp = INTVAL(op) & 0xffffffff;
+-  if ((GET_CODE (op) == CONST_INT) && 
+-      (temp == INTVAL(op)))
+-    return 1;
+-  return 0;
+-}
+-
+ /* This hook is called many times during insn scheduling. If the hook 
+    returns nonzero, the automaton based pipeline description is used 
+    for insn scheduling. Otherwise the traditional pipeline description 
+@@ -3865,10 +3538,9 @@ microblaze_output_filename (stream, name)
+     first_time = 0;
+     SET_FILE_NUMBER ();
+     current_function_file = name;
+-    ASM_OUTPUT_FILENAME (stream, num_source_filenames, name);
+-    /* This tells microblaze-tfile that stabs will follow.  */
+-    if (!TARGET_GAS && write_symbols == DBX_DEBUG)
+-      fprintf (stream, "\t#@stabs\n");
++    fprintf (stream, "\t.file\t%d ", num_source_filenames);
++    output_quoted_string (stream, name);
++    putc ('\n', stream);
+   }
+ 
+   else if (write_symbols == DBX_DEBUG)
+@@ -4460,7 +4132,7 @@ microblaze_function_prologue (file, size)
+ 
+ #ifdef SDB_DEBUGGING_INFO
+   if (debug_info_level != DINFO_LEVEL_TERSE && write_symbols == SDB_DEBUG)
+-    ASM_OUTPUT_SOURCE_LINE (file, DECL_SOURCE_LINE (current_function_decl));
++    microblaze_output_lineno (file, DECL_SOURCE_LINE (current_function_decl));
+ #endif
+ #endif
+   inside_function = 1;
+@@ -5014,16 +4686,6 @@ machine_dependent_reorg ()
+ 
+ }
+ 
+-/* Return nonzero if X is a SIGN or ZERO extend operator.  */
+-int
+-extend_operator (x, mode)
+-  rtx x;
+-  enum machine_mode mode ATTRIBUTE_UNUSED;
+-{
+-  enum rtx_code code = GET_CODE (x);
+-  return code == SIGN_EXTEND || code == ZERO_EXTEND;
+-}
+-
+ /* Accept any operator that can be used to shift the high half of the
+    input value to the lower half, suitable for truncation.  The
+    remainder (the lower half of the input, and the upper half of the
+diff --git a/gcc/config/microblaze/microblaze.h b/gcc/config/microblaze/microblaze.h
+index 07afa3d..7cdd1ac 100644
+--- a/gcc/config/microblaze/microblaze.h
++++ b/gcc/config/microblaze/microblaze.h
+@@ -314,70 +314,6 @@ extern char *microblaze_no_clearbss;
+   { "-xl-no-libxil", "-Zxl-no-libxil" }
+ 
+ 
+-/* Macro to define tables used to set the flags.
+-   This is a list in braces of pairs in braces,
+-   each pair being { "NAME", VALUE }
+-   where VALUE is the bits to set or minus the bits to clear.
+-   An empty string NAME is used to identify the default VALUE.  */
+-
+-#define TARGET_SWITCHES							\
+-{									\
+-  {"xl-soft-mul",	  MASK_SOFT_MUL,				\
+-     "Use the soft multiply emulation"},				\
+-  {"no-xl-soft-mul",	  -MASK_SOFT_MUL,				\
+-     "Use the hardware multiplier instead of emulation"},		\
+-  {"xl-soft-div",	  MASK_SOFT_DIV,				\
+-     "Use the soft divide emulation"},                                  \
+-  {"no-xl-soft-div",	  -MASK_SOFT_DIV,				\
+-     "Use the hardware divider instead of emulation"},	         	\
+-  {"xl-barrel-shift",	  MASK_BARREL_SHIFT,				\
+-     "Use the hardware barrel shifter instead of emulation"},           \
+-  {"soft-float",	  MASK_SOFT_FLOAT,				\
+-     "Use software floating point"},					\
+-  {"hard-float",          -MASK_SOFT_FLOAT,                             \
+-     "Don't use software floating point"},                              \
+-  {"xl-pattern-compare",  MASK_PATTERN_COMPARE,                         \
+-     "Use pattern compare instructions"},                               \
+-  {"small-divides",	  MASK_SMALL_DIVIDES,				\
+-     "Use table lookup optimization for small signed integer divisions"},\
+-  {"xl-stack-check",	  MASK_STACK_CHECK,				\
+-     "Check Stack at runtime"},						\
+-  {"memcpy",		  MASK_MEMCPY,					\
+-     "Don't optimize block moves"},					\
+-  {"no-memcpy",		 -MASK_MEMCPY,					\
+-     "Optimize block moves"},						\
+-  {"xl-gp-opt",		 MASK_XLGPOPT,					\
+-     "Use GP relative sdata/sbss sections[for xlnx]"},			\
+-  {"no-xl-gp-opt",	 -MASK_XLGPOPT,			 	        \
+-     "Use GP relative sdata/sbss sections[for xlnx]"},			\
+-  {"stats",		  MASK_STATS,					\
+-     "Output compiler statistics"},					\
+-  {"no-stats",		 -MASK_STATS,					\
+-     "Don't output compiler statistics"},				\
+-  {"debug",		  MASK_DEBUG,					\
+-     NULL},								\
+-  {"debuga",		  MASK_DEBUG_A,					\
+-     NULL},								\
+-  {"debugb",		  MASK_DEBUG_B,					\
+-     NULL},								\
+-  {"debugd",		  MASK_DEBUG_D,					\
+-     NULL},								\
+-  {"debuge",		  MASK_DEBUG_E,					\
+-     NULL},								\
+-  {"debugf",		  MASK_DEBUG_F,					\
+-     NULL},								\
+-  {"debugg",		  MASK_DEBUG_G,					\
+-     NULL},								\
+-  {"debugh",		  MASK_DEBUG_H,					\
+-     NULL},								\
+-  {"debugi",		  MASK_DEBUG_I,					\
+-     NULL},								\
+-  {"",			  (TARGET_DEFAULT				\
+-			   | TARGET_CPU_DEFAULT				\
+-			   | TARGET_ENDIAN_DEFAULT),			\
+-     NULL},								\
+-}     
+-
+ /* Default target_flags if no switches are specified  */
+ #define TARGET_DEFAULT      (0)
+ 
+@@ -415,32 +351,6 @@ extern char *microblaze_no_clearbss;
+ #endif
+ #endif
+ 
+-/* This macro is similar to `TARGET_SWITCHES' but defines names of
+-   command options that have values.  Its definition is an
+-   initializer with a subgrouping for each command option.
+-
+-   Each subgrouping contains a string constant, that defines the
+-   fixed part of the option name, and the address of a variable. 
+-   The variable, type `char *', is set to the variable part of the
+-   given option if the fixed part matches.  The actual option name
+-   is made by appending `-m' to the specified name.
+-
+-   Here is an example which defines `-mshort-data-NUMBER'.  If the
+-   given option is `-mshort-data-512', the variable `m88k_short_data'
+-   will be set to the string `"512"'.
+-
+-   extern char *m88k_short_data;
+-   #define TARGET_OPTIONS { { "short-data-", &m88k_short_data } }  */
+-
+-#define TARGET_OPTIONS                                                                  \
+-{                                                                                       \
+-  {"cpu=",  &microblaze_select.cpu,                                                     \
+-     N_("Use features of and schedule code for given CPU"), NULL},                      \
+-  {"tune=", &microblaze_select.tune,                                                    \
+-     N_("Schedule code for given CPU"), NULL},                                          \
+-  {"no-clearbss", &microblaze_no_clearbss,                                              \
+-     N_("Do not clear the BSS to zero and do not place zero initialized in BSS"), "yes"}\
+-}
+ 
+ /* Macros to decide whether certain features are available or not,
+    depending on the instruction set architecture level.  */
+@@ -1093,7 +1003,6 @@ while (0)
+    target machine.  If you don't define this, the default is one
+    word.  */
+ #define LONG_TYPE_SIZE          32
+-#define MAX_LONG_TYPE_SIZE      64
+ 
+ /* A C expression for the size in bits of the type `long long' on the
+    target machine.  If you don't define this, the default is two
+@@ -1206,14 +1115,6 @@ while (0)
+ 	|| TREE_CODE (TYPE) == UNION_TYPE				\
+ 	|| TREE_CODE (TYPE) == RECORD_TYPE)) ? BITS_PER_WORD : (ALIGN))
+ 
+-
+-/* Define this macro if an argument declared as `char' or `short' in a
+-   prototype should actually be passed as an `int'.  In addition to
+-   avoiding errors in certain cases of mismatch, it also makes for
+-   better code on certain machines. */
+-
+-#define PROMOTE_PROTOTYPES 1
+-
+ /* Define if operations between registers always perform the operation
+    on the full register even if a narrower mode is specified.  */
+ #define WORD_REGISTER_OPERATIONS
+@@ -1240,15 +1141,6 @@ while (0)
+       && GET_MODE_SIZE (MODE) < 4)		\
+     (MODE) = SImode;
+ 
+-/* Define this if function arguments should also be promoted using the above
+-   procedure.  */
+-
+-#define PROMOTE_FUNCTION_ARGS
+-
+-/* Likewise, if the function return value is promoted.  */
+-
+-#define PROMOTE_FUNCTION_RETURN
+-
+ /* Standard register usage.  */
+ 
+ /* Number of actual hardware registers.
+@@ -1436,11 +1328,6 @@ extern char microblaze_hard_regno_mode_ok[][FIRST_PSEUDO_REGISTER];
+    function address than to call an address kept in a register.  */
+ #define NO_FUNCTION_CSE                 1
+ 
+-/* Define this macro if it is as good or better for a function to
+-   call itself with an explicit address than to call an address
+-   kept in a register.  */
+-#define NO_RECURSIVE_FUNCTION_CSE       1
+-
+ /* The register number of the register used to address a table of
+    static data addresses in memory.  In some cases this register is
+    defined by a processor's "application binary interface" (ABI). 
+@@ -1648,6 +1535,16 @@ contain (16 bit zero-extended integers).
+ 
+ #define SMALL_INT(X) ((unsigned HOST_WIDE_INT) (INTVAL (X) + 0x8000) < 0x10000)
+ #define SMALL_INT_UNSIGNED(X) ((unsigned HOST_WIDE_INT) (INTVAL (X)) < 0x10000)
++#define LARGE_INT(X) (((unsigned HOST_WIDE_INT) (INTVAL (X) + 0xffffffff)) \
++	== ((unsigned HOST_WIDE_INT) (INTVAL (X) + 0xffffffff)))
++/* Test for a valid operand for a call instruction.
++   Don't allow the arg pointer register or virtual regs
++   since they may change into reg + const, which the patterns
++   can't handle yet.  */
++#define CALL_INSN_OP(X) (CONSTANT_ADDRESS_P (op)	\
++                         || (GET_CODE (op) == REG && op != arg_pointer_rtx	\
++                             && ! (REGNO (op) >= FIRST_PSEUDO_REGISTER	\
++                             && REGNO (op) <= LAST_VIRTUAL_REGISTER)))
+ 
+ /* Deifinition of K changed for MicroBlaze specific code */
+ 
+@@ -2102,13 +1999,6 @@ typedef struct microblaze_args {
+ #define FUNCTION_ARG(CUM, MODE, TYPE, NAMED) \
+   function_arg( &CUM, MODE, TYPE, NAMED)
+ 
+-/* For an arg passed partly in registers and partly in memory,
+-   this is the number of registers used.
+-   For args passed entirely in registers or entirely in memory, zero. */
+-
+-#define FUNCTION_ARG_PARTIAL_NREGS(CUM, MODE, TYPE, NAMED) \
+-  function_arg_partial_nregs (&CUM, MODE, TYPE, NAMED)
+-
+ /* Tell prologue and epilogue if register REGNO should be saved / restored.  */
+ 
+ /* Added the link register for functions which are not leaf */
+@@ -2358,17 +2248,6 @@ typedef struct microblaze_args {
+ 
+ #define LEGITIMATE_PIC_OPERAND_P(X)  (! pic_address_needs_scratch (X))
+ 
+-/* Nonzero if the constant value X is a legitimate general operand.
+-   It is given that X satisfies CONSTANT_P or is a CONST_DOUBLE.
+-
+-   At present, GAS doesn't understand li.[sd], so don't allow it
+-   to be generated at present.  Also, the MICROBLAZE assembler does not
+-   grok li.d Infinity.  */
+-
+-#define LEGITIMATE_CONSTANT_P(X)				\
+-  (GET_CODE (X) != CONST_DOUBLE					\
+-    || microblaze_const_double_ok (X, GET_MODE (X)))
+-
+ /* Try a machine-dependent way of reloading an illegitimate address
+    operand.  If we find one, push the reload and jump to WIN.  This
+    macro is used in only one place: `find_reloads_address' in reload.c.
+@@ -2519,10 +2398,6 @@ typedef struct microblaze_args {
+ 
+ #define FUNCTION_MODE   (SImode)
+ 
+-/* Define TARGET_MEM_FUNCTIONS if we want to use calls to memcpy and
+-   memset, instead of the BSD functions bcopy and bzero.  */
+-#define TARGET_MEM_FUNCTIONS
+-
+ /* GCC 3.4.1
+  * Removed CONST_COSTS. Find a way to get behavior back ???
+  */
+@@ -2637,54 +2512,6 @@ condition code register.  */
+   if (REG_NOTE_KIND (LINK) != 0)					\
+     (COST) = 0; /* Anti or output dependence.  */
+ 
+-/* Optionally define this if you have added predicates to
+-   `MACHINE.c'.  This macro is called within an initializer of an
+-   array of structures.  The first field in the structure is the
+-   name of a predicate and the second field is an array of rtl
+-   codes.  For each predicate, list all rtl codes that can be in
+-   expressions matched by the predicate.  The list should have a
+-   trailing comma.  Here is an example of two entries in the list
+-   for a typical RISC machine:
+-
+-   #define PREDICATE_CODES \
+-   {"gen_reg_rtx_operand", {SUBREG, REG}},  \
+-   {"reg_or_short_cint_operand", {SUBREG, REG, CONST_INT}},
+-
+-   Defining this macro does not affect the generated code (however,
+-   incorrect definitions that omit an rtl code that may be matched
+-   by the predicate can cause the compiler to malfunction). 
+-   Instead, it allows the table built by `genrecog' to be more
+-   compact and efficient, thus speeding up the compiler.  The most
+-   important predicates to include in the list specified by this
+-   macro are thoses used in the most insn patterns.  */
+-
+-#define PREDICATE_CODES							\
+-  {"arith_operand",		{ REG, CONST_INT, SUBREG }},		\
+-  {"reg_or_0_operand",		{ REG, CONST_INT, CONST_DOUBLE, SUBREG }}, \
+-  {"small_int",			{ CONST_INT }},				\
+-  {"immediate32_operand",	{ CONST_INT }},				\
+-  {"microblaze_const_double_ok",	{ CONST_DOUBLE }},		\
+-  {"const_float_1_operand",	{ CONST_DOUBLE }},			\
+-  {"simple_memory_operand",	{ MEM, SUBREG }},			\
+-  {"imm_required_operand",	{ MEM, SUBREG }},			\
+-  {"equality_op",		{ EQ, NE }},				\
+-  {"lessthan_op",		{ LT, LTU }},				\
+-  {"cmp_op",			{ EQ, NE, GT, GE, GTU, GEU, LT, LE,	\
+-				  LTU, LEU }},				\
+-  {"signed_cmp_op",             { EQ, NE, GT, GE, LT, LE }},            \
+-  {"unsigned_cmp_op",           { GTU, GEU, LTU, LEU }},                \
+-  {"pc_or_label_operand",	{ PC, LABEL_REF }},			\
+-  {"call_insn_operand",		{ CONST_INT, CONST, SYMBOL_REF, REG}},	\
+-  {"move_operand", 		{ CONST_INT, CONST_DOUBLE, CONST,	\
+-				  SYMBOL_REF, LABEL_REF, SUBREG,	\
+-				  REG, MEM}},				\
+-  {"movdi_operand",		{ CONST_INT, CONST_DOUBLE, CONST,	\
+-				  SYMBOL_REF, LABEL_REF, SUBREG, REG,	\
+-				  MEM, SIGN_EXTEND }},			\
+-  {"extend_operator",           { SIGN_EXTEND, ZERO_EXTEND }},          \
+-  {"highpart_shift_operator",   { ASHIFTRT, LSHIFTRT, ROTATERT, ROTATE }}, 
+-
+-
+ 
+ /* If defined, a C statement to be executed just prior to the
+    output of assembler code for INSN, to modify the extracted
+@@ -2902,18 +2729,6 @@ condition code register.  */
+   { "s13",	30 + GP_REG_FIRST }					\
+ }
+ 
+-/* Define results of standard character escape sequences.  */
+-/* Removed since defined in Default */
+-/*
+-  #define TARGET_BELL	007
+-  #define TARGET_BS	010
+-  #define TARGET_TAB	011
+-  #define TARGET_NEWLINE	012
+-  #define TARGET_VT	013
+-  #define TARGET_FF	014
+-  #define TARGET_CR	015
+-*/
+-
+ /* A C compound statement to output to stdio stream STREAM the
+    assembler syntax for an instruction operand X.  X is an RTL
+    expression.
+@@ -3004,15 +2819,6 @@ while (0)
+ #define ASM_OUTPUT_SOURCE_FILENAME(STREAM, NAME)			\
+   microblaze_output_filename (STREAM, NAME)
+ 
+-#define ASM_OUTPUT_FILENAME(STREAM, NUM_SOURCE_FILENAMES, NAME) \
+-do								\
+-  {								\
+-    fprintf (STREAM, "\t.file\t%d ", NUM_SOURCE_FILENAMES);	\
+-    output_quoted_string (STREAM, NAME);			\
+-    fputs ("\n", STREAM);					\
+-  }								\
+-while (0)
+-
+ /* This is how to output a note the debugger telling it the line number
+    to which the following sequence of instructions corresponds.
+    Silicon graphics puts a label after each .loc.  */
+@@ -3021,9 +2827,6 @@ while (0)
+ #define LABEL_AFTER_LOC(STREAM)
+ #endif
+ 
+-#define ASM_OUTPUT_SOURCE_LINE(STREAM, LINE, COUNTER)		\
+-  microblaze_output_lineno (STREAM, LINE)
+-
+ /* The MICROBLAZE implementation uses some labels for its own purpose.  The
+    following lists what labels are created, and are all formed by the
+    pattern $L[a-z].*.  The machine independent portion of GCC creates
+@@ -3246,32 +3049,32 @@ if(TARGET_MICROBLAZE_ASM){                                                    \
+ 	  cur_pos += 2;							\
+ 	  break;							\
+ 									\
+-	case TARGET_NEWLINE:						\
++	case '\n':						\
+ 	  fputs ("\\n", (STREAM));					\
+ 	  if (i+1 < len							\
+ 	      && (((c = string[i+1]) >= '\040' && c <= '~')		\
+-		  || c == TARGET_TAB))					\
++		  || c == '\t'))					\
+ 	    cur_pos = 32767;		/* break right here */		\
+ 	  else								\
+ 	    cur_pos += 2;						\
+ 	  break;							\
+ 									\
+-	case TARGET_TAB:						\
++	case '\t':						\
+ 	  fputs ("\\t", (STREAM));					\
+ 	  cur_pos += 2;							\
+ 	  break;							\
+ 									\
+-	case TARGET_FF:							\
++	case '\f':							\
+ 	  fputs ("\\f", (STREAM));					\
+ 	  cur_pos += 2;							\
+ 	  break;							\
+ 									\
+-	case TARGET_BS:							\
++	case '\b':							\
+ 	  fputs ("\\b", (STREAM));					\
+ 	  cur_pos += 2;							\
+ 	  break;							\
+ 									\
+-	case TARGET_CR:							\
++	case '\r':							\
+ 	  fputs ("\\r", (STREAM));					\
+ 	  cur_pos += 2;							\
+ 	  break;							\
+@@ -3443,22 +3246,6 @@ do{ \
+ 
+ #define MAX_OFILE_ALIGNMENT (32768*8)
+ 
+-/* A C statement to output something to the assembler file to switch to section
+-   NAME for object DECL which is either a FUNCTION_DECL, a VAR_DECL or
+-   NULL_TREE.  Some target formats do not support arbitrary sections.  Do not
+-   define this macro in such cases.  */
+-
+-#define ASM_OUTPUT_SECTION_NAME(F, DECL, NAME, RELOC) \
+-do {								\
+-  extern FILE *asm_out_text_file;				\
+-  if ((DECL) && TREE_CODE (DECL) == FUNCTION_DECL)		\
+-    fprintf (asm_out_text_file, "\t.section %s,\"ax\",@progbits\n", (NAME)); \
+-  else if ((DECL) && DECL_READONLY_SECTION (DECL, RELOC))	\
+-    fprintf (F, "\t.section %s,\"a\",@progbits\n", (NAME));	\
+-  else								\
+-    fprintf (F, "\t.section %s,\"aw\",@progbits\n", (NAME));	\
+-} while (0)
+-
+ /* The following macro defines the format used to output the second
+    operand of the .type assembler directive.  Different svr4 assemblers
+    expect various different forms for this operand.  The one given here
+diff --git a/gcc/config/microblaze/microblaze.md b/gcc/config/microblaze/microblaze.md
+index dfd380c..ea60985 100644
+--- a/gcc/config/microblaze/microblaze.md
++++ b/gcc/config/microblaze/microblaze.md
+@@ -32,6 +32,7 @@
+ ;; 
+ ;;----------------------------------------------------------------------------------------------------------------------------------------------------
+ 
++(include "predicates.md")
+ 
+ ;;----------------------------------------------------
+ ;; Constants
+@@ -472,7 +473,7 @@
+ (define_insn "adddi3_internal2"
+   [(set (match_operand:DI 0 "register_operand" "=d")
+ 	(plus:DI (match_operand:DI 1 "register_operand" "d")
+-		 (match_operand:SI 2 "immediate32_operand" "i")))]
++		 (match_operand:SI 2 "large_int" "i")))]
+   ""
+   { 
+         if (INTVAL (operands[2]) > 0)
+diff --git a/gcc/config/microblaze/microblaze.opt b/gcc/config/microblaze/microblaze.opt
+new file mode 100644
+index 0000000..4160617
+--- /dev/null
++++ b/gcc/config/microblaze/microblaze.opt
+@@ -0,0 +1,106 @@
++; Options for the MicroBlaze port of the compiler
++;
++; Copyright (C) 2006 Free Software Foundation, Inc.
++;
++; This file is part of GCC.
++;
++; GCC is free software; you can redistribute it and/or modify it under
++; the terms of the GNU General Public License as published by the Free
++; Software Foundation; either version 2, or (at your option) any later
++; version.
++;
++; GCC is distributed in the hope that it will be useful, but WITHOUT
++; ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
++; or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
++; License for more details.
++;
++; You should have received a copy of the GNU General Public License
++; along with GCC; see the file COPYING.  If not, write to the Free
++; Software Foundation, 51 Franklin Street, Fifth Floor, Boston, MA
++; 02110-1301, USA.
++
++mxl-soft-mul
++Target Mask(SOFT_MUL)
++Use the soft multiply emulation
++
++mxl-soft-div
++Target Mask(MASK_SOFT_DIV)
++Use the soft divide emulation
++
++mxl-barrel-shift
++Target Mask(MASK_BARREL_SHIFT)
++Use the hardware barrel shifter instead of emulation
++
++msoft-float
++Target Report RejectNegative Mask(SOFT_FLOAT)
++Prevent the use of all hardware floating-point instructions
++
++mhard-float
++Target Report RejectNegative InverseMask(SOFT_FLOAT, HARD_FLOAT)
++Allow the use of hardware floating-point instructions
++
++mxl-pattern-compare
++Target Joined Mask(MASK_PATTERN_COMPARE)
++Use pattern compare instructions
++
++msmall-divides
++Target Joined 
++Use table lookup optimization for small signed integer divisions
++
++mxl-stack-check
++Target Joined Mask(MASK_STACK_CHECK)
++Check Stack at runtime
++
++mmemcpy
++Target Joined 
++Don't optimize block moves
++
++mxl-gp-opt
++Target Joined Mask(MASK_XLGPOPT)
++Use GP relative sdata/sbss sections[for xlnx]
++
++mstats
++Target Joined 
++Output compiler statistics
++
++mdebug
++Target Var(TARGET_DEBUG_MODE) Undocumented
++
++mdebuga
++Target Var(TARGET_DEBUG_A_MODE) Undocumented
++
++mdebugb
++Target Var(TARGET_DEBUG_B_MODE) Undocumented
++
++mdebugc
++Target Var(TARGET_DEBUG_C_MODE) Undocumented
++
++mdebugd
++Target Var(TARGET_DEBUG_D_MODE) Undocumented
++
++mdebuge
++Target Var(TARGET_DEBUG_E_MODE) Undocumented
++
++mdebugf
++Target Var(TARGET_DEBUG_F_MODE) Undocumented
++
++mdebugg
++Target Var(TARGET_DEBUG_G_MODE) Undocumented
++
++mdebugh
++Target Var(TARGET_DEBUG_H_MODE) Undocumented
++
++mdebugi
++Target Var(TARGET_DEBUG_I_MODE) Undocumented
++
++mcpu=
++Target RejectNegative Joined Var(microblaze_select_cpu)
++-mcpu=PROCESSOR		Use features of and schedule code for given CPU
++
++mtune=
++Target RejectNegative Joined Var(microblaze_select_tune)
++-mtune=PROCESSOR	Schedule code for given CPU
++
++mclearbss
++Target 
++Clear the BSS to zero and place zero initialized in BSS
+diff --git a/gcc/config/microblaze/predicates.md b/gcc/config/microblaze/predicates.md
+new file mode 100644
+index 0000000..72b8bb0
+--- /dev/null
++++ b/gcc/config/microblaze/predicates.md
+@@ -0,0 +1,100 @@
++;; Predicate definitions for Xilinx MicroBlaze
++;; Copyright (C) 2007 Free Software Foundation, Inc.
++;;
++;; This file is part of GCC.
++;;
++;; GCC is free software; you can redistribute it and/or modify
++;; it under the terms of the GNU General Public License as published by
++;; the Free Software Foundation; either version 2, or (at your option)
++;; any later version.
++;;
++;; GCC is distributed in the hope that it will be useful,
++;; but WITHOUT ANY WARRANTY; without even the implied warranty of
++;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++;; GNU General Public License for more details.
++;;
++;; You should have received a copy of the GNU General Public License
++;; along with GCC; see the file COPYING.   not, write to
++;; the Free Software Foundation, 51 Franklin Street, Fifth Floor,
++;; Boston, MA 02110-1301, USA.
++
++
++;; Return whether OP can be used as an operands in arithmetic.
++(define_predicate "arith_operand"
++  (ior (match_code "const_int")
++       (match_operand 0 "register_operand")))
++
++;; FIXME:  Should this include test INTVAL(op)==0
++(define_predicate "const_0_operand"
++  (and (match_code "const_int,const_double")
++       (match_test "op == CONST0_RTX (GET_MODE (op))")))
++
++;; Return whether OP is a register or the constant 0.
++(define_predicate "reg_or_0_operand"
++  (ior (match_operand 0 "const_0_operand")
++       (match_operand 0 "register_operand")))
++
++;; Return whether OP is a integer which fits in 16 bits.
++(define_predicate "small_int"
++  (and (match_code "const_int")
++       (match_test "SMALL_INT (op)")))
++
++;; Return whether OP is a integer which fits in 32 bits.
++(define_predicate "large_int"
++  (and (match_code "const_int")
++       (match_test "LARGE_INT (op)")))
++
++;; Return if the code of this rtx pattern is EQ or NE.
++(define_predicate "equality_operator"
++  (match_code "eq,ne"))
++
++;; Return if the code of this rtx pattern is LT or LTU.
++(define_predicate "lessthan_operator"
++  (match_code "lt,ltu"))
++
++;; Return if the code of this rtx pattern is a comparison.
++(define_predicate "cmp_op"
++  (match_code "eq,ne,gt,ge,gtu,geu,lt,le,ltu,leu"))
++
++;; Return if the code of this rtx pattern is a signed comparison.
++(define_predicate "signed_cmp_op"
++  (match_code "eq,ne,gt,ge,lt,le"))
++
++;; Return if the code of this rtx pattern is an unsigned comparison.
++(define_predicate "unsigned_cmp_op"
++  (match_code "gtu,geu,ltu,leu"))
++
++;;  Return if the operand is either the PC or a label_ref.  
++(define_special_predicate "pc_or_label_operand"
++  (ior (match_code "pc,label_ref")
++       (and (match_code "symbol_ref")
++            (match_test "!(strcmp ((XSTR (op, 0)), \"_stack_overflow_exit\"))"))))
++
++;; Test for valid call operand
++(define_predicate "call_insn_operand"
++  (match_test "CALL_INSN_OP (op)"))
++
++;; Return if OPERAND is valid as a source operand for a move instruction.
++(define_predicate "move_operand"
++  (ior (and (match_code "plus")
++            (match_test "(GET_CODE (XEXP (op, 0)) == REG) ^ (GET_CODE (XEXP (op,1)) == REG)"))
++       (match_operand 0 "general_operand")))
++
++;; Return if OPERAND is valid as a source operand for movdi.
++(define_predicate "movdi_operand"
++  (match_operand 0 "general_operand"))
++
++;; Return if X is a SIGN or ZERO extend operator. 
++(define_predicate "extend_operator"
++  (match_code "sign_extend,zero_extend"))
++
++;; Accept any operator that can be used to shift the high half of the
++;;   input value to the lower half, suitable for truncation.  The
++;;   remainder (the lower half of the input, and the upper half of the
++;;   output) will be discarded.  
++(define_predicate "highpart_shift_operator"
++  (match_code "ashiftrt,rotatert,rotate"))
++
++
++
++
+-- 
+1.5.3.8
+

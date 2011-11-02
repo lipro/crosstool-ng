@@ -1,0 +1,377 @@
+From cfd89bd2f10630a1846f886d4e839cfcedce2e30 Mon Sep 17 00:00:00 2001
+Message-Id: <cfd89bd2f10630a1846f886d4e839cfcedce2e30.1241484427.git.john.williams@petalogix.com>
+In-Reply-To: <930a7bf07b58a3d6a48393a6419b2c958fc9dc2a.1241484427.git.john.williams@petalogix.com>
+References: <930a7bf07b58a3d6a48393a6419b2c958fc9dc2a.1241484427.git.john.williams@petalogix.com>
+From: John Williams <john.williams@petalogix.com>
+Date: Tue, 28 Apr 2009 14:39:13 +1000
+Subject: [PATCH 15/63] microblaze: Updates
+
+---
+ gcc/config/microblaze/microblaze.c   |   50 +++++++++----
+ gcc/config/microblaze/microblaze.h   |    2 +
+ gcc/config/microblaze/microblaze.md  |  129 ++++++++++++++++++++++++++++++----
+ gcc/config/microblaze/microblaze.opt |   17 ++++-
+ gcc/config/microblaze/t-microblaze   |    5 +-
+ 5 files changed, 170 insertions(+), 33 deletions(-)
+
+diff --git a/gcc/config/microblaze/microblaze.c b/gcc/config/microblaze/microblaze.c
+index 157095d..84c72fa 100644
+--- a/gcc/config/microblaze/microblaze.c
++++ b/gcc/config/microblaze/microblaze.c
+@@ -217,6 +217,7 @@ void microblaze_declare_object 			PARAMS ((FILE *, char *, char *, char *, int))
+ int microblaze_valid_machine_decl_attribute 	PARAMS ((tree, tree, tree, tree));
+ static bool microblaze_handle_option 		PARAMS ((size_t, const char *, int));
+ int microblaze_is_interrupt_handler		PARAMS ((void));
++int microblaze_const_double_ok 			PARAMS ((rtx, enum machine_mode));
+ 
+ /* Global variables for machine-dependent things.  */
+ 
+@@ -1862,7 +1863,7 @@ microblaze_rtx_costs (
+         *total = COSTS_N_INSNS (INTVAL (XEXP (x, 1)));
+       else 
+         *total = COSTS_N_INSNS (32 * 4);                /* Double the worst cost of shifts when there is no barrel shifter and the shift amount is in a reg */
+-      return false;
++      return true;
+     }
+     case PLUS:								
+     case MINUS:								
+@@ -1871,12 +1872,18 @@ microblaze_rtx_costs (
+       {						
+         if (TARGET_HARD_FLOAT)
+           *total = COSTS_N_INSNS (6);					
++	return true;
+       } 
+       else if (mode == DImode)
+       {
+         *total = COSTS_N_INSNS (4);					
+-      } else
++	return true;
++      } 
++      else
++      {
+         *total = COSTS_N_INSNS (1);
++	return true;
++      }
+ 
+       return false;
+     }									
+@@ -1893,13 +1900,13 @@ microblaze_rtx_costs (
+         if (TARGET_HARD_FLOAT)
+           *total = COSTS_N_INSNS (6);					
+       }
+-      else if (!TARGET_SOFT_MUL) {                                                               
+-        if (microblaze_version_compare (microblaze_select.cpu, "v5.00.a") >= 0)
+-          *total = COSTS_N_INSNS (1);                                     
+-        else 
+-          *total = COSTS_N_INSNS (3);                                               
+-      }                                                               
+-      return false;
++      else if (!TARGET_SOFT_MUL) {                                                       if (microblaze_version_compare (microblaze_select.cpu, "v5.00.a") >= 0)
++         *total = COSTS_N_INSNS (1);
++      else
++          *total = COSTS_N_INSNS (3);
++      }
++      else *total =  COSTS_N_INSNS (10);
++      return true;
+     }									
+     case DIV:								
+     case UDIV:								
+@@ -2968,17 +2975,30 @@ override_options (void)
+     microblaze_select.flags &= ~(MICROBLAZE_MASK_NO_UNSAFE_DELAY);
+     microblaze_no_unsafe_delay = 0;
+     microblaze_pipe = MICROBLAZE_PIPE_3;
+-  } else if (ver == 0 || (microblaze_version_compare (microblaze_select.cpu, "v4.00.a") == 0)) {
++  } else if (ver == 0 || (microblaze_version_compare (microblaze_select.cpu, "v4.00.b") == 0)) {
+     microblaze_select.flags |= (MICROBLAZE_MASK_NO_UNSAFE_DELAY);
+     microblaze_no_unsafe_delay = 1;
+     microblaze_pipe = MICROBLAZE_PIPE_3;
+-  } else {                                                              /* v5.00.a or greater */
++  } else {
+     microblaze_select.flags &= ~(MICROBLAZE_MASK_NO_UNSAFE_DELAY);
+-    microblaze_no_unsafe_delay = 0;                              
+-    target_flags |= MASK_PATTERN_COMPARE;                               /* Pattern compares are on by default in later versions of MB */
+-    microblaze_pipe = MICROBLAZE_PIPE_5;
++    microblaze_no_unsafe_delay = 0;
++    microblaze_pipe = MICROBLAZE_PIPE_5;                                /* We agree to use 5 pipe-stage model even on area optimized 3 pipe-stage variants. */
++    if (microblaze_version_compare (microblaze_select.cpu, "v5.00.a") == 0 ||
++        microblaze_version_compare (microblaze_select.cpu, "v5.00.b") == 0 ||
++        microblaze_version_compare (microblaze_select.cpu, "v5.00.c") == 0) {
++        target_flags |= MASK_PATTERN_COMPARE;                           /* Pattern compares are to be turned on by default only when compiling for MB v5.00.'z' */
++    }
++  }
++
++  ver = microblaze_version_compare (microblaze_select.cpu, "v6.00.a");
++  if (ver < 0) {
++      if (TARGET_MULTIPLY_HIGH)
++          warning (0, "-mxl-multiply-high can be used only with -mcpu=v6.00.a or greater.\n");
+   }
+ 
++  if (TARGET_MULTIPLY_HIGH && TARGET_SOFT_MUL)
++      error ("-mxl-multiply-high requires -mno-xl-soft-mul.\n");
++
+   /* Always use DFA scheduler */
+   microblaze_sched_use_dfa = 1;
+   
+@@ -4260,7 +4280,7 @@ microblaze_expand_prologue (void)
+ #if 0
+   rtx reg_18_save = NULL_RTX;
+ #endif
+-  rtx mem_rtx, reg_rtx, insn;
++  rtx mem_rtx, reg_rtx;
+ 
+   /* If struct value address is treated as the first argument, make it so.  */
+   if (aggregate_value_p (DECL_RESULT (fndecl), fntype)
+diff --git a/gcc/config/microblaze/microblaze.h b/gcc/config/microblaze/microblaze.h
+index 2e2017e..3d144bd 100644
+--- a/gcc/config/microblaze/microblaze.h
++++ b/gcc/config/microblaze/microblaze.h
+@@ -507,6 +507,8 @@ while (0)
+ %{mxl-barrel-shift: -DHAVE_HW_BSHIFT}   	\
+ %{mxl-pattern-compare: -DHAVE_HW_PCMP}  	\
+ %{mhard-float: -DHAVE_HW_FPU}           	\
++%{mxl-float-convert: -DHAVE_HW_FPU_CONVERT} \
++%{mxl-float-sqrt: -DHAVE_HW_FPU_SQRT}   \
+ "
+ #endif
+ 
+diff --git a/gcc/config/microblaze/microblaze.md b/gcc/config/microblaze/microblaze.md
+index 9ccf2f7..f0c3448 100644
+--- a/gcc/config/microblaze/microblaze.md
++++ b/gcc/config/microblaze/microblaze.md
+@@ -79,7 +79,7 @@
+ ;; bshift 	Shift operations
+ 
+ (define_attr "type"
+-  "unknown,branch,jump,call,load,store,move,arith,darith,imul,idiv,icmp,multi,nop,no_delay_arith,no_delay_load,no_delay_store,no_delay_imul,no_delay_move,bshift,fadd,frsub,fmul,fdiv,fcmp,fsl"
++  "unknown,branch,jump,call,load,store,move,arith,darith,imul,idiv,icmp,multi,nop,no_delay_arith,no_delay_load,no_delay_store,no_delay_imul,no_delay_move,bshift,fadd,frsub,fmul,fdiv,fcmp,fsl,fsqrt,fcvt"
+   (const_string "unknown"))
+ 
+ ;; Main data type used by the insn
+@@ -278,7 +278,15 @@
+        (eq (symbol_ref  "microblaze_pipe") (const_int MB_PIPE_5)))
+   "mb_issue,mb_fpu,mb_fpu_2*29,mb_wb")
+ 
++(define_insn_reservation "mb-fpu-sqrt" 30
++  (and (eq_attr "type" "fsqrt")
++       (eq (symbol_ref  "microblaze_pipe") (const_int MB_PIPE_5)))
++  "mb_issue,mb_fpu,mb_fpu_2*29,mb_wb")
+ 
++(define_insn_reservation "mb-fpu-fcvt" 4
++  (and (eq_attr "type" "fcvt")
++       (eq (symbol_ref  "microblaze_pipe") (const_int MB_PIPE_5)))
++  "mb_issue,mb_fpu,mb_fpu_2*3,mb_wb")
+ 
+ ;;----------------------------------------------------------------
+ ;; Microblaze 3-stage pipeline description (for v4.00.a and earlier)
+@@ -343,6 +351,16 @@
+        (eq (symbol_ref  "microblaze_pipe") (const_int MB_PIPE_3)))
+   "mb3_iu")
+ 
++(define_insn_reservation "mb3-fpu-sqrt" 30
++  (and (eq_attr "type" "fsqrt")
++       (eq (symbol_ref  "microblaze_pipe") (const_int MB_PIPE_3)))
++  "mb3_iu")
++
++(define_insn_reservation "mb3-fpu-fcvt" 4
++  (and (eq_attr "type" "fcvt")
++       (eq (symbol_ref  "microblaze_pipe") (const_int MB_PIPE_3)))
++  "mb3_iu")
++
+ (automata_option "v")
+ (automata_option "time")
+ (automata_option "progress")
+@@ -403,6 +421,32 @@
+   (set_attr "mode"      "SF")
+   (set_attr "length"    "4")])
+ 
++(define_insn "sqrtsf2"
++  [(set (match_operand:SF 0 "register_operand" "=d")
++        (sqrt:SF (match_operand:SF 1 "register_operand" "d")))]
++  "TARGET_HARD_FLOAT && TARGET_FLOAT_SQRT"
++  "fsqrt\t%0,%1"
++  [(set_attr "type"     "fsqrt")
++  (set_attr "mode"      "SF")
++  (set_attr "length"    "4")])
++
++(define_insn "floatsisf2"
++  [(set (match_operand:SF 0 "register_operand" "=d")
++        (float:SF (match_operand:SI 1 "register_operand" "d")))]
++  "TARGET_HARD_FLOAT && TARGET_FLOAT_CONVERT"
++  "flt\t%0,%1"
++  [(set_attr "type"     "fcvt")
++  (set_attr "mode"      "SF")
++  (set_attr "length"    "4")])
++
++(define_insn "fix_truncsfsi2"
++  [(set (match_operand:SI 0 "register_operand" "=d")
++        (fix:SI (match_operand:SF 1 "register_operand" "d")))]
++  "TARGET_HARD_FLOAT && TARGET_FLOAT_CONVERT"
++  "fint\t%0,%1"
++  [(set_attr "type"     "fcvt")
++  (set_attr "mode"      "SF")
++  (set_attr "length"    "4")])
+ 
+ ;;----------------------------------------------------------------
+ ;; Add
+@@ -606,6 +650,17 @@
+ ;; Multiplication
+ ;;----------------------------------------------------------------
+ 
++(define_expand "mulsi3"
++  [(set (match_operand:SI 0 "register_operand" "=d")
++        (mult:SI (match_operand:SI 1 "register_operand" "d")
++                 (match_operand:SI 2 "register_operand" "d")))]
++  "!TARGET_SOFT_MUL"
++  {
++    emit_insn (gen_mulsi3_mult3 (operands[0], operands[1], operands[2]));
++    DONE;
++  }
++)
++
+ (define_insn "mulsi3_imm0"
+   [(set (match_operand:SI 0 "register_operand" "=d")
+ 	(mult:SI  (match_operand:SI 1 "register_operand" "d")
+@@ -656,19 +711,6 @@
+   (set_attr "mode"	"SI")
+   (set_attr "length"	"4,8")])
+ 
+-(define_expand "mulsi3"
+-  [(set (match_operand:SI 0 "register_operand" "=d")
+-	(mult:SI (match_operand:SI 1 "register_operand" "d")
+-		 (match_operand:SI 2 "register_operand" "d")))
+-  (clobber (match_scratch:SI 3 "=d"))
+-  (clobber (match_scratch:SI 4 "=d"))]
+-  "!TARGET_SOFT_MUL"
+-  {
+-    emit_insn (gen_mulsi3_mult3 (operands[0], operands[1], operands[2]));
+-    DONE;
+-  }
+-)
+-
+ (define_insn "mulsi3_mult3"
+   [(set (match_operand:SI 0 "register_operand" "=d")
+ 	(mult:SI (match_operand:SI 1 "register_operand" "d")
+@@ -679,6 +721,65 @@
+   (set_attr "mode"	"SI")
+   (set_attr "length"	"4")])
+ 
++(define_insn "mulsidi3"
++  [(set (match_operand:DI 0 "register_operand" "=&d")
++        (mult:DI
++         (sign_extend:DI (match_operand:SI 1 "register_operand" "d"))
++         (sign_extend:DI (match_operand:SI 2 "register_operand" "d"))))]
++  "!TARGET_SOFT_MUL && TARGET_MULTIPLY_HIGH"
++  "mul\t%L0,%1,%2\;mulh\t%M0,%1,%2"
++  [(set_attr "type"     "no_delay_arith")
++   (set_attr "mode"     "DI")
++   (set_attr "length"   "8")])
++
++(define_insn "umulsidi3"
++  [(set (match_operand:DI 0 "register_operand" "=&d")
++        (mult:DI
++         (zero_extend:DI (match_operand:SI 1 "register_operand" "d"))
++         (zero_extend:DI (match_operand:SI 2 "register_operand" "d"))))]
++  "!TARGET_SOFT_MUL && TARGET_MULTIPLY_HIGH"
++  "mul\t%L0,%1,%2\;mulhu\t%M0,%1,%2"
++  [(set_attr "type"     "no_delay_arith")
++   (set_attr "mode"     "DI")
++   (set_attr "length"   "8")])
++
++(define_insn "usmulsidi3"
++  [(set (match_operand:DI 0 "register_operand" "=&d")
++        (mult:DI
++         (zero_extend:DI (match_operand:SI 1 "register_operand" "d"))
++         (sign_extend:DI (match_operand:SI 2 "register_operand" "d"))))]
++  "!TARGET_SOFT_MUL && TARGET_MULTIPLY_HIGH"
++  "mul\t%L0,%1,%2\;mulhsu\t%M0,%2,%1"
++  [(set_attr "type"     "no_delay_arith")
++   (set_attr "mode"     "DI")
++   (set_attr "length"   "8")])
++
++(define_insn "smulsi3_highpart"
++  [(set (match_operand:SI 0 "register_operand"                            "=d")
++        (truncate:SI
++         (lshiftrt:DI
++          (mult:DI (sign_extend:DI (match_operand:SI 1 "register_operand"  "d"))
++                   (sign_extend:DI (match_operand:SI 2 "register_operand"  "d")))
++          (const_int 32))))]
++  "!TARGET_SOFT_MUL && TARGET_MULTIPLY_HIGH"
++  "mulh\t%0,%1,%2"
++  [(set_attr "type"     "imul")
++  (set_attr "mode"      "SI")
++  (set_attr "length"    "4")])
++
++(define_insn "umulsi3_highpart"
++  [(set (match_operand:SI 0 "register_operand"                            "=d")
++        (truncate:SI
++         (lshiftrt:DI
++          (mult:DI (zero_extend:DI (match_operand:SI 1 "register_operand"  "d"))
++                   (zero_extend:DI (match_operand:SI 2 "register_operand"  "d"))
++)
++          (const_int 32))))]
++  "!TARGET_SOFT_MUL && TARGET_MULTIPLY_HIGH"
++  "mulhu\t%0,%1,%2"
++  [(set_attr "type"     "imul")
++  (set_attr "mode"      "SI")
++  (set_attr "length"    "4")])
+ 
+ ;;----------------------------------------------------------------
+ ;; Division and remainder
+diff --git a/gcc/config/microblaze/microblaze.opt b/gcc/config/microblaze/microblaze.opt
+index dcf53d3..cdf9387 100644
+--- a/gcc/config/microblaze/microblaze.opt
++++ b/gcc/config/microblaze/microblaze.opt
+@@ -25,7 +25,7 @@ Use the soft multiply emulation (default)
+ 
+ mxl-soft-div
+ Target Mask(SOFT_DIV)
+-Use the soft divide emulation (default)
++Use the software emulation for divides (default)
+ 
+ mxl-barrel-shift
+ Target Mask(BARREL_SHIFT)
+@@ -95,7 +95,7 @@ Target RejectNegative Joined Var(microblaze_select_cpu)
+ 
+ mtune=
+ Target RejectNegative Joined Var(microblaze_select_tune)
+--mtune=PROCESSOR	Schedule code for sub-configuration
++-mtune=PROCESSOR	Tune code for sub-configuration
+ 
+ mno-clearbss
+ Target RejectNegative
+@@ -112,3 +112,16 @@ Target Mask(EMBEDDED_PIC)
+ mxl-multiply-high
+ Target Mask(MULTIPLY_HIGH)
+ Use multiply high instructions for high part of 32x32 multiply
++
++mxl-float-convert
++Target Mask(FLOAT_CONVERT)
++Use hardware floating point converstion instructions
++
++mmemcpy
++Target Mask(MEMCPY)
++Don't optimize block moves, use memcpy
++
++mxl-float-sqrt
++Target Mask(FLOAT_SQRT)
++Use hardware floating point square root instruction
++
+diff --git a/gcc/config/microblaze/t-microblaze b/gcc/config/microblaze/t-microblaze
+index d126ae2..cc1929b 100644
+--- a/gcc/config/microblaze/t-microblaze
++++ b/gcc/config/microblaze/t-microblaze
+@@ -30,8 +30,9 @@ dp-bit.c: $(srcdir)/config/fp-bit.c
+ 	cat $(srcdir)/config/fp-bit.c > dp-bit.c
+ 
+ 
+-MULTILIB_OPTIONS = mxl-barrel-shift mno-xl-soft-mul
+-MULTILIB_DIRNAMES = bs m
++MULTILIB_OPTIONS = mxl-barrel-shift mno-xl-soft-mul mxl-multiply-high
++MULTILIB_DIRNAMES = bs m mh
++MULTILIB_EXCEPTIONS = *mxl-barrel-shift/mxl-multiply-high mxl-multiply-high
+ 
+ ## Unfortunately, this does not work. We have to find a way to do this. 
+ ## Otherwise, -xl-blazeit will cause only the base libgcc to be picked up always.
+-- 
+1.5.3.8
+

@@ -1,0 +1,214 @@
+From 3db61f13bc863372b22641010512b5047fc3773b Mon Sep 17 00:00:00 2001
+Message-Id: <3db61f13bc863372b22641010512b5047fc3773b.1241484430.git.john.williams@petalogix.com>
+In-Reply-To: <930a7bf07b58a3d6a48393a6419b2c958fc9dc2a.1241484427.git.john.williams@petalogix.com>
+References: <930a7bf07b58a3d6a48393a6419b2c958fc9dc2a.1241484427.git.john.williams@petalogix.com>
+From: John Williams <john.williams@petalogix.com>
+Date: Tue, 28 Apr 2009 14:39:55 +1000
+Subject: [PATCH 40/63] microblaze: Fix DWARF return address in debug data
+
+---
+ gcc/config/microblaze/microblaze.h      |    2 +-
+ gcc/config/microblaze/microblaze.h.orig |  123 +++++++++----------------------
+ 2 files changed, 35 insertions(+), 90 deletions(-)
+
+diff --git a/gcc/config/microblaze/microblaze.h b/gcc/config/microblaze/microblaze.h
+index 1f0eecb..7fe653c 100644
+--- a/gcc/config/microblaze/microblaze.h
++++ b/gcc/config/microblaze/microblaze.h
+@@ -635,7 +635,7 @@ while (0)
+ #endif
+ 
+ /* The DWARF 2 CFA column which tracks the return address.  */
+-#define DWARF_FRAME_RETURN_COLUMN (FP_REG_LAST + 1)
++#define DWARF_FRAME_RETURN_COLUMN (GP_REG_FIRST + MB_ABI_SUB_RETURN_ADDR_REGNUM)
+ 
+ /* Initial state of return address on entry to func = R15.
+    Actually, the RA is at R15+8, but gcc doesn't know how 
+diff --git a/gcc/config/microblaze/microblaze.h.orig b/gcc/config/microblaze/microblaze.h.orig
+index 396306e..1f0eecb 100644
+--- a/gcc/config/microblaze/microblaze.h.orig
++++ b/gcc/config/microblaze/microblaze.h.orig
+@@ -85,14 +85,6 @@ enum block_move_type {
+     BLOCK_MOVE_LAST			/* generate just the last store */
+ };
+ 
+-/* microblaze_cpu_select contains CPU info */
+-struct microblaze_cpu_select
+-{
+-    const char *cpu;
+-    const char *tune;
+-    unsigned int flags;
+-};
+-
+ #define MICROBLAZE_MASK_NO_UNSAFE_DELAY         0x00000001
+ 
+ extern char microblaze_reg_names[][8];          /* register names (a0 vs. $4). */
+@@ -446,15 +438,7 @@ while (0)
+ /* ??? The bestGnum will never be passed to the linker, because the gcc driver
+    will interpret it as a -b option.  */
+ 
+-#ifndef LINK_SPEC
+-/*#define LINK_SPEC "\
+-  %{G*} %{EB} %{EL} \
+-  %{bestGnum} %{shared} %{non_shared} \
+-  %(linker_endian_spec) -relax -N \
+-  %{intrusive-debug:-defsym _TEXT_START_ADDR=0x400}"
+-*/
+-#define LINK_SPEC "-relax -N %{Zxl-mode-xmdstub:-defsym _TEXT_START_ADDR=0x800}"
+-#endif	/* LINK_SPEC defined */
++#define LINK_SPEC "-relax -N %{Zxl-mode-xmdstub:-defsym _TEXT_START_ADDR=0x800} %{!Wl,-T*: %{!T*: -T xilinx.ld%s}}"
+ 
+ /* Specs for the compiler proper */
+ 
+@@ -637,16 +621,31 @@ while (0)
+ /* How to renumber registers for dbx and gdb. */
+ #define DBX_REGISTER_NUMBER(REGNO) microblaze_dbx_regno[ (REGNO) ]
+ 
+-#define DWARF2_UNWIND_INFO 0
++/* Generate DWARF exception handling info. */
++#define DWARF2_UNWIND_INFO 1
++
++/* Don't generate .loc operations. */
++#define DWARF2_ASM_LINE_DEBUG_INFO 0
++
++#if 0
+ /* The mapping from gcc register number to DWARF 2 CFA column number.
+  */
+ #define DWARF_FRAME_REGNUM(REG)				\
+   (REG == GP_REG_FIRST + MB_ABI_SUB_RETURN_ADDR_REGNUM ? DWARF_FRAME_RETURN_COLUMN : REG)
++#endif
+ 
+ /* The DWARF 2 CFA column which tracks the return address.  */
+ #define DWARF_FRAME_RETURN_COLUMN (FP_REG_LAST + 1)
+-#define INCOMING_RETURN_ADDR_RTX  gen_rtx_REG (VOIDmode, GP_REG_FIRST + MB_ABI_SUB_RETURN_ADDR_REGNUM)
+ 
++/* Initial state of return address on entry to func = R15.
++   Actually, the RA is at R15+8, but gcc doesn't know how 
++   to generate this. */
++#define INCOMING_RETURN_ADDR_RTX  			\
++  gen_rtx_REG (VOIDmode, GP_REG_FIRST + MB_ABI_SUB_RETURN_ADDR_REGNUM)
++
++/* Use DWARF 2 debugging information by default.  */
++#define DWARF2_DEBUGGING_INFO
++#define PREFERRED_DEBUGGING_TYPE DWARF2_DEBUG
+ 
+ /* /\* Overrides for the COFF debug format.  *\/ */
+ /* #define PUT_SDB_SCL(a)					\ */
+@@ -994,6 +993,16 @@ while (0)
+ 	|| TREE_CODE (TYPE) == UNION_TYPE				\
+ 	|| TREE_CODE (TYPE) == RECORD_TYPE)) ? BITS_PER_WORD : (ALIGN))
+ 
++/* A C expression to compute the alignment for a variables in the
++   local store.  TYPE is the data type, and ALIGN is the alignment
++   that the object would ordinarily have.
++   
++   We handle QImode arrays specially. It enables string operations
++   to be optimally handled using pattern comparator instructions */
++#define LOCAL_ALIGNMENT(TYPE, ALIGN)                                            \
++    ((TREE_CODE (TYPE) == ARRAY_TYPE && TYPE_MODE (TREE_TYPE (TYPE)) == QImode	\
++     && (ALIGN) < BITS_PER_WORD) ? BITS_PER_WORD : (ALIGN))
++
+ /* Define if operations between registers always perform the operation
+    on the full register even if a narrower mode is specified.  */
+ #define WORD_REGISTER_OPERATIONS
+@@ -1684,6 +1693,8 @@ extern struct microblaze_frame_info current_frame_info;
+ /* Old Code */		     
+ /*#define FIRST_PARM_OFFSET(FNDECL) (((current_function_is_leaf == 0 ? 1 : 0)  * (UNITS_PER_WORD)))   */
+ 
++/* Offset from the argument pointer register value to the top of stack.  */
++#define ARG_POINTER_CFA_OFFSET(FNDECL) 0
+ 
+ /* When a parameter is passed in a register, stack space is still
+    allocated for it.  For the MICROBLAZE, stack space must be allocated 
+@@ -2895,84 +2906,18 @@ do {									\
+ /*   Changed the way the string is to be printed in the assembly file. It
+      will output .data8 words instead of .ascii and the string
+ */
++#if TARGET_MICROBLAZE_ASM
+ #define ASM_OUTPUT_ASCII(STREAM, STRING, LEN)				\
+ do {									\
+-if(TARGET_MICROBLAZE_ASM){                                                    \
+   register int i, c, len = (LEN) ;  				        \
+   register unsigned char *string = (unsigned char *)(STRING);		\
+   for (i = 0; i < len; i++)						\
+        fprintf((STREAM),".data8 %d\n",string[i]);			\
+   }                                                                     \
+- else /* If not MICROBLAZE_ASM print ascii */                                 \
+-  {/* Original code for ASM_OUTPUT_ASCII */                             \
+-  register int i, c, len = (LEN), cur_pos = 17;				\
+-  register unsigned char *string = (unsigned char *)(STRING);		\
+-  fprintf ((STREAM), "\t.ascii\t\"");					\
+-  for (i = 0; i < len; i++)						\
+-    {									\
+-      register int c = string[i];					\
+-									\
+-      switch (c)							\
+-	{								\
+-	case '\"':							\
+-	case '\\':							\
+-	  putc ('\\', (STREAM));					\
+-	  putc (c, (STREAM));						\
+-	  cur_pos += 2;							\
+-	  break;							\
+-									\
+-	case '\n':						\
+-	  fputs ("\\n", (STREAM));					\
+-	  if (i+1 < len							\
+-	      && (((c = string[i+1]) >= '\040' && c <= '~')		\
+-		  || c == '\t'))					\
+-	    cur_pos = 32767;		/* break right here */		\
+-	  else								\
+-	    cur_pos += 2;						\
+-	  break;							\
+-									\
+-	case '\t':						\
+-	  fputs ("\\t", (STREAM));					\
+-	  cur_pos += 2;							\
+-	  break;							\
+-									\
+-	case '\f':							\
+-	  fputs ("\\f", (STREAM));					\
+-	  cur_pos += 2;							\
+-	  break;							\
+-									\
+-	case '\b':							\
+-	  fputs ("\\b", (STREAM));					\
+-	  cur_pos += 2;							\
+-	  break;							\
+-									\
+-	case '\r':							\
+-	  fputs ("\\r", (STREAM));					\
+-	  cur_pos += 2;							\
+-	  break;							\
+-									\
+-	default:							\
+-	  if (c >= ' ' && c < 0177)					\
+-	    {								\
+-	      putc (c, (STREAM));					\
+-	      cur_pos++;						\
+-	    }								\
+-	  else								\
+-	    {								\
+-	      fprintf ((STREAM), "\\%03o", c);				\
+-	      cur_pos += 4;						\
+-	    }								\
+-	}								\
+-									\
+-      if (cur_pos > 72 && i+1 < len)					\
+-	{								\
+-	  cur_pos = 17;							\
+-	  fprintf ((STREAM), "\"\n\t.ascii\t\"");			\
+-	}								\
+-    }									\
+-   fprintf ((STREAM), "\"\n");						\
+-  } 								        \
+ } while (0)
++#else
++#define ASM_OUTPUT_ASCII(STREAM, STRING, LEN) output_ascii(STREAM,STRING,LEN)
++#endif
+ 
+ /* Handle certain cpp directives used in header files on sysV.  */
+ /* GCC 3.4.1 - Poisoned */
+-- 
+1.5.3.8
+

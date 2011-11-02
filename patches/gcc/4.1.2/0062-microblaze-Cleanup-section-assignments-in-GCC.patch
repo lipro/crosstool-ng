@@ -1,0 +1,531 @@
+From 494c7c3c89442df2c2ed413d7356264c526d0a26 Mon Sep 17 00:00:00 2001
+Message-Id: <494c7c3c89442df2c2ed413d7356264c526d0a26.1241484432.git.john.williams@petalogix.com>
+In-Reply-To: <930a7bf07b58a3d6a48393a6419b2c958fc9dc2a.1241484427.git.john.williams@petalogix.com>
+References: <930a7bf07b58a3d6a48393a6419b2c958fc9dc2a.1241484427.git.john.williams@petalogix.com>
+From: John Williams <john.williams@petalogix.com>
+Date: Tue, 28 Apr 2009 14:40:27 +1000
+Subject: [PATCH 62/63] microblaze: Cleanup section assignments in GCC
+
+---
+ gcc/config/microblaze/microblaze.c |  327 +++++++++---------------------------
+ gcc/config/microblaze/microblaze.h |   65 ++++++--
+ gcc/rtl.h                          |    4 -
+ 3 files changed, 129 insertions(+), 267 deletions(-)
+
+diff --git a/gcc/config/microblaze/microblaze.c b/gcc/config/microblaze/microblaze.c
+index bbf3363..7b78abd 100644
+--- a/gcc/config/microblaze/microblaze.c
++++ b/gcc/config/microblaze/microblaze.c
+@@ -148,8 +148,6 @@ struct microblaze_address_info
+ 
+ static void microblaze_encode_section_info	PARAMS ((tree, rtx, int));
+ static void microblaze_globalize_label          PARAMS ((FILE*, const char*));
+-void  microblaze_declare_comm_object            PARAMS ((FILE *, char *, char *, char *, int size, int align));
+-//static void microblaze_unique_section           PARAMS ((tree, int));
+ static void microblaze_function_prologue        PARAMS ((FILE*, int));
+ static void microblaze_function_epilogue        PARAMS ((FILE*, HOST_WIDE_INT));
+ static void microblaze_asm_file_start           PARAMS ((void));
+@@ -218,6 +216,7 @@ int microblaze_const_double_ok 			PARAMS ((rtx, enum machine_mode));
+ static int microblaze_must_save_register 	PARAMS ((int));
+ void output_ascii 				PARAMS ((FILE *, const char *, int));
+ static bool microblaze_classify_unspec 		PARAMS ((struct microblaze_address_info *, rtx));
++static bool microblaze_elf_in_small_data_p      PARAMS ((tree));
+ 
+ /* Global variables for machine-dependent things.  */
+ 
+@@ -527,9 +526,6 @@ static int microblaze_save_volatiles (tree);
+ #undef TARGET_ASM_GLOBALIZE_LABEL
+ #define TARGET_ASM_GLOBALIZE_LABEL      microblaze_globalize_label
+ 
+-#undef TARGET_UNIQUE_SECTION
+-#define TARGET_UNIQUE_SECTION           microblaze_unique_section
+-
+ #undef TARGET_ASM_FUNCTION_PROLOGUE
+ #define TARGET_ASM_FUNCTION_PROLOGUE    microblaze_function_prologue
+ 
+@@ -560,12 +556,18 @@ static int microblaze_save_volatiles (tree);
+ #undef TARGET_ASM_DESTRUCTOR
+ #define TARGET_ASM_DESTRUCTOR           microblaze_asm_destructor
+ 
++#undef TARGET_IN_SMALL_DATA_P
++#define TARGET_IN_SMALL_DATA_P          microblaze_elf_in_small_data_p
++
+ #undef TARGET_ASM_SELECT_RTX_SECTION   
+ #define TARGET_ASM_SELECT_RTX_SECTION   microblaze_select_rtx_section
+ 
+ #undef TARGET_ASM_SELECT_SECTION
+ #define TARGET_ASM_SELECT_SECTION       microblaze_select_section
+ 
++#undef TARGET_HAVE_SRODATA_SECTION
++#define TARGET_HAVE_SRODATA_SECTION     true
++
+ #undef TARGET_SCHED_USE_DFA_PIPELINE_INTERFACE
+ #define TARGET_SCHED_USE_DFA_PIPELINE_INTERFACE \
+                                         microblaze_sched_use_dfa_pipeline_interface
+@@ -3637,28 +3639,6 @@ microblaze_declare_object (FILE *stream, char *name, char *section, char *fmt, i
+   }
+ }
+ 
+-void
+-microblaze_declare_comm_object (FILE *stream, char *name, char *section, char *fmt, int size, int align)
+-{
+-  if (size > 0 && size <= microblaze_section_threshold && TARGET_XLGP_OPT)
+-    named_section (0, ".sbss", 0);
+-  else
+-    named_section (0, ".bss", 0);
+-
+-  fputs (section, stream);		
+-  assemble_name (stream, name);
+-  fprintf (stream, fmt, size, ((align)/BITS_PER_UNIT));	 
+-  ASM_OUTPUT_TYPE_DIRECTIVE (stream, name, "object");		       
+-/*   if (!flag_inhibit_size_directive) */
+-/*     ASM_OUTPUT_SIZE_DIRECTIVE (stream, name, size); */
+-
+-  if (TARGET_GP_OPT)
+-  {
+-    tree name_tree = get_identifier (name);
+-    TREE_ASM_WRITTEN (name_tree) = 1;
+-  }
+-}
+-
+ /* Output a double precision value to the assembler.  If both the
+    host and target are IEEE, emit the values in hex.  */
+ 
+@@ -4520,19 +4500,21 @@ machine_dependent_reorg (void)
+ 
+ /* Get the base register for accessing a value from the memory or
+    Symbol ref. Used for Microblaze Small Data Area Pointer Optimization */
+-
+ int
+ get_base_reg(rtx x)
+ {
+-  int base_reg = (flag_pic ? 
+-                  MB_ABI_PIC_ADDR_REGNUM : 
+-                  MB_ABI_BASE_REGNUM );
++  tree decl;
++  int base_reg = (flag_pic ? MB_ABI_PIC_ADDR_REGNUM : MB_ABI_BASE_REGNUM);
+   
+-  if (TARGET_XLGP_OPT){
+-    if (VAR_SECTION(x) ==  SDATA_VAR || VAR_SECTION(x) ==  SBSS_VAR )
+-      base_reg = MB_ABI_GPRW_REGNUM ;
+-    else if (VAR_SECTION(x) ==  SDATA2_VAR)
+-      base_reg = MB_ABI_GPRO_REGNUM ;
++  if (TARGET_XLGP_OPT
++      && GET_CODE(x) == SYMBOL_REF 
++      && SYMBOL_REF_SMALL_P(x)
++      && (decl = SYMBOL_REF_DECL(x)) != NULL)  
++  {
++    if (TREE_READONLY(decl))
++      base_reg = MB_ABI_GPRO_REGNUM;
++    else 
++      base_reg = MB_ABI_GPRW_REGNUM;
+   }
+ 
+   return base_reg;
+@@ -4721,244 +4703,89 @@ microblaze_globalize_label (
+   fputs ("\n", stream);						
+ } 
+ 
+-
+-
+-/* Choose the section to use for the constant rtx expression X that has
+-   mode MODE.  */
+-
+-/* This macro is not defined any more. The constants will be moved to
+-   Readonly section */
+-void
+-microblaze_select_rtx_section (
+-  enum machine_mode mode ATTRIBUTE_UNUSED,
+-  rtx x ATTRIBUTE_UNUSED,
+-  unsigned HOST_WIDE_INT align ATTRIBUTE_UNUSED)
+-{
+-  READONLY_DATA_SECTION ();
+-}
+-
+-/* Choose the section to use for DECL.  RELOC is true if its value contains
+-   any relocatable expression.
+-
+-   Some of the logic used here needs to be replicated in
+-   ENCODE_SECTION_INFO in microblaze.h so that references to these symbols
+-   are done correctly.  Specifically, at least all symbols assigned
+-   here to rom (.text and/or .rodata) must not be referenced via
+-   ENCODE_SECTION_INFO with %gprel, as the rom might be too far away.
+-
+-   If you need to make a change here, you probably should check
+-   ENCODE_SECTION_INFO to see if it needs a similar change.  */
+-
+-void
+-microblaze_select_section (
+-  tree decl,
+-  int reloc,
+-  unsigned HOST_WIDE_INT align ATTRIBUTE_UNUSED)
++/* Returns true if decl should be placed into a "small data" section. */
++static bool
++microblaze_elf_in_small_data_p (tree decl)
+ {
+-  int size = int_size_in_bytes (TREE_TYPE (decl));
+-
++  if (!TARGET_XLGP_OPT)
++    return false;
+ 
+-  /* 
+-     if (DECL_NAME (decl))
+-     fprintf (stderr, "microblaze_select_section: %s: \n", IDENTIFIER_POINTER (DECL_NAME (decl)));   
+-  */
+-    
++  /* We want to merge strings, so we never consider them small data.  */
++  if (TREE_CODE (decl) == STRING_CST)
++    return false;
+ 
+-  /* 07/23/01 XLNX : Set the section to be either .data or .sdata */
++  /* Functions are never in the small data area.  */
++  if (TREE_CODE (decl) == FUNCTION_DECL)
++    return false;
+ 
+-  /*  rtx decl_rtx = XEXP(DECL_RTL(decl),0);
++  if (TREE_CODE (decl) == VAR_DECL && DECL_SECTION_NAME (decl))
++    {
++      const char *section = TREE_STRING_POINTER (DECL_SECTION_NAME (decl));
++      if (strcmp (section, ".sdata") == 0
++	  || strcmp (section, ".sdata2") == 0
++	  || strcmp (section, ".sbss") == 0
++	  || strcmp (section, ".sbss2") == 0)
++        return true;
++    }
+   
+-  if (TREE_CODE(decl) != STRING_CST)
+-  if (!(TREE_READONLY(decl)))
+-  VAR_SECTION(decl_rtx)= (size <=microblaze_section_threshold && size > 0 && TARGET_XLGP_OPT) ? SDATA_VAR : DATA_VAR;
+-  */
++  HOST_WIDE_INT size = int_size_in_bytes (TREE_TYPE (decl));
+   
+-  if ((TARGET_EMBEDDED_PIC)
+-      && TREE_CODE (decl) == STRING_CST)
+-    /* For embedded position independent code, put constant strings in the
+-       text section, because the data section is limited to 64K in size.
+-    */
+-    text_section ();
+-
+-  /* For embedded applications, always put an object in read-only data
+-     if possible, in order to reduce RAM usage.  */
+-
+-  if (((TREE_CODE (decl) == VAR_DECL
+-        && TREE_READONLY (decl) && !TREE_SIDE_EFFECTS (decl)
+-        && DECL_INITIAL (decl)
+-        && (DECL_INITIAL (decl) == error_mark_node
+-            || TREE_CONSTANT (DECL_INITIAL (decl))))
+-       /* Deal with calls from output_constant_def_contents.  */
+-       || (TREE_CODE (decl) != VAR_DECL
+-           && (TREE_CODE (decl) != STRING_CST)))
+-      && ! (flag_pic && reloc)){
+-    if(size > 0 && size <= microblaze_section_threshold && TARGET_XLGP_OPT)
+-      READONLY_SDATA_SECTION ();
+-    else
+-      READONLY_DATA_SECTION ();
+-  }
+-  else if (size > 0 && size <= microblaze_section_threshold && TARGET_XLGP_OPT)
+-    SDATA_SECTION ();
+-  else
+-    data_section ();
++  return (size > 0 && (unsigned HOST_WIDE_INT) size <= microblaze_section_threshold);
+ }
+ 
+ 
++/* A C statement or statements to switch to the appropriate section
++   for output of RTX in mode MODE.  You can assume that RTX is some
++   kind of constant in RTL.  The argument MODE is redundant except in
++   the case of a `const_int' rtx.  Select the section by calling
++   `text_section' or one of the alternatives for other sections.
++
++   Do not define this macro if you put all constants in the read-only
++   data section.  */
+ 
+-#if 0
+ static void
+-microblaze_unique_section (
+-  tree decl,
+-  int reloc)
++microblaze_select_rtx_section (enum machine_mode mode, rtx x, 
++                               unsigned HOST_WIDE_INT align)
+ {
++  default_elf_select_rtx_section (mode, x, align);
++}
+ 
+-  int len, size, sec;
+-  const char *name, *prefix;
+-  char *string;
+-  const char *prefixes[4][2] = {
+-    { ".text.", ".gnu.linkonce.t." },
+-    { ".rodata.", ".gnu.linkonce.r." },
+-    { ".data.", ".gnu.linkonce.d." },
+-    { ".sdata.", ".gnu.linkonce.s." }
+-  };
+-    
+-  name = IDENTIFIER_POINTER (DECL_ASSEMBLER_NAME (decl));
+-  size = int_size_in_bytes (TREE_TYPE (decl));
++/* A C statement or statements to switch to the appropriate
++   section for output of DECL.  DECL is either a `VAR_DECL' node
++   or a constant of some sort.  RELOC indicates whether forming
++   the initial value of DECL requires link-time relocations.  */
+ 
+-  /* Determine the base section we are interested in:
+-     0=text, 1=rodata, 2=data, 3=sdata.  */
+-  if (TREE_CODE (decl) == FUNCTION_DECL)
+-    sec = 0;
+-  else if ((TARGET_EMBEDDED_PIC)
+-           && TREE_CODE (decl) == STRING_CST)
+-  {
+-    /* For embedded position independent code, put constant strings
+-       in the text section, because the data section is limited to
+-       64K in size.  For microblaze16 code, put strings in the text
+-       section so that a PC relative load instruction can be used to
+-       get their address.  */
+-    sec = 0;
+-  }
+-  else
++static void
++microblaze_select_section (tree decl, int reloc, 
++                           unsigned HOST_WIDE_INT align) 
++{
++  switch (categorize_decl_for_section (decl, reloc, align))
+   {
+-    /* For hosted applications, always put an object in small data if
+-       possible, as this gives the best performance.  */
++    case SECCAT_RODATA_MERGE_STR:
++    case SECCAT_RODATA_MERGE_STR_INIT:
++      /* MB binutils have various issues with mergeable string sections and
++         relaxation/relocation. Currently, turning mergeable sections 
++         into regular readonly sections. */
++      readonly_data_section ();
++      return;
+ 
+-    if (size > 0 && size <= microblaze_section_threshold)
+-      sec = 3;
+-    else if (decl_readonly_section (decl, reloc))
+-      sec = 1;
+-    else
+-      sec = 2;
++    default:
++      default_elf_select_section (decl, reloc, align);
++      return;
+   }
+-
+-  prefix = prefixes[sec][DECL_ONE_ONLY (decl)];
+-  len = strlen (name) + strlen (prefix);
+-  /*  len =  strlen (prefix);                         */
+-  string = alloca (len + 1);
+-  sprintf (string, "%s%s", prefix, name);
+-  DECL_SECTION_NAME(decl) = build_string(len,string);
+-  /*  sprintf (string, "%s", prefix);                           */
+-  /*  DECL_SECTION_NAME(DECL) = build_string(len,string);*/
+ }
+-#endif
+ 
+-
+-
+-/* GCC 3.4.1
+- * Re-write this. Can use default_encode_section_info. Refer to rs6000/mips.
+- */
++/*
++  Encode info about sections into the RTL based on a symbol's declaration.
++  The default definition of this hook, default_encode_section_info in `varasm.c',
++  sets a number of commonly-useful bits in SYMBOL_REF_FLAGS. */
+ 
+ static void
+-microblaze_encode_section_info (
+-  tree DECL,
+-  rtx rtl,
+-  int new_decl_p ATTRIBUTE_UNUSED)
++microblaze_encode_section_info (tree decl, rtx rtl, int first)
+ {
+-   
+-  if (TARGET_EMBEDDED_PIC)					
+-  {									
+-    if (TREE_CODE (DECL) == VAR_DECL)				
+-      SYMBOL_REF_FLAG (XEXP (rtl, 0)) = 1;		
+-    else if (TREE_CODE (DECL) == FUNCTION_DECL)			
+-      SYMBOL_REF_FLAG (XEXP (rtl, 0)) = 0;		
+-    else if (TREE_CODE (DECL) == STRING_CST)
+-      SYMBOL_REF_FLAG (XEXP (rtl, 0)) = 0;		
+-    else								
+-      SYMBOL_REF_FLAG (XEXP (rtl, 0)) = 1;		
+-  }									
+-									
+-  else if (TREE_CODE (DECL) == VAR_DECL				
+-           && DECL_SECTION_NAME (DECL) != NULL_TREE                   
+-           && (0 == strcmp (TREE_STRING_POINTER (DECL_SECTION_NAME (DECL)), 
+-                            ".sdata")                                 
+-               || 0 == strcmp (TREE_STRING_POINTER (DECL_SECTION_NAME (DECL)),
+-                               ".sbss")))                                
+-  {									
+-    SYMBOL_REF_FLAG (XEXP (rtl, 0)) = 1;		
+-  }									
+-									
+-  /* We can not perform GP optimizations on variables which are in	
+-     specific sections, except for .sdata and .sbss which are		
+-     handled above.  */						
+-  else if (TARGET_GP_OPT && TREE_CODE (DECL) == VAR_DECL		
+-           && DECL_SECTION_NAME (DECL) == NULL_TREE)			
+-  {									
+-    int size = int_size_in_bytes (TREE_TYPE (DECL));		
+-    if (size > 0 && size <= microblaze_section_threshold)		
+-      SYMBOL_REF_FLAG (XEXP (rtl, 0)) = 1;		
+-  }									
+-									
+-  else if (HALF_PIC_P ())						
+-  {									
+-    HALF_PIC_ENCODE (DECL);						
+-  }					
+-				
+-  /* XLNX[07.24.01] */						        
+-  /*Added for setting the var_section in different cases */       	        
+-  {  								
+-    int size = int_size_in_bytes (TREE_TYPE (DECL));                    
+-    int small_size = (size > 0 && size <= microblaze_section_threshold   
+-                      && TARGET_XLGP_OPT) ? 1 : 0;      	        
+-    int read_only = (TREE_READONLY (DECL)) ;                             
+-                                                                        
+-    if ((TREE_CODE (DECL)) == VAR_DECL) {                            
+-      int init_val = (DECL_INITIAL (DECL) == NULL) ? 0 : 1;              
+-      int init_val_override = init_val ? (!initializer_zerop (DECL_INITIAL (DECL))): 1;
+-      int value = (small_size & init_val_override) | (read_only << 1) | (init_val << 2);       
+-            
+-      if (DECL_EXTERNAL (DECL))                                            
+-        VAR_SECTION (XEXP (rtl,0)) = DATA_VAR;                 
+-      else {
+-        if (init_val)          
+-          VAR_SECTION (XEXP (rtl,0)) = value;                  
+-        else                                                             
+-          VAR_SECTION (XEXP (rtl,0)) = (value % 2) + 1;        
+-      }
+-            
+-      /* 
+-         if (DECL_NAME (DECL))
+-         fprintf (stderr, "microblaze_encode_section_info: %s. size: %d, init_val: %d, read_only: %d, VAR_SECTION: %d\n", 
+-         IDENTIFIER_POINTER (DECL_NAME (DECL)), size, init_val, read_only, VAR_SECTION (XEXP (rtl, 0)));
+-      */
+-            
+-    }                                                                   
+-    else if ((TREE_CODE (DECL)) == STRING_CST){                         
+-      if ((XEXP (rtl, 0)) != NULL) {                      
+-        if (TREE_STRING_LENGTH (DECL) <= microblaze_section_threshold) {     
+-          VAR_SECTION (XEXP (rtl,0)) = SDATA_VAR;   
+-        }     
+-        else {                                                              
+-          VAR_SECTION (XEXP (rtl,0)) = RODATA_VAR;    
+-        }    
+-      } else {
+-        fprintf(stderr,"Some Problem with the string\n");
+-      }          
+-    }									
+-  }									
++  default_encode_section_info (decl, rtl, first);
+ }
+ 
+-
+ /* Determine of register must be saved/restored in call. */
+ static int
+ microblaze_must_save_register (int regno)
+diff --git a/gcc/config/microblaze/microblaze.h b/gcc/config/microblaze/microblaze.h
+index d04de79..6900793 100644
+--- a/gcc/config/microblaze/microblaze.h
++++ b/gcc/config/microblaze/microblaze.h
+@@ -2717,18 +2717,60 @@ do {									\
+   fputs (":\n", STREAM);						\
+ } while (0)
+ 
++/* All of these below can be replaced or overridden from elfos.h.  */
++#define COMMON_ASM_OP	"\t.comm\t"
++#define LCOMMON_ASM_OP	"\t.lcomm\t"
++
++/* ASM_OUTPUT_ALIGNED_COMMON and ASM_OUTPUT_ALIGNED_LOCAL
++
++   Unfortunately, we still need to set the section explicitly. Somehow,
++   our binutils assign .comm and .lcomm variables to the "current" section 
++   in the assembly file, rather than where they implicitly belong. We need to
++   remove this explicit setting in GCC when binutils can understand sections
++   better. */                                                        
++#undef	ASM_OUTPUT_ALIGNED_COMMON
++#define	ASM_OUTPUT_ALIGNED_COMMON(FILE, NAME, SIZE, ALIGN)		\
++do {									\
++  if (SIZE > 0 && SIZE <= microblaze_section_threshold                  \
++      && TARGET_XLGP_OPT)                                               \
++    {                                                                   \
++      sbss_section ();							\
++    }									\
++  else									\
++    {									\
++      bss_section();                                                    \
++    }                                                                   \
++  fprintf (FILE, "%s", COMMON_ASM_OP);                                  \
++  assemble_name ((FILE), (NAME));					\
++  fprintf ((FILE), ","HOST_WIDE_INT_PRINT_UNSIGNED",%u\n",		\
++           (SIZE), (ALIGN) / BITS_PER_UNIT);                            \
++  ASM_OUTPUT_TYPE_DIRECTIVE (FILE, NAME, "object");			\
++} while (0)
+ 
+-/* This says how to define an aligned common symbol */
+-#define ASM_OUTPUT_ALIGNED_COMMON(STREAM, NAME, SIZE, ALIGNMENT)   \
+-    (microblaze_declare_comm_object (STREAM, NAME, "\n\t.comm\t", ",%u,%u\n", (SIZE), (ALIGNMENT)))
+-
+-/* This says how to define an aligned static common symbol */
+-#define ASM_OUTPUT_ALIGNED_LOCAL(STREAM, NAME, SIZE, ALIGNMENT)     \
+-    (microblaze_declare_comm_object (STREAM, NAME, "\n\t.lcomm\t", ",%u,%u\n", (SIZE), (ALIGNMENT)))
++#undef ASM_OUTPUT_ALIGNED_LOCAL
++#define	ASM_OUTPUT_ALIGNED_LOCAL(FILE, NAME, SIZE, ALIGN)		\
++do {									\
++  if (SIZE > 0 && SIZE <= microblaze_section_threshold                  \
++      && TARGET_XLGP_OPT)                                               \
++    {                                                                   \
++      sbss_section ();							\
++    }									\
++  else									\
++    {									\
++      bss_section();                                                    \
++    }                                                                   \
++  fprintf (FILE, "%s", LCOMMON_ASM_OP);                                 \
++  assemble_name ((FILE), (NAME));					\
++  fprintf ((FILE), ","HOST_WIDE_INT_PRINT_UNSIGNED",%u\n",		\
++           (SIZE), (ALIGN) / BITS_PER_UNIT);                            \
++  ASM_OUTPUT_TYPE_DIRECTIVE (FILE, NAME, "object");			\
++} while (0)
+ 
+-/* This says how to output an aligned BSS symbol */
+-#define ASM_OUTPUT_ALIGNED_BSS(STREAM, DECL, NAME, SIZE, ALIGNMENT) \
+-    asm_output_aligned_bss (STREAM, DECL, NAME, SIZE, ALIGNMENT)
++/* Describe how to emit uninitialized external linkage items.  */
++#define	ASM_OUTPUT_ALIGNED_BSS(FILE, DECL, NAME, SIZE, ALIGN)		\
++do {									\
++  ASM_OUTPUT_ALIGNED_LOCAL (FILE, NAME, SIZE, ALIGN);			\
++} while (0)
+ 
+ /* This says how to output an external.  It would be possible not to
+    output anything and let undefined symbol become external. However
+@@ -2945,9 +2987,6 @@ do {									\
+ #define ASM_COMMENT_START " #"
+ #endif
+ 
+-#define VAR_SECTION(RTX) ((RTX)->var_section)
+-#define SHIFT_TYPE(RTX) ((RTX)->shift_type)
+-
+ /* Macros for microblaze-tfile.c to encapsulate stabs in ECOFF, and for
+    and microblaze-tdump.c to print them out.
+ 
+diff --git a/gcc/rtl.h b/gcc/rtl.h
+index 7c04746..26926b6 100644
+--- a/gcc/rtl.h
++++ b/gcc/rtl.h
+@@ -243,10 +243,6 @@ struct rtx_def GTY((chain_next ("RTX_NEXT (&%h)"),
+      1 in a MEM if it refers to a scalar.
+      1 in a SYMBOL_REF for a weak symbol.  */
+   unsigned return_val : 1;
+-  /* var_section indicates which section the variable is defined. */
+-  unsigned int var_section : 4;
+-  /* shift_type - shift by a constant amount or by an amount in a register.  */
+-  unsigned int shift_type : 2;
+ 
+   /* The first element of the operands of this rtx.
+      The number of operands and their types are controlled
+-- 
+1.5.3.8
+

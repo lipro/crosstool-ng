@@ -1,0 +1,344 @@
+From 126b992eba74200f9a8beb76f7cc6627545e33db Mon Sep 17 00:00:00 2001
+Message-Id: <126b992eba74200f9a8beb76f7cc6627545e33db.1241484429.git.john.williams@petalogix.com>
+In-Reply-To: <930a7bf07b58a3d6a48393a6419b2c958fc9dc2a.1241484427.git.john.williams@petalogix.com>
+References: <930a7bf07b58a3d6a48393a6419b2c958fc9dc2a.1241484427.git.john.williams@petalogix.com>
+From: John Williams <john.williams@petalogix.com>
+Date: Tue, 28 Apr 2009 14:39:50 +1000
+Subject: [PATCH 37/63] microblaze: More prototype cleanups for MicroBlaze
+
+---
+ gcc/config/microblaze/microblaze.c      |   23 ++++--
+ gcc/config/microblaze/microblaze.c.orig |  120 ++++++++++++++++++++++++-------
+ 2 files changed, 110 insertions(+), 33 deletions(-)
+
+diff --git a/gcc/config/microblaze/microblaze.c b/gcc/config/microblaze/microblaze.c
+index 467800d..77f80c9 100644
+--- a/gcc/config/microblaze/microblaze.c
++++ b/gcc/config/microblaze/microblaze.c
+@@ -151,7 +151,7 @@ struct microblaze_address_info
+ static void microblaze_encode_section_info	PARAMS ((tree, rtx, int));
+ static void microblaze_globalize_label          PARAMS ((FILE*, const char*));
+ void  microblaze_declare_comm_object            PARAMS ((FILE *, char *, char *, char *, int size, int align));
+-static void microblaze_unique_section           PARAMS ((tree, int));
++//static void microblaze_unique_section           PARAMS ((tree, int));
+ static void microblaze_function_prologue        PARAMS ((FILE*, int));
+ static void microblaze_function_epilogue        PARAMS ((FILE*, HOST_WIDE_INT));
+ static void microblaze_asm_file_start           PARAMS ((void));
+@@ -181,13 +181,13 @@ HOST_WIDE_INT microblaze_initial_elimination_offset
+                                                 PARAMS ((int, int));
+ int microblaze_sched_use_dfa_pipeline_interface PARAMS ((void));
+ void microblaze_function_end_prologue           PARAMS ((FILE *));
+-static enum internal_test map_test_to_internal_test	
+-                                                PARAMS ((enum rtx_code));
++//static enum internal_test map_test_to_internal_test	
++//                                                PARAMS ((enum rtx_code));
+ static void block_move_loop			PARAMS ((rtx, rtx, int, int, rtx, rtx));
+ static void block_move_call			PARAMS ((rtx, rtx, rtx));
+ static void save_restore_insns			PARAMS ((int));
+-static rtx add_constant				PARAMS ((struct constant **, rtx, enum machine_mode));
+-static void dump_constants			PARAMS ((struct constant *, rtx));
++//static rtx add_constant				PARAMS ((struct constant **, rtx, enum machine_mode));
++//static void dump_constants			PARAMS ((struct constant *, rtx));
+ static int microblaze_version_to_int            PARAMS ((const char *));
+ static int microblaze_version_compare           PARAMS ((const char *, const char *));
+ void microblaze_order_regs_for_local_alloc 	PARAMS ((void));
+@@ -217,6 +217,7 @@ static bool microblaze_handle_option 		PARAMS ((size_t, const char *, int));
+ int microblaze_is_interrupt_handler		PARAMS ((void));
+ int microblaze_const_double_ok 			PARAMS ((rtx, enum machine_mode));
+ static int microblaze_must_save_register 	PARAMS ((int));
++void output_ascii 				PARAMS ((FILE *, const char *, int));
+ 
+ /* Global variables for machine-dependent things.  */
+ 
+@@ -340,7 +341,7 @@ struct microblaze_frame_info zero_frame_info;
+ 
+ /* Temporary filename used to buffer .text until end of program
+    for -mgpopt.  */
+-static char *temp_filename;
++//static char *temp_filename;
+ 
+ /* Pseudo-reg holding the address of the current function when
+    generating embedded PIC code.  Created by LEGITIMIZE_ADDRESS, used
+@@ -498,7 +499,7 @@ int get_base_reg(rtx);
+ static int printed = 0;
+ enum load_store {LOAD = 0, STORE=1};
+ char *format_load_store(char*, enum load_store,  enum machine_mode ,  rtx,int);
+-static int prev_offset;
++// static int prev_offset;
+ 
+ /* True if the current function is an interrupt handler
+    (either via #pragma or an attribute specification).  */
+@@ -1992,6 +1993,7 @@ pic_address_needs_scratch (rtx x)
+ 
+ /* Make normal rtx_code into something we can index from an array */
+ 
++#if 0
+ static enum internal_test
+ map_test_to_internal_test (enum rtx_code test_code)
+ {
+@@ -2014,6 +2016,7 @@ map_test_to_internal_test (enum rtx_code test_code)
+ 
+   return test;
+ }
++#endif
+ 
+ /* Emit the common code for doing conditional branches.
+    operand[0] is the label to jump to.
+@@ -4721,6 +4724,7 @@ struct constant
+ 
+ /* Add a constant to the list in *PCONSTANTS.  */
+ 
++#if 0
+ static rtx
+ add_constant (
+   struct constant **pconstants,
+@@ -4741,6 +4745,7 @@ add_constant (
+   *pconstants = c;
+   return c->label;
+ }
++#endif
+ 
+ 
+ /* Exported to toplev.c.
+@@ -5039,6 +5044,7 @@ microblaze_select_section (
+ 
+ 
+ 
++#if 0
+ static void
+ microblaze_unique_section (
+   tree decl,
+@@ -5094,6 +5100,7 @@ microblaze_unique_section (
+   /*  sprintf (string, "%s", prefix);                           */
+   /*  DECL_SECTION_NAME(DECL) = build_string(len,string);*/
+ }
++#endif
+ 
+ 
+ 
+@@ -5231,7 +5238,7 @@ microblaze_must_save_register (int regno)
+ void
+ output_ascii (FILE *file, const char *string, int len)
+ {
+-  register int i, c, cur_pos = 17;
++  register int i, cur_pos = 17;
+   fprintf (file, "\t.ascii\t\"");
+   for (i = 0; i < len; i++)
+   {
+diff --git a/gcc/config/microblaze/microblaze.c.orig b/gcc/config/microblaze/microblaze.c.orig
+index 00c5b94..467800d 100644
+--- a/gcc/config/microblaze/microblaze.c.orig
++++ b/gcc/config/microblaze/microblaze.c.orig
+@@ -203,8 +203,6 @@ int simple_memory_operand 			PARAMS ((rtx, enum machine_mode));
+ void trace 					PARAMS ((const char *, const char *, const char *));
+ void gen_conditional_branch 			PARAMS ((rtx *, enum rtx_code));
+ void init_cumulative_args 			PARAMS ((CUMULATIVE_ARGS *,tree, rtx));
+-void function_arg_advance 			PARAMS ((CUMULATIVE_ARGS *, enum machine_mode, tree, int));
+-struct rtx_def *function_arg 			PARAMS ((CUMULATIVE_ARGS *, enum machine_mode, tree, int));
+ int function_arg_partial_nregs 			PARAMS ((CUMULATIVE_ARGS *, enum machine_mode, tree, int));
+ HOST_WIDE_INT microblaze_debugger_offset 	PARAMS ((rtx, HOST_WIDE_INT));
+ void microblaze_output_lineno 			PARAMS ((FILE *, int));
+@@ -222,12 +220,7 @@ static int microblaze_must_save_register 	PARAMS ((int));
+ 
+ /* Global variables for machine-dependent things.  */
+ 
+-struct microblaze_cpu_select microblaze_select =
+-{
+-  MICROBLAZE_DEFAULT_CPU,                 /* CPU      */
+-  "none",                                 /* Tuning   */
+-  0                                       /* Flags    */
+-};
++static unsigned int microblaze_select_flags = 0;
+ 
+ /* Toggle which pipleline interface to use */
+ int microblaze_sched_use_dfa = 0;
+@@ -583,6 +576,9 @@ static int microblaze_save_volatiles (tree);
+ #undef TARGET_HANDLE_OPTION
+ #define TARGET_HANDLE_OPTION		microblaze_handle_option
+ 
++#undef TARGET_DEFAULT_TARGET_FLAGS
++#define TARGET_DEFAULT_TARGET_FLAGS	TARGET_DEFAULT
++
+ struct gcc_target targetm = TARGET_INITIALIZER;
+ 
+ /* Return truth value if a CONST_DOUBLE is ok to be a legitimate constant.  */
+@@ -1855,7 +1851,7 @@ microblaze_rtx_costs (
+     case LSHIFTRT:	
+     {
+       if (TARGET_BARREL_SHIFT) {
+-        if (microblaze_version_compare (microblaze_select.cpu, "v5.00.a") >= 0)
++        if (microblaze_version_compare (microblaze_select_cpu, "v5.00.a") >= 0)
+           *total = COSTS_N_INSNS (1);                                         
+         else
+           *total = COSTS_N_INSNS (2);
+@@ -1901,7 +1897,7 @@ microblaze_rtx_costs (
+         if (TARGET_HARD_FLOAT)
+           *total = COSTS_N_INSNS (6);					
+       }
+-      else if (!TARGET_SOFT_MUL) {                                                       if (microblaze_version_compare (microblaze_select.cpu, "v5.00.a") >= 0)
++      else if (!TARGET_SOFT_MUL) {                                                       if (microblaze_version_compare (microblaze_select_cpu, "v5.00.a") >= 0)
+          *total = COSTS_N_INSNS (1);
+       else
+           *total = COSTS_N_INSNS (3);
+@@ -2723,7 +2719,7 @@ function_arg_advance (
+ /* Return an RTL expression containing the register for the given mode,
+    or 0 if the argument is to be passed on the stack.  */
+ 
+-struct rtx_def *
++rtx
+ function_arg (
+   CUMULATIVE_ARGS *cum,		/* current arg information */
+   enum machine_mode mode,	/* current arg mode */
+@@ -2964,32 +2960,34 @@ override_options (void)
+   microblaze_section_threshold = g_switch_set ? g_switch_value : MICROBLAZE_DEFAULT_GVALUE;
+ 
+   /* Check the Microblaze CPU version for any special action that needs to be done */
+-  ver = microblaze_version_to_int (microblaze_select.cpu);
++  if (microblaze_select_cpu == NULL) 
++    microblaze_select_cpu = MICROBLAZE_DEFAULT_CPU;
++  ver = microblaze_version_to_int (microblaze_select_cpu);
+   if (ver == -1) {
+-    error ("(%s) is an invalid argument to -mcpu=\n", microblaze_select.cpu);
++    error ("(%s) is an invalid argument to -mcpu=\n", microblaze_select_cpu);
+   }
+ 
+-  ver = microblaze_version_compare (microblaze_select.cpu, "v3.00.a");
++  ver = microblaze_version_compare (microblaze_select_cpu, "v3.00.a");
+   if (ver < 0) {                                                        /* No hardware exceptions in earlier versions. So no worries */
+-    microblaze_select.flags &= ~(MICROBLAZE_MASK_NO_UNSAFE_DELAY);
++    microblaze_select_flags &= ~(MICROBLAZE_MASK_NO_UNSAFE_DELAY);
+     microblaze_no_unsafe_delay = 0;
+     microblaze_pipe = MICROBLAZE_PIPE_3;
+-  } else if (ver == 0 || (microblaze_version_compare (microblaze_select.cpu, "v4.00.b") == 0)) {
+-    microblaze_select.flags |= (MICROBLAZE_MASK_NO_UNSAFE_DELAY);
++  } else if (ver == 0 || (microblaze_version_compare (microblaze_select_cpu, "v4.00.b") == 0)) {
++    microblaze_select_flags |= (MICROBLAZE_MASK_NO_UNSAFE_DELAY);
+     microblaze_no_unsafe_delay = 1;
+     microblaze_pipe = MICROBLAZE_PIPE_3;
+   } else {
+-    microblaze_select.flags &= ~(MICROBLAZE_MASK_NO_UNSAFE_DELAY);
++    microblaze_select_flags &= ~(MICROBLAZE_MASK_NO_UNSAFE_DELAY);
+     microblaze_no_unsafe_delay = 0;
+     microblaze_pipe = MICROBLAZE_PIPE_5;                                /* We agree to use 5 pipe-stage model even on area optimized 3 pipe-stage variants. */
+-    if (microblaze_version_compare (microblaze_select.cpu, "v5.00.a") == 0 ||
+-        microblaze_version_compare (microblaze_select.cpu, "v5.00.b") == 0 ||
+-        microblaze_version_compare (microblaze_select.cpu, "v5.00.c") == 0) {
++    if (microblaze_version_compare (microblaze_select_cpu, "v5.00.a") == 0 ||
++        microblaze_version_compare (microblaze_select_cpu, "v5.00.b") == 0 ||
++        microblaze_version_compare (microblaze_select_cpu, "v5.00.c") == 0) {
+         target_flags |= MASK_PATTERN_COMPARE;                           /* Pattern compares are to be turned on by default only when compiling for MB v5.00.'z' */
+     }
+   }
+ 
+-  ver = microblaze_version_compare (microblaze_select.cpu, "v6.00.a");
++  ver = microblaze_version_compare (microblaze_select_cpu, "v6.00.a");
+   if (ver < 0) {
+       if (TARGET_MULTIPLY_HIGH)
+           warning (0, "-mxl-multiply-high can be used only with -mcpu=v6.00.a or greater.\n");
+@@ -4158,7 +4156,7 @@ save_restore_insns (int prologue)
+       reg_rtx = gen_rtx_REG (gpr_mode, regno);  
+       insn = gen_rtx_PLUS (Pmode, base_reg_rtx, GEN_INT (gp_offset));
+       mem_rtx = gen_rtx_MEM (gpr_mode, insn);
+-      if (interrupt_handler)
++      if (interrupt_handler || save_volatiles)
+         MEM_VOLATILE_P (mem_rtx) = 1;                         /* Do not optimize in flow analysis */    
+ 
+       if (prologue)
+@@ -4169,8 +4167,9 @@ save_restore_insns (int prologue)
+       else if (regno != (PIC_OFFSET_TABLE_REGNUM - GP_REG_FIRST))
+       {
+         insn = emit_move_insn (reg_rtx, mem_rtx);
+-        REG_NOTES (insn) = gen_rtx_EXPR_LIST (REG_MAYBE_DEAD, const0_rtx, NULL_RTX);
+       }
++
++      REG_NOTES (insn) = gen_rtx_EXPR_LIST (REG_MAYBE_DEAD, const0_rtx, NULL_RTX);
+       
+       gp_offset += GET_MODE_SIZE (gpr_mode);
+     }
+@@ -5179,7 +5178,7 @@ microblaze_encode_section_info (
+     else if ((TREE_CODE (DECL)) == STRING_CST){                         
+       if ((XEXP (rtl, 0)) != NULL) {                      
+         if (TREE_STRING_LENGTH (DECL) <= microblaze_section_threshold) {     
+-          VAR_SECTION (XEXP (rtl,0)) = SDATA2_VAR;   
++          VAR_SECTION (XEXP (rtl,0)) = SDATA_VAR;   
+         }     
+         else {                                                              
+           VAR_SECTION (XEXP (rtl,0)) = RODATA_VAR;    
+@@ -5227,3 +5226,74 @@ microblaze_must_save_register (int regno)
+ 
+   return 0;
+ }
++
++/* Output .ascii string. */
++void
++output_ascii (FILE *file, const char *string, int len)
++{
++  register int i, c, cur_pos = 17;
++  fprintf (file, "\t.ascii\t\"");
++  for (i = 0; i < len; i++)
++  {
++    register int c = string[i];
++
++    switch (c)
++    {
++      case '\"':
++      case '\\':
++	putc ('\\', file);
++	putc (c, file);
++	cur_pos += 2;
++	break;
++
++      case '\n':
++	fputs ("\\n", file);
++	if (i+1 < len
++	    && (((c = string[i+1]) >= '\040' && c <= '~')
++		  || c == '\t'))
++	  cur_pos = 32767;		/* break right here */
++	else
++	  cur_pos += 2;
++	break;
++
++      case '\t':
++	fputs ("\\t", file);
++	cur_pos += 2;
++	break;
++
++      case '\f':
++	fputs ("\\f", file);
++	cur_pos += 2;
++	break;
++
++      case '\b':
++	fputs ("\\b", file);
++	cur_pos += 2;
++	break;
++
++      case '\r':
++	fputs ("\\r", file);
++	cur_pos += 2;
++	break;
++
++      default:
++	if (c >= ' ' && c < 0177)
++	{
++	  putc (c, file);
++	  cur_pos++;
++	}
++	else
++	{
++	  fprintf (file, "\\%03o", c);
++	  cur_pos += 4;
++	}
++      }
++
++      if (cur_pos > 72 && i+1 < len)
++      {
++        cur_pos = 17;
++        fprintf (file, "\"\n\t.ascii\t\"");
++      }
++    }
++  fprintf (file, "\"\n");
++}
+-- 
+1.5.3.8
+

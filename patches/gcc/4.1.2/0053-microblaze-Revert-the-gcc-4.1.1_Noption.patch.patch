@@ -1,0 +1,28 @@
+From 23ed42e6503a86099d1e90b89b0c4e93ffcdf04d Mon Sep 17 00:00:00 2001
+Message-Id: <23ed42e6503a86099d1e90b89b0c4e93ffcdf04d.1241484431.git.john.williams@petalogix.com>
+In-Reply-To: <930a7bf07b58a3d6a48393a6419b2c958fc9dc2a.1241484427.git.john.williams@petalogix.com>
+References: <930a7bf07b58a3d6a48393a6419b2c958fc9dc2a.1241484427.git.john.williams@petalogix.com>
+From: John Williams <john.williams@petalogix.com>
+Date: Tue, 28 Apr 2009 14:40:14 +1000
+Subject: [PATCH 53/63] microblaze: Revert the gcc-4.1.1_Noption.patch
+
+---
+ gcc/config/microblaze/microblaze.h |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/gcc/config/microblaze/microblaze.h b/gcc/config/microblaze/microblaze.h
+index db0d5f6..c500729 100644
+--- a/gcc/config/microblaze/microblaze.h
++++ b/gcc/config/microblaze/microblaze.h
+@@ -429,7 +429,7 @@ while (0)
+ /* ??? The bestGnum will never be passed to the linker, because the gcc driver
+    will interpret it as a -b option.  */
+ 
+-#define LINK_SPEC "%{shared:-shared} -relax %{Zxl-mode-xmdstub:-defsym _TEXT_START_ADDR=0x800} \
++#define LINK_SPEC "%{shared:-shared} -N -relax %{Zxl-mode-xmdstub:-defsym _TEXT_START_ADDR=0x800} \
+   %{!mxl-gp-opt: -G 0} %{!Wl,-T*: %{!T*: -T xilinx.ld%s}}"
+ 
+ /* Specs for the compiler proper */
+-- 
+1.5.3.8
+

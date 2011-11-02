@@ -1,0 +1,187 @@
+From f3e2dac46fc4c09b2b1869816b7ac2b453548d30 Mon Sep 17 00:00:00 2001
+Message-Id: <f3e2dac46fc4c09b2b1869816b7ac2b453548d30.1241484427.git.john.williams@petalogix.com>
+In-Reply-To: <930a7bf07b58a3d6a48393a6419b2c958fc9dc2a.1241484427.git.john.williams@petalogix.com>
+References: <930a7bf07b58a3d6a48393a6419b2c958fc9dc2a.1241484427.git.john.williams@petalogix.com>
+From: John Williams <john.williams@petalogix.com>
+Date: Tue, 28 Apr 2009 14:39:12 +1000
+Subject: [PATCH 14/63] microblaze: Updates to switches
+
+---
+ gcc/config/microblaze/microblaze.h   |   66 +++++++++------------------------
+ gcc/config/microblaze/microblaze.opt |   16 +++++---
+ 2 files changed, 28 insertions(+), 54 deletions(-)
+
+diff --git a/gcc/config/microblaze/microblaze.h b/gcc/config/microblaze/microblaze.h
+index 495688e..2e2017e 100644
+--- a/gcc/config/microblaze/microblaze.h
++++ b/gcc/config/microblaze/microblaze.h
+@@ -222,7 +222,7 @@ extern char *microblaze_no_clearbss;
+ 
+ 
+ /* Default target_flags if no switches are specified  */
+-#define TARGET_DEFAULT      (0)
++#define TARGET_DEFAULT      (MASK_SOFT_MUL | MASK_SOFT_DIV | MASK_SOFT_FLOAT)
+ 
+ #ifndef TARGET_CPU_DEFAULT
+ #define TARGET_CPU_DEFAULT 0
+@@ -232,31 +232,12 @@ extern char *microblaze_no_clearbss;
+ #define TARGET_ENDIAN_DEFAULT MASK_BIG_ENDIAN
+ #endif
+ 
+-#ifndef MULTILIB_DEFAULTS
+-#if TARGET_ENDIAN_DEFAULT == 0
+-#define MULTILIB_DEFAULTS { "EL", "microblaze" }
+-#else
+-#define MULTILIB_DEFAULTS { "EB", "microblaze" }
+-#endif
+-#endif
+-
+ /* What is the default setting for -mcpu= . We set it to v4.00.a even though 
+    we are actually ahead. This is safest version that has generate code compatible 
+    for the original ISA */
+ #define MICROBLAZE_DEFAULT_CPU      "v4.00.a"               
+ 
+-/* We must pass -EL to the linker by default for little endian embedded
+-   targets using linker scripts with a OUTPUT_FORMAT line.  Otherwise, the
+-   linker will default to using big-endian output files.  The OUTPUT_FORMAT
+-   line must be in the linker script, otherwise -EB/-EL will not work.  */
+-
+-#ifndef LINKER_ENDIAN_SPEC
+-#if TARGET_ENDIAN_DEFAULT == 0
+-#define LINKER_ENDIAN_SPEC "%{!EB:%{!meb:-EL}}"
+-#else
+ #define LINKER_ENDIAN_SPEC ""
+-#endif
+-#endif
+ 
+ 
+ /* Macros to decide whether certain features are available or not,
+@@ -330,23 +311,13 @@ while (0)
+ /* Show we can debug even without a frame pointer.  */
+ #define CAN_DEBUG_WITHOUT_FP
+ 
+-/* Complain about missing specs and predefines that should be defined in each
+-   of the target tm files to override the defaults.  This is mostly a place-
+-   holder until I can get each of the files updated [mm].  */
+-
+-#if defined(OSF_OS) \
+-    || defined(MICROBLAZE_SYSV) \
+-    || defined(MICROBLAZE_SVR4) \
+-    || defined(MICROBLAZE_BSD43)
+-
+-#ifndef STARTFILE_SPEC
+-#error "Define STARTFILE_SPEC in the appropriate tm.h file"
+-#endif
+-
+-#ifndef MACHINE_TYPE
+-#error "Define MACHINE_TYPE in the appropriate tm.h file"
+-#endif
+-#endif
++#define DRIVER_SELF_SPECS    				\
++	"%{mxl-soft-mul:%<mno-xl-soft-mul}", 		\
++	"%{mno-xl-multiply-high:%<mxl-multiply-high}", 	\
++	"%{mno-xl-barrel-shift:%<mxl-barrel-shift}", 	\
++	"%{mno-xl-pattern-compare:%<mxl-pattern-compare}", \
++	"%{mxl-soft-div:%<mno-xl-soft-div}", 		\
++	"%{msoft-float:%<mhard-float}", 
+ 
+ /* Tell collect what flags to pass to nm.  */
+ #ifndef NM_FLAGS
+@@ -494,14 +465,12 @@ while (0)
+ /* CC1_SPEC is the set of arguments to pass to the compiler proper.  */
+ 
+ #ifndef CC1_SPEC
+-#define CC1_SPEC "\
++#define CC1_SPEC " \
+ %{G*} %{gline:%{!g:%{!g0:%{!g1:%{!g2: -g1}}}}} \
+ %{save-temps: } \
+-%(subtarget_cc1_spec)\
+-%{Zxl-blazeit: %{!mxl-soft-mul: -mno-xl-soft-mul} %{!mxl-soft-div: -mno-xl-soft-div} -mxl-barrel-shift}\
+-%{!mno-xl-soft-mul: %{!Zxl-blazeit: -mxl-soft-mul}}\
+-%{!mno-xl-soft-div: %{!Zxl-blazeit: -mxl-soft-div}}\
+-%{!mhard-float: -msoft-float}\
++%(subtarget_cc1_spec) \
++%{Zxl-blazeit: -mno-xl-soft-mul -mno-xl-soft-div -mxl-barrel-shift \
++-mxl-pattern-compare -mxl-multiply-high} \
+ "
+ #endif
+ 
+@@ -532,11 +501,12 @@ while (0)
+ %{.S:	-D__LANGUAGE_ASSEMBLY -D_LANGUAGE_ASSEMBLY %{!ansi:-DLANGUAGE_ASSEMBLY}} \
+ %{.s:	-D__LANGUAGE_ASSEMBLY -D_LANGUAGE_ASSEMBLY %{!ansi:-DLANGUAGE_ASSEMBLY}} \
+ %{!.S: %{!.s: %{!.cc: %{!.cxx: %{!.C: %{!.m: -D__LANGUAGE_C -D_LANGUAGE_C %{!ansi:-DLANGUAGE_C}}}}}}} \
+-%{mno-xl-soft-mul: -DHAVE_HW_MUL}       \
+-%{mno-xl-soft-div: -DHAVE_HW_DIV}       \
+-%{mxl-barrel-shift: -DHAVE_HW_BSHIFT}   \
+-%{mxl-pattern-compare: -DHAVE_HW_PCMP}  \
+-%{mhard-float: -DHAVE_HW_FPU}           \
++%{mno-xl-soft-mul: -DHAVE_HW_MUL}       	\
++%{mxl-multiply-high: -DHAVE_HW_MUL_HIGH}    	\
++%{mno-xl-soft-div: -DHAVE_HW_DIV}       	\
++%{mxl-barrel-shift: -DHAVE_HW_BSHIFT}   	\
++%{mxl-pattern-compare: -DHAVE_HW_PCMP}  	\
++%{mhard-float: -DHAVE_HW_FPU}           	\
+ "
+ #endif
+ 
+diff --git a/gcc/config/microblaze/microblaze.opt b/gcc/config/microblaze/microblaze.opt
+index 97649df..dcf53d3 100644
+--- a/gcc/config/microblaze/microblaze.opt
++++ b/gcc/config/microblaze/microblaze.opt
+@@ -21,11 +21,11 @@
+ 
+ mxl-soft-mul
+ Target Mask(SOFT_MUL)
+-Use the soft multiply emulation
++Use the soft multiply emulation (default)
+ 
+ mxl-soft-div
+ Target Mask(SOFT_DIV)
+-Use the soft divide emulation
++Use the soft divide emulation (default)
+ 
+ mxl-barrel-shift
+ Target Mask(BARREL_SHIFT)
+@@ -33,11 +33,11 @@ Use the hardware barrel shifter instead of emulation
+ 
+ msoft-float
+ Target Report RejectNegative Mask(SOFT_FLOAT)
+-Prevent the use of all hardware floating-point instructions
++Use software emulation for floating point (default)
+ 
+ mhard-float
+ Target Report RejectNegative InverseMask(SOFT_FLOAT, HARD_FLOAT)
+-Allow the use of hardware floating-point instructions
++Use hardware floating point instructions
+ 
+ mxl-pattern-compare
+ Target Mask(PATTERN_COMPARE)
+@@ -49,7 +49,7 @@ Use table lookup optimization for small signed integer divisions
+ 
+ mxl-stack-check
+ Target Mask(STACK_CHECK)
+-Check Stack at runtime
++Check for stack overflow at runtime
+ 
+ mxl-gp-opt
+ Target Mask(XLGPOPT)
+@@ -95,7 +95,7 @@ Target RejectNegative Joined Var(microblaze_select_cpu)
+ 
+ mtune=
+ Target RejectNegative Joined Var(microblaze_select_tune)
+--mtune=PROCESSOR	Schedule code for given CPU
++-mtune=PROCESSOR	Schedule code for sub-configuration
+ 
+ mno-clearbss
+ Target RejectNegative
+@@ -108,3 +108,7 @@ Emit OSF-style pic refs to externs
+ membedded-pic
+ Target Mask(EMBEDDED_PIC)
+ -membedded-pic is a form of PIC code suitable for embedded systems
++
++mxl-multiply-high
++Target Mask(MULTIPLY_HIGH)
++Use multiply high instructions for high part of 32x32 multiply
+-- 
+1.5.3.8
+

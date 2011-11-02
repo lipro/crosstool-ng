@@ -1,0 +1,16 @@
+diff -Naur gcc-4.1.2.s2/gcc/config/microblaze/microblaze.md gcc-4.1.2/gcc/config/microblaze/microblaze.md
+--- gcc-4.1.2.s2/gcc/config/microblaze/microblaze.md	2010-07-11 01:11:36.383359504 +0200
++++ gcc-4.1.2/gcc/config/microblaze/microblaze.md	2010-07-11 01:20:12.510173436 +0200
+@@ -3691,3 +3691,12 @@
+   [(set_attr "type" "multi")
+    (set_attr "length" "12")])
+ 
++(define_expand "builtin_setjmp_receiver"
++  [(match_operand 0 "" "")]
++  "flag_pic"
++{
++  emit_insn (gen_set_got (pic_offset_table_rtx));
++  emit_insn (gen_rtx_USE (VOIDmode, pic_offset_table_rtx));
++  DONE;
++})
++

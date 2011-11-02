@@ -1,0 +1,22 @@
+diff -Naur gcc-4.1.2.s1/gcc/config/microblaze/microblaze.c gcc-4.1.2/gcc/config/microblaze/microblaze.c
+--- gcc-4.1.2.s1/gcc/config/microblaze/microblaze.c	2010-07-11 01:16:38.509786744 +0200
++++ gcc-4.1.2/gcc/config/microblaze/microblaze.c	2010-07-11 01:18:39.504351223 +0200
+@@ -1736,13 +1736,14 @@
+           else
+ #endif
+           {
+-            union { long value_long; unsigned int value_int[2]; } val;
++            long int values[2];
+             REAL_VALUE_TYPE value;
+             REAL_VALUE_FROM_CONST_DOUBLE(value,operands[1]);
+-            REAL_VALUE_TO_TARGET_DOUBLE (value, &(val.value_long));
++            REAL_VALUE_TO_TARGET_DOUBLE (value, values);
+ 
+-            sprintf (ret, "addik\t%%0,r0,0x%x \n\taddik\t%%D0,r0,0x%x #Xfer Lo", 
+-		     val.value_int[0], val.value_int[1]);
++	
++            sprintf (ret, "addik\t%%0,r0,0x%lx \n\taddik\t%%D0,r0,0x%lx #Xfer Lo", 
++                     values[0], values[1]);
+             printed = 1;
+           }
+         }

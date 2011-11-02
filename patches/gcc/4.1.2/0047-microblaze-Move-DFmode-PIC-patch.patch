@@ -1,0 +1,81 @@
+From 564fdff04546fc415e0920b590ae3f6205c573e7 Mon Sep 17 00:00:00 2001
+Message-Id: <564fdff04546fc415e0920b590ae3f6205c573e7.1241484430.git.john.williams@petalogix.com>
+In-Reply-To: <930a7bf07b58a3d6a48393a6419b2c958fc9dc2a.1241484427.git.john.williams@petalogix.com>
+References: <930a7bf07b58a3d6a48393a6419b2c958fc9dc2a.1241484427.git.john.williams@petalogix.com>
+From: John Williams <john.williams@petalogix.com>
+Date: Tue, 28 Apr 2009 14:40:05 +1000
+Subject: [PATCH 47/63] microblaze: Move DFmode PIC patch
+
+---
+ gcc/config/microblaze/microblaze.c  |   10 ++--------
+ gcc/config/microblaze/microblaze.md |   12 ++++++++++++
+ 2 files changed, 14 insertions(+), 8 deletions(-)
+
+diff --git a/gcc/config/microblaze/microblaze.c b/gcc/config/microblaze/microblaze.c
+index d0f1eee..4ea6478 100644
+--- a/gcc/config/microblaze/microblaze.c
++++ b/gcc/config/microblaze/microblaze.c
+@@ -1050,11 +1050,6 @@ microblaze_legitimize_address (rtx x, rtx oldx ATTRIBUTE_UNUSED,
+     if (code0 == REG && REG_OK_FOR_BASE_P (xplus0)
+         && flag_pic == 2)
+     {
+-      rtx ptr_reg = gen_reg_rtx (Pmode);
+-      rtx res_reg = gen_reg_rtx (Pmode);
+-//      fprintf(stderr, "legitimize address:\n");
+-//      debug_rtx(xplus0);
+-//      debug_rtx(xplus1);
+       if (reload_in_progress)
+         regs_ever_live[PIC_OFFSET_TABLE_REGNUM] = 1;
+       if (code1 == CONST)
+@@ -1069,9 +1064,6 @@ microblaze_legitimize_address (rtx x, rtx oldx ATTRIBUTE_UNUSED,
+         result = gen_rtx_PLUS (Pmode, pic_offset_table_rtx, result);
+         result = gen_const_mem (Pmode, result);
+         result = gen_rtx_PLUS (Pmode, xplus0, result);
+-//        fprintf(stderr, "  returning:\n");
+-//        debug_rtx(result);
+-//        emit_insn (gen_rtx_SET (VOIDmode, res_reg, result));
+         return result;
+       }
+     }
+@@ -1468,6 +1460,7 @@ microblaze_move_1word (
+             sprintf (ret, "l%si\t%%0,%%1", microblaze_mode_to_mem_modifier (1, GET_MODE (operands[1])));
+             break;
+ 	  case ADDRESS_INVALID:
++	  case ADDRESS_PLT:
+ 	    fatal_insn("Invalid address", operands[1]);
+ 	    break;
+         }
+@@ -1648,6 +1641,7 @@ microblaze_move_1word (
+         sprintf (ret, "s%si\t%%z1,%%0", microblaze_mode_to_mem_modifier (0, GET_MODE (operands[0])));
+         break;
+       case ADDRESS_INVALID:
++      case ADDRESS_PLT:
+ 	fatal_insn ("invalid address", insn);
+ 	break;
+     }
+diff --git a/gcc/config/microblaze/microblaze.md b/gcc/config/microblaze/microblaze.md
+index 9b0031d..394cbf3 100644
+--- a/gcc/config/microblaze/microblaze.md
++++ b/gcc/config/microblaze/microblaze.md
+@@ -1856,6 +1856,18 @@
+         (match_operand:DF 1 "general_operand" ""))]
+   ""
+   {
++    if (flag_pic == 2) {
++      if (GET_CODE(operands[1]) == MEM 
++          && !microblaze_legitimate_address_p(DFmode, XEXP(operands[1],0), 0))
++      {
++        rtx ptr_reg;
++        rtx result;
++        ptr_reg = force_reg(Pmode, XEXP(operands[1],0));
++        result = gen_rtx_MEM(DFmode, ptr_reg);
++        emit_move_insn(operands[0], result);
++        DONE;
++      }
++    }
+     if ((reload_in_progress | reload_completed) == 0
+         && !register_operand (operands[0], DFmode)
+         && !register_operand (operands[1], DFmode)
+-- 
+1.5.3.8
+

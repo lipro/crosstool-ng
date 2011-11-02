@@ -1,0 +1,107 @@
+From 6ba50db400406f16143060deeae1f8f6d1673574 Mon Sep 17 00:00:00 2001
+Message-Id: <6ba50db400406f16143060deeae1f8f6d1673574.1241484427.git.john.williams@petalogix.com>
+In-Reply-To: <930a7bf07b58a3d6a48393a6419b2c958fc9dc2a.1241484427.git.john.williams@petalogix.com>
+References: <930a7bf07b58a3d6a48393a6419b2c958fc9dc2a.1241484427.git.john.williams@petalogix.com>
+From: John Williams <john.williams@petalogix.com>
+Date: Tue, 28 Apr 2009 14:39:00 +1000
+Subject: [PATCH 05/63] microblaze: Switches to microblaze.opt
+
+---
+ gcc/config/microblaze/microblaze.h   |   14 ------------
+ gcc/config/microblaze/microblaze.opt |   37 +++++++++++++++++++++++++++++++--
+ 2 files changed, 34 insertions(+), 17 deletions(-)
+
+diff --git a/gcc/config/microblaze/microblaze.h b/gcc/config/microblaze/microblaze.h
+index 6a8ec65..d1bf13b 100644
+--- a/gcc/config/microblaze/microblaze.h
++++ b/gcc/config/microblaze/microblaze.h
+@@ -169,20 +169,6 @@ extern char *microblaze_no_clearbss;
+ /* Run-time compilation parameters selecting different hardware subsets.  */
+ 
+ /* Macros used in the machine description to test the flags.  */
+-
+-/* Bits for real switches */
+-#define MASK_MEMCPY             0x00000008      /* Call memcpy instead of inline code           */
+-#define MASK_GAS                0x00000010	/* Gas used instead of MICROBLAZE as            */
+-#define MASK_EMPTY1             0x00000020	/* Empty 1 */
+-#define MASK_STATS              0x00000040	/* print statistics to stderr                   */
+-#define MASK_ABICALLS           0x00000400	/* emit .abicalls/.cprestore/.cpload            */
+-#define MASK_HALF_PIC           0x00000800	/* Emit OSF-style pic refs to externs           */
+-#define MASK_LONG_CALLS         0x00001000	/* Always call through a register               */
+-#define MASK_EMBEDDED_PIC       0x00004000	/* Generate embedded PIC code                   */
+-#define MASK_EMBEDDED_DATA      0x00008000	/* Reduce RAM usage, not fast code              */
+-#define MASK_BIG_ENDIAN         0x00010000	/* Generate big endian code                     */
+-#define MASK_SMALL_DIVIDES      0x10000000      /* Use table lookup for divides.                */
+-
+ #define TARGET_GAS		(target_flags & MASK_GAS)
+ #define TARGET_UNIX_ASM		(!TARGET_GAS)
+ #define TARGET_MICROBLAZE_AS		TARGET_UNIX_ASM
+diff --git a/gcc/config/microblaze/microblaze.opt b/gcc/config/microblaze/microblaze.opt
+index 7b66c05..1b254a6 100644
+--- a/gcc/config/microblaze/microblaze.opt
++++ b/gcc/config/microblaze/microblaze.opt
+@@ -44,7 +44,7 @@ Target Mask(PATTERN_COMPARE)
+ Use pattern compare instructions
+ 
+ msmall-divides
+-Target Joined 
++Target Joined Mask(SMALL_DIVIDES)
+ Use table lookup optimization for small signed integer divisions
+ 
+ mxl-stack-check
+@@ -52,7 +52,7 @@ Target Mask(STACK_CHECK)
+ Check Stack at runtime
+ 
+ mmemcpy
+-Target Joined 
++Target Joined Mask(MEMCPY)
+ Don't optimize block moves
+ 
+ mxl-gp-opt
+@@ -60,7 +60,7 @@ Target Mask(XLGPOPT)
+ Use GP relative sdata/sbss sections[for xlnx]
+ 
+ mstats
+-Target Joined 
++Target Joined Mask(STATS)
+ Output compiler statistics
+ 
+ mdebug
+@@ -104,3 +104,34 @@ Target RejectNegative Joined Var(microblaze_select_tune)
+ mno-clearbss
+ Target RejectNegative
+ Clear the BSS to zero and place zero initialized in BSS
++
++mgas
++Target Mask(GAS)
++Use gas instead of MicroBlaze as
++
++mabicalls
++Target Mask(ABICALLS)
++Emit .abicalls/.cprestore/.cpload
++
++mhalf-pic
++Target Mask(HALF_PIC)
++Emit OSF-style pic refs to externs
++
++mlong-calls
++Target Mask(LONG_CALLS)
++Always call through register
++
++membedded-pic
++Target Mask(EMBEDDED_PIC)
++-membedded-pic is a form of PIC code suitable for embedded systems
++
++membedded-data
++Target Mask(EMBEDDED_DATA)
++Reduce RAM usage, not fast code
++
++mbig-endian
++Target RejectNegative Mask(BIG_ENDIAN)
++Generate big endian code
++
++
++
+-- 
+1.5.3.8
+

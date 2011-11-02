@@ -1,0 +1,947 @@
+From 2216f295215496ad38455c6de0fc63099bba37a5 Mon Sep 17 00:00:00 2001
+Message-Id: <2216f295215496ad38455c6de0fc63099bba37a5.1241484430.git.john.williams@petalogix.com>
+In-Reply-To: <930a7bf07b58a3d6a48393a6419b2c958fc9dc2a.1241484427.git.john.williams@petalogix.com>
+References: <930a7bf07b58a3d6a48393a6419b2c958fc9dc2a.1241484427.git.john.williams@petalogix.com>
+From: John Williams <john.williams@petalogix.com>
+Date: Tue, 28 Apr 2009 14:40:07 +1000
+Subject: [PATCH 48/63] microblaze: Clean up block move handling
+
+---
+ gcc/config/microblaze/microblaze.c  |  681 ++++++++---------------------------
+ gcc/config/microblaze/microblaze.h  |   17 +-
+ gcc/config/microblaze/microblaze.md |  146 +-------
+ 3 files changed, 175 insertions(+), 669 deletions(-)
+
+diff --git a/gcc/config/microblaze/microblaze.c b/gcc/config/microblaze/microblaze.c
+index 4ea6478..fc3a97d 100644
+--- a/gcc/config/microblaze/microblaze.c
++++ b/gcc/config/microblaze/microblaze.c
+@@ -44,10 +44,6 @@
+ #include "insn-attr.h"
+ #include "recog.h"
+ #include "toplev.h"
+-
+-#undef MAX			/* sys/param.h may also define these */
+-#undef MIN
+-
+ #include "tree.h"
+ #include "function.h"
+ #include "expr.h"
+@@ -185,8 +181,10 @@ int microblaze_sched_use_dfa_pipeline_interface PARAMS ((void));
+ void microblaze_function_end_prologue           PARAMS ((FILE *));
+ //static enum internal_test map_test_to_internal_test	
+ //                                                PARAMS ((enum rtx_code));
+-static void block_move_loop			PARAMS ((rtx, rtx, int, int, rtx, rtx));
+-static void block_move_call			PARAMS ((rtx, rtx, rtx));
++static void microblaze_block_move_straight      PARAMS ((rtx, rtx, HOST_WIDE_INT));
++static void microblaze_adjust_block_mem         PARAMS ((rtx, HOST_WIDE_INT, rtx *, rtx *));
++static void microblaze_block_move_loop          PARAMS ((rtx, rtx, HOST_WIDE_INT));
++bool        microblaze_expand_block_move        PARAMS ((rtx, rtx, rtx, rtx));
+ static void save_restore_insns			PARAMS ((int));
+ //static rtx add_constant				PARAMS ((struct constant **, rtx, enum machine_mode));
+ //static void dump_constants			PARAMS ((struct constant *, rtx));
+@@ -212,7 +210,6 @@ void microblaze_internal_label 			PARAMS ((FILE *, const char*, unsigned long));
+ void microblaze_output_double 			PARAMS ((FILE *, REAL_VALUE_TYPE));
+ static int microblaze_save_volatiles 		PARAMS ((tree func));
+ const char* microblaze_move_2words 		PARAMS ((rtx *, rtx));
+-const char * output_block_move 			PARAMS ((rtx, rtx *, int, enum block_move_type));
+ void microblaze_declare_object 			PARAMS ((FILE *, char *, char *, char *, int));
+ int microblaze_valid_machine_decl_attribute 	PARAMS ((tree, tree, tree, tree));
+ static bool microblaze_handle_option 		PARAMS ((size_t, const char *, int));
+@@ -1921,6 +1918,154 @@ microblaze_move_2words (
+   return ret;
+ }
+ 
++/* Block Moves */
++
++#define MAX_MOVE_REGS 8
++#define MAX_MOVE_BYTES (MAX_MOVE_REGS * UNITS_PER_WORD)
++
++/* Emit straight-line code to move LENGTH bytes from SRC to DEST.
++   Assume that the areas do not overlap.  */
++
++static void
++microblaze_block_move_straight (rtx dest, rtx src, HOST_WIDE_INT length)
++{
++  HOST_WIDE_INT offset, delta;
++  unsigned HOST_WIDE_INT bits;
++  int i;
++  enum machine_mode mode;
++  rtx *regs;
++
++  bits = BITS_PER_WORD;
++  mode = mode_for_size (bits, MODE_INT, 0);
++  delta = bits / BITS_PER_UNIT;
++
++  /* Allocate a buffer for the temporary registers.  */
++  regs = alloca (sizeof (rtx) * length / delta);
++
++  /* Load as many BITS-sized chunks as possible.  Use a normal load if
++     the source has enough alignment, otherwise use left/right pairs.  */
++  for (offset = 0, i = 0; offset + delta <= length; offset += delta, i++)
++    {
++      regs[i] = gen_reg_rtx (mode);
++      emit_move_insn (regs[i], adjust_address (src, mode, offset));
++    }
++
++  /* Copy the chunks to the destination.  */
++  for (offset = 0, i = 0; offset + delta <= length; offset += delta, i++)
++    emit_move_insn (adjust_address (dest, mode, offset), regs[i]);
++
++  /* Mop up any left-over bytes.  */
++  if (offset < length)
++    {
++      src = adjust_address (src, BLKmode, offset);
++      dest = adjust_address (dest, BLKmode, offset);
++      move_by_pieces (dest, src, length - offset,
++		      MIN (MEM_ALIGN (src), MEM_ALIGN (dest)), 0);
++    }
++}
++
++/* Helper function for doing a loop-based block operation on memory
++   reference MEM.  Each iteration of the loop will operate on LENGTH
++   bytes of MEM.
++
++   Create a new base register for use within the loop and point it to
++   the start of MEM.  Create a new memory reference that uses this
++   register.  Store them in *LOOP_REG and *LOOP_MEM respectively.  */
++
++static void
++microblaze_adjust_block_mem (rtx mem, HOST_WIDE_INT length,
++                             rtx *loop_reg, rtx *loop_mem)
++{
++  *loop_reg = copy_addr_to_reg (XEXP (mem, 0));
++
++  /* Although the new mem does not refer to a known location,
++     it does keep up to LENGTH bytes of alignment.  */
++  *loop_mem = change_address (mem, BLKmode, *loop_reg);
++  set_mem_align (*loop_mem, MIN (MEM_ALIGN (mem), length * BITS_PER_UNIT));
++}
++
++
++/* Move LENGTH bytes from SRC to DEST using a loop that moves MAX_MOVE_BYTES
++   per iteration.  LENGTH must be at least MAX_MOVE_BYTES.  Assume that the
++   memory regions do not overlap.  */
++
++static void
++microblaze_block_move_loop (rtx dest, rtx src, HOST_WIDE_INT length)
++{
++  rtx label, src_reg, dest_reg, final_src;
++  HOST_WIDE_INT leftover;
++
++  leftover = length % MAX_MOVE_BYTES;
++  length -= leftover;
++
++  /* Create registers and memory references for use within the loop.  */
++  microblaze_adjust_block_mem (src, MAX_MOVE_BYTES, &src_reg, &src);
++  microblaze_adjust_block_mem (dest, MAX_MOVE_BYTES, &dest_reg, &dest);
++
++  /* Calculate the value that SRC_REG should have after the last iteration
++     of the loop.  */
++  final_src = expand_simple_binop (Pmode, PLUS, src_reg, GEN_INT (length),
++				   0, 0, OPTAB_WIDEN);
++
++  /* Emit the start of the loop.  */
++  label = gen_label_rtx ();
++  emit_label (label);
++
++  /* Emit the loop body.  */
++  microblaze_block_move_straight (dest, src, MAX_MOVE_BYTES);
++
++  /* Move on to the next block.  */
++  emit_move_insn (src_reg, plus_constant (src_reg, MAX_MOVE_BYTES));
++  emit_move_insn (dest_reg, plus_constant (dest_reg, MAX_MOVE_BYTES));
++
++  /* Emit the loop condition.  */
++  emit_insn (gen_cmpsi (src_reg, final_src));
++  emit_jump_insn (gen_bne (label));
++
++  /* Mop up any left-over bytes.  */
++  if (leftover)
++    microblaze_block_move_straight (dest, src, leftover);
++}
++
++/* Expand a movmemsi instruction.  */
++
++bool
++microblaze_expand_block_move (rtx dest, rtx src, rtx length, rtx align_rtx)
++{
++    
++  if (GET_CODE (length) == CONST_INT)
++    {
++      HOST_WIDE_INT bytes = INTVAL (length);
++      int align           = INTVAL (align_rtx);
++
++      if (align > UNITS_PER_WORD) 
++        {
++          align = UNITS_PER_WORD;       /* We can't do any better */
++        }
++      else if (align < UNITS_PER_WORD) 
++        {
++            if (INTVAL (length) <= MAX_MOVE_BYTES) 
++             {
++                move_by_pieces (dest, src, bytes, align, 0); 
++                return true;
++             }
++            else
++                return false;
++        }
++
++      if (INTVAL (length) <= 2 * MAX_MOVE_BYTES)
++	{
++	  microblaze_block_move_straight (dest, src, INTVAL (length));
++	  return true;
++	}
++      else if (optimize)
++	{
++	  microblaze_block_move_loop (dest, src, INTVAL (length));
++	  return true;
++	}
++    }
++  return false;
++}
+ 
+ bool 
+ microblaze_rtx_costs (
+@@ -2200,528 +2345,6 @@ gen_conditional_branch (rtx operands[], enum rtx_code test_code)
+ 	  label1, label2)));
+ }
+ 
+-/* Write a loop to move a constant number of bytes.
+-   Generate load/stores as follows:
+-
+-   do {
+-   temp1 = src[0];
+-   temp2 = src[1];
+-   ...
+-   temp<last> = src[MAX_MOVE_REGS-1];
+-   dest[0] = temp1;
+-   dest[1] = temp2;
+-   ...
+-   dest[MAX_MOVE_REGS-1] = temp<last>;
+-   src += MAX_MOVE_REGS;
+-   dest += MAX_MOVE_REGS;
+-   } while (src != final);
+-
+-   This way, no NOP's are needed, and only MAX_MOVE_REGS+3 temp
+-   registers are needed.
+-
+-   Aligned moves move MAX_MOVE_REGS*4 bytes every (2*MAX_MOVE_REGS)+3
+-   cycles, unaligned moves move MAX_MOVE_REGS*4 bytes every
+-   (4*MAX_MOVE_REGS)+3 cycles, assuming no cache misses.  */
+-/*#undef UNITS_PER_WORD
+-  #define UNITS_PER_WORD 1
+-*/
+-#define MAX_MOVE_REGS 4
+-#define MAX_MOVE_BYTES (MAX_MOVE_REGS * UNITS_PER_WORD)
+-
+-
+-
+-static void
+-block_move_loop (
+-  rtx dest_reg,		/* register holding destination address */
+-  rtx src_reg,		/* register holding source address */
+-  int bytes,		/* # bytes to move */
+-  int align,		/* alignment */
+-  rtx orig_dest,	/* original dest for change_address */
+-  rtx orig_src)		/* original source for making a reg note */
+-{
+-  rtx dest_mem = change_address (orig_dest, BLKmode, dest_reg);
+-  rtx src_mem = change_address (orig_src, BLKmode, src_reg);
+-  rtx align_rtx = GEN_INT (align);
+-  rtx label;
+-  rtx final_src;
+-  rtx bytes_rtx;
+-  int leftover;
+-
+-  if (bytes < 2 * MAX_MOVE_BYTES)
+-    abort ();
+-
+-  leftover = bytes % MAX_MOVE_BYTES;
+-  bytes -= leftover;
+-
+-  label = gen_label_rtx ();
+-  final_src = gen_reg_rtx (Pmode);
+-  bytes_rtx = GEN_INT (bytes);
+-
+-  if (bytes > 0x7fff)
+-  {
+-    emit_insn (gen_movsi (final_src, bytes_rtx));
+-    emit_insn (gen_addsi3 (final_src, final_src, src_reg));
+-  }
+-  else
+-  {
+-    emit_insn (gen_addsi3 (final_src, src_reg, bytes_rtx));
+-  }
+-
+-  emit_label (label);
+-
+-  bytes_rtx = GEN_INT (MAX_MOVE_BYTES);
+-
+-  emit_insn (gen_movstrsi_internal (dest_mem, src_mem, bytes_rtx, align_rtx));
+-
+-  emit_insn (gen_addsi3 (src_reg, src_reg, bytes_rtx));
+-  emit_insn (gen_addsi3 (dest_reg, dest_reg, bytes_rtx));
+-  emit_insn (gen_cmpsi (src_reg, final_src));
+-
+-  emit_jump_insn (gen_bne (label));
+-
+-  if (leftover)
+-    emit_insn (gen_movstrsi_internal (dest_mem, src_mem, GEN_INT (leftover),
+-                                      align_rtx));
+-}
+-
+-/* Use a library function to move some bytes.  */
+-
+-static void
+-block_move_call (
+-  rtx dest_reg,
+-  rtx src_reg,
+-  rtx bytes_rtx)
+-{
+-  /* We want to pass the size as Pmode, which will normally be SImode
+-     but will be DImode if we are using 64 bit longs and pointers.  */
+-  if (GET_MODE (bytes_rtx) != VOIDmode
+-      && GET_MODE (bytes_rtx) != Pmode)
+-    bytes_rtx = convert_to_mode (Pmode, bytes_rtx, 1);
+-
+-  emit_library_call (gen_rtx_SYMBOL_REF (Pmode, "memcpy"), 0,
+-                     VOIDmode, 3, dest_reg, Pmode, src_reg, Pmode,
+-                     convert_to_mode (TYPE_MODE (sizetype), bytes_rtx,
+-                                      /* TREE_UNSIGNED (sizetype) */ 1),
+-                     TYPE_MODE (sizetype));
+-}
+-
+-/* Expand string/block move operations.
+-
+-operands[0] is the pointer to the destination.
+-operands[1] is the pointer to the source.
+-operands[2] is the number of bytes to move.
+-operands[3] is the alignment.  */
+-
+-void
+-expand_block_move (rtx operands[])
+-{
+-  rtx bytes_rtx	= operands[2];
+-  rtx align_rtx = operands[3];
+-  int constp = GET_CODE (bytes_rtx) == CONST_INT;
+-  HOST_WIDE_INT bytes = constp ? INTVAL (bytes_rtx) : 0;
+-  int align = INTVAL (align_rtx);
+-  rtx orig_src	= operands[1];
+-  rtx orig_dest	= operands[0];
+-  rtx src_reg;
+-  rtx dest_reg;
+-
+-  if (constp && bytes <= 0)
+-    return;
+-
+-  if (align > UNITS_PER_WORD)
+-    align = UNITS_PER_WORD;
+-
+-  /* Move the address into scratch registers.  */
+-  dest_reg = copy_addr_to_reg (XEXP (orig_dest, 0));
+-  src_reg  = copy_addr_to_reg (XEXP (orig_src, 0));
+-
+-  if (constp && bytes <= 2 * MAX_MOVE_BYTES
+-           && align == UNITS_PER_WORD) {
+-    move_by_pieces (orig_dest, orig_src, bytes, align, 0);                  
+-  }	
+-  else if (constp && bytes <= 2 * MAX_MOVE_BYTES) {
+-    emit_insn (gen_movstrsi_internal (change_address (orig_dest, BLKmode,
+-                                                      dest_reg),
+-                                      change_address (orig_src, BLKmode,
+-                                                      src_reg),
+-                                      bytes_rtx, align_rtx));
+-  }
+-  else if (constp && align >= UNITS_PER_WORD && optimize) {
+-    block_move_loop (dest_reg, src_reg, bytes, align, orig_dest, orig_src);
+-  }
+-  else if (constp /* && optimize */)
+-  {
+-    /* If the alignment is not word aligned, generate a test at
+-       runtime, to see whether things wound up aligned, and we
+-       can use the faster lw/sw instead ulw/usw.  */
+-
+-    rtx temp = gen_reg_rtx (Pmode);
+-    rtx aligned_label = gen_label_rtx ();
+-    rtx join_label = gen_label_rtx ();
+-    int leftover = bytes % MAX_MOVE_BYTES;
+-
+-    bytes -= leftover;
+-    emit_insn (gen_iorsi3 (temp, src_reg, dest_reg));
+-    emit_insn (gen_andsi3 (temp, temp, GEN_INT (UNITS_PER_WORD - 1)));
+-    emit_insn (gen_cmpsi (temp, const0_rtx));
+-    emit_jump_insn (gen_beq (aligned_label));
+-
+-    /* Unaligned loop.  */
+-    block_move_loop (dest_reg, src_reg, bytes, 1, orig_dest, orig_src);
+-    emit_jump_insn (gen_jump (join_label));
+-    emit_barrier ();
+-
+-    /* Aligned loop.  */
+-    emit_label (aligned_label);
+-    block_move_loop (dest_reg, src_reg, bytes, UNITS_PER_WORD, orig_dest,
+-                     orig_src);
+-    emit_label (join_label);
+-
+-    /* Bytes at the end of the loop.  */
+-    if (leftover)
+-      emit_insn (gen_movstrsi_internal (change_address (orig_dest, BLKmode,
+-                                                        dest_reg),
+-                                        change_address (orig_src, BLKmode,
+-                                                        src_reg),
+-                                        GEN_INT (leftover),
+-                                        GEN_INT (align)));
+-  }
+-
+-  else {
+-    block_move_call (dest_reg, src_reg, bytes_rtx);
+-  }
+-}
+-
+-/* Emit load/stores for a small constant block_move. 
+-
+-operands[0] is the memory address of the destination.
+-operands[1] is the memory address of the source.
+-operands[2] is the number of bytes to move.
+-operands[3] is the alignment.
+-operands[4] is a temp register.
+-operands[5] is a temp register.
+-...
+-operands[3+num_regs] is the last temp register.
+-
+-The block move type can be one of the following:
+-BLOCK_MOVE_NORMAL	Do all of the block move.
+-BLOCK_MOVE_NOT_LAST	Do all but the last store.
+-BLOCK_MOVE_LAST		Do just the last store. */
+-
+-const char *
+-output_block_move (
+-  rtx insn,
+-  rtx operands[],
+-  int num_regs,
+-  enum block_move_type move_type)
+-{
+-  rtx dest_reg = XEXP (operands[0], 0);
+-  rtx src_reg = XEXP (operands[1], 0);
+-  HOST_WIDE_INT bytes = INTVAL (operands[2]);
+-  int align = INTVAL (operands[3]);
+-  int num = 0;
+-  int offset = 0;
+-  int use_lwl_lwr = 0;
+-  int last_operand = num_regs + 4;
+-  int safe_regs = 4;
+-  int i;
+-  rtx xoperands[10];
+-  int op0_base_reg=0;
+-  int op1_base_reg=0;
+-
+-  struct {
+-    char *load;		/* load insn without nop */
+-    char *load_nop;	/* load insn with trailing nop */
+-    char *store;		/* store insn */
+-    char *final;		/* if last_store used: NULL or swr */
+-    char *last_store;	/* last store instruction */
+-    int offset;			/* current offset */
+-    enum machine_mode mode;	/* mode to use on (MEM) */
+-  } load_store[4];
+-
+-  /* ??? Detect a bug in GCC, where it can give us a register
+-     the same as one of the addressing registers and reduce
+-     the number of registers available.  */
+-  for (i = 4;
+-       i < last_operand
+-         && safe_regs < (int)(sizeof(xoperands) / sizeof(xoperands[0]));
+-       i++)
+-    if (! reg_mentioned_p (operands[i], operands[0])
+-        && ! reg_mentioned_p (operands[i], operands[1]))
+-      xoperands[safe_regs++] = operands[i];
+-
+-  if (safe_regs < last_operand)
+-  {
+-    xoperands[0] = operands[0];
+-    xoperands[1] = operands[1];
+-    xoperands[2] = operands[2];
+-    xoperands[3] = operands[3];
+-    return output_block_move (insn, xoperands, safe_regs - 4, move_type);
+-  }
+-
+-  /* If we are given global or static addresses, and we would be
+-     emitting a few instructions, try to save time by using a
+-     temporary register for the pointer.  */
+-  if (num_regs > 2 && (bytes > 2 * align || move_type != BLOCK_MOVE_NORMAL))
+-  {
+-    if (CONSTANT_P (src_reg))
+-    {
+-      if (TARGET_STATS)
+-        microblaze_count_memory_refs (operands[1], 1);
+-
+-      src_reg = operands[3 + num_regs--];
+-      if (move_type != BLOCK_MOVE_LAST)
+-      {
+-        xoperands[1] = operands[1];
+-        xoperands[0] = src_reg;
+-        if (GET_CODE(xoperands[1]) == MEM){
+-          char *output_string = (char*)xmalloc(sizeof("addik\t%%0,r13,%%1"));		  
+-          if ((GET_CODE (XEXP (xoperands[1], 0)) == SYMBOL_REF) ||
+-              (GET_CODE (XEXP (xoperands[1], 0)) == CONST)){
+-            sprintf (output_string, "addik\t%%0,%%1");
+-            output_asm_insn (output_string, xoperands);
+-            free (output_string);
+-          }
+-        }
+-        else
+-          fprintf(stderr,"Error!!Block move has operations other than MEM %d\n",GET_MODE(xoperands[1]));
+-      }
+-    }
+-
+-    if (CONSTANT_P (dest_reg))
+-    {
+-      if (TARGET_STATS)
+-        microblaze_count_memory_refs (operands[0], 1);
+-
+-      dest_reg = operands[3 + num_regs--];
+-      if (move_type != BLOCK_MOVE_LAST)
+-      {
+-        xoperands[1] = operands[0];
+-        xoperands[0] = dest_reg;
+-        if (GET_CODE(xoperands[1]) == MEM){
+-          if ((GET_CODE (XEXP (xoperands[1], 0)) == SYMBOL_REF)||
+-              (GET_CODE (XEXP (xoperands[1], 0)) == CONST)){
+-            char *output_string = (char*)xmalloc(sizeof("addik\t%%0,r13,%%1"));
+-            sprintf (output_string," addik\t%%0,%%1");
+-            output_asm_insn (output_string, xoperands);
+-            free (output_string);
+-          }
+-        }
+-        else
+-          fprintf(stderr,"Error!!Block move has operations other than MEM (2)\n");
+-      }
+-    }
+-  }
+-
+-  if (num_regs > (int)(sizeof (load_store) / sizeof (load_store[0])))
+-    num_regs = sizeof (load_store) / sizeof (load_store[0]);
+-
+-  else if (num_regs < 1)
+-    fatal_insn ("Cannot do block move, not enough scratch registers", insn);
+-
+-  op0_base_reg = get_base_reg (XEXP (operands[0],0));
+-  op1_base_reg = get_base_reg (XEXP (operands[1],0));
+-
+-  while (bytes > 0)
+-  {
+-    load_store[num].offset = offset;
+-
+-    if (bytes >= 4 && align >= 4)
+-    {
+-      /*if (offset == 0) {
+-        load_store[num].load = "lw\t%0,r0,%1 # MICROBLAZElw78";
+-        load_store[num].load_nop = "lw\t%0,r0,%1%# # MICROBLAZElw78";
+-        load_store[num].store = "sw\t%0,r0,%1 # MICROBLAZEsw67";
+-        load_store[num].last_store = "sw\t%0,r0,%1 # MICROBLAZEsw67";
+-        }
+-        else {
+-        load_store[num].load = "lwi\t%0,%1 # MICROBLAZElwi78";
+-        load_store[num].load_nop = "lwi\t%0,%1%# # MICROBLAZElwi78";
+-        load_store[num].store = "swi\t%0,%1 # MICROBLAZEswi67";
+-        load_store[num].last_store = "swi\t%0,%1 # MICROBLAZEswi67";
+-        }*/
+-      load_store[num].load=format_load_store(load_store[num].load,LOAD,SImode,src_reg,offset);
+-      load_store[num].load_nop = load_store[num].load;
+-      load_store[num].store=format_load_store(load_store[num].store,STORE,SImode,dest_reg,offset);
+-      load_store[num].last_store = load_store[num].store;
+-	    
+-      load_store[num].final = 0;
+-      load_store[num].mode = SImode;
+-      offset += 4;
+-      bytes -= 4;
+-    }
+-    else if (bytes >= 2 && align >= 2)
+-    {
+-      /*	  if(offset ==0){
+-                  load_store[num].load = "lhu\t%0,%1 # MICROBLAZElhu121";
+-                  load_store[num].load_nop = "lhu\t%0,%1% #MICROBLAZElhu122";
+-                  load_store[num].store = "sh\t%0,%1 #MICROBLAZEsh121 ";
+-                  load_store[num].last_store = "sh\t%0,%1 #MICROBLAZEshu122 ";
+-                  }
+-                  else	  
+-                  {
+-                  load_store[num].load = "lhui\t%0,%1 # MICROBLAZElhu111";
+-                  load_store[num].load_nop = "lhui\t%0,%1% #MICROBLAZElhu112";
+-                  load_store[num].store = "shi\t%0,%1 #MICROBLAZEsh111 ";
+-                  load_store[num].last_store = "shi\t%0,%1 #MICROBLAZEshu112 ";
+-                  }*/
+-      load_store[num].load = 
+-        format_load_store(load_store[num].load,LOAD,HImode,src_reg,offset);
+-      load_store[num].load_nop = load_store[num].load;
+-
+-      load_store[num].store = 
+-        format_load_store(load_store[num].store,STORE,HImode,dest_reg,offset);
+-      load_store[num].last_store = load_store[num].store;
+-	  
+-      load_store[num].final = 0;
+-      load_store[num].mode = HImode;
+-      offset += 2;
+-      bytes -= 2;
+-    }
+-    else
+-    {
+-      /*	  if (offset == 0) {
+-                  load_store[num].load = "lbu\t%0,%1,r0 # MICROBLAZElbu45";
+-                  load_store[num].load_nop = "lbu\t%0,r0,%1%# # MICROBLAZElbu45";
+-                  load_store[num].store = "sbi\t%0,%1 # MICROBLAZEsb4";
+-                  load_store[num].last_store = "sbi\t%0,%1 # MICROBLAZEsb5";
+-                  }
+-                  else {
+-                  load_store[num].load = "lbui\t%0,%1 # MICROBLAZElbui45";
+-                  load_store[num].load_nop = "lbui\t%0,%1%# # MICROBLAZElbui45";
+-                  load_store[num].store = "sbi\t%0,%1 # MICROBLAZEsbi45";
+-                  load_store[num].last_store = "sbi\t%0,%1 # MICROBLAZEsbi45";
+-                  }
+-      */
+-      load_store[num].load = 
+-        format_load_store(load_store[num].load,LOAD,QImode,src_reg,offset);
+-      load_store[num].load_nop = load_store[num].load;
+-
+-      load_store[num].store = 
+-        format_load_store(load_store[num].store,STORE,QImode,dest_reg,offset);
+-      load_store[num].last_store = load_store[num].store;
+-		    
+-      load_store[num].final = 0;
+-      load_store[num].mode = QImode;
+-      offset++;
+-      bytes--;
+-    }
+-
+-    if (TARGET_STATS && move_type != BLOCK_MOVE_LAST)
+-    {
+-      dslots_load_total++;
+-      dslots_load_filled++;
+-
+-      if (CONSTANT_P (src_reg))
+-        microblaze_count_memory_refs (src_reg, 1);
+-
+-      if (CONSTANT_P (dest_reg))
+-        microblaze_count_memory_refs (dest_reg, 1);
+-    }
+-
+-    /* Emit load/stores now if we have run out of registers or are
+-       at the end of the move.  */
+-
+-    if (++num == num_regs || bytes == 0)
+-    {
+-      /* If only load/store, we need a NOP after the load.  */
+-      if (num == 1)
+-      {
+-        load_store[0].load = load_store[0].load_nop;
+-        if (TARGET_STATS && move_type != BLOCK_MOVE_LAST)
+-          dslots_load_filled--;
+-      }
+-
+-      if (move_type != BLOCK_MOVE_LAST)
+-      {
+-        for (i = 0; i < num; i++)
+-        {
+-          int offset;
+-
+-          if (!operands[i + 4])
+-            abort ();
+-
+-          if (GET_MODE (operands[i + 4]) != load_store[i].mode)
+-            operands[i + 4] = gen_rtx_REG (load_store[i].mode,
+-                                       REGNO (operands[i + 4]));
+-
+-          offset = load_store[i].offset;
+-          xoperands[0] = operands[i + 4];
+-          xoperands[1] = gen_rtx_MEM (load_store[i].mode,
+-                                  plus_constant (src_reg, offset));
+-
+-          /*		  if(offset == 0){
+-                          load_store[i].load = 
+-                          format_load_store(load_store[num].load,LOAD,load_store[num].mode,
+-                          xoperands[1],offset);
+-                          load_store[i].load_nop = load_store[i].load; */
+-          /*load_store[i].load = "lbu\t%0,%1,r0 # MICROBLAZElbu451";
+-            load_store[i].load_nop = "lbu\t%0,r0,%1%# # MICROBLAZElbu452";*/
+-          /*		  }*/
+-		  
+-
+-          if (use_lwl_lwr)
+-          {
+-            int extra_offset
+-              = GET_MODE_SIZE (load_store[i].mode) - 1;
+-
+-            xoperands[2] = gen_rtx_MEM (load_store[i].mode,
+-                                    plus_constant (src_reg,
+-                                                   extra_offset
+-                                                   + offset));
+-
+-          }
+-
+-          output_asm_insn (load_store[i].load, xoperands);
+-        }
+-      }
+-
+-      for (i = 0; i < num; i++)
+-      {
+-        int last_p = (i == num-1 && bytes == 0);
+-        int offset = load_store[i].offset;
+-
+-        xoperands[0] = operands[i + 4];
+-        xoperands[1] = gen_rtx_MEM (load_store[i].mode,
+-                                plus_constant (dest_reg, offset));
+-
+-	      
+-        if (use_lwl_lwr)
+-        {
+-          int extra_offset = GET_MODE_SIZE (load_store[i].mode) - 1;
+-          xoperands[2] = gen_rtx_MEM (load_store[i].mode,
+-                                  plus_constant (dest_reg,
+-                                                 extra_offset
+-                                                 + offset));
+-        }
+-
+-
+-        if (move_type == BLOCK_MOVE_NORMAL)
+-          output_asm_insn (load_store[i].store, xoperands);
+-
+-        else if (move_type == BLOCK_MOVE_NOT_LAST)
+-        {
+-          if (!last_p)
+-            output_asm_insn (load_store[i].store, xoperands);
+-
+-          else if (load_store[i].final != 0)
+-            output_asm_insn (load_store[i].final, xoperands);
+-        }
+-
+-        else if (last_p)
+-          output_asm_insn (load_store[i].last_store, xoperands);
+-      }
+-
+-      num = 0;		/* reset load_store */
+-      use_lwl_lwr = 0;
+-    }
+-  }
+-
+-  return "";
+-}
+-
+-
+-
+ /* Argument support functions.  */
+ 
+ /* Initialize CUMULATIVE_ARGS for a function.  */
+diff --git a/gcc/config/microblaze/microblaze.h b/gcc/config/microblaze/microblaze.h
+index e0ee2a4..8a38090 100644
+--- a/gcc/config/microblaze/microblaze.h
++++ b/gcc/config/microblaze/microblaze.h
+@@ -76,15 +76,6 @@ enum microblaze_abicalls_type {
+ /* Recast the abicalls class to be the abicalls attribute.  */
+ #define microblaze_abicalls_attr ((enum attr_abicalls)microblaze_abicalls)
+ 
+-/* Which type of block move to do (whether or not the last store is
+-   split out so it can fill a branch delay slot).  */
+-
+-enum block_move_type {
+-    BLOCK_MOVE_NORMAL,			/* generate complete block move */
+-    BLOCK_MOVE_NOT_LAST,			/* generate all but last store */
+-    BLOCK_MOVE_LAST			/* generate just the last store */
+-};
+-
+ #define MICROBLAZE_MASK_NO_UNSAFE_DELAY         0x00000001
+ 
+ extern char microblaze_reg_names[][8];          /* register names (a0 vs. $4). */
+@@ -999,8 +990,8 @@ while (0)
+    
+    We handle QImode arrays specially. It enables string operations
+    to be optimally handled using pattern comparator instructions */
+-#define LOCAL_ALIGNMENT(TYPE, ALIGN)                                            \
+-    ((TREE_CODE (TYPE) == ARRAY_TYPE && TYPE_MODE (TREE_TYPE (TYPE)) == QImode	\
++#define LOCAL_ALIGNMENT(TYPE, ALIGN)                                                \
++    (((TREE_CODE (TYPE) == ARRAY_TYPE && TYPE_MODE (TREE_TYPE (TYPE)) == QImode)    \
+      && (ALIGN) < BITS_PER_WORD) ? BITS_PER_WORD : (ALIGN))
+ 
+ /* Define if operations between registers always perform the operation
+@@ -2218,8 +2209,8 @@ typedef struct microblaze_args {
+ 
+ /* Max number of bytes we can move from memory to memory
+    in one reasonably fast instruction.  */
+-#define MOVE_MAX 4
+-#define MAX_MOVE_MAX 8
++#define MOVE_MAX        4
++#define MAX_MOVE_MAX    8
+ 
+ /* Define this macro as a C expression which is nonzero if
+    accessing less than a word of memory (i.e. a `char' or a
+diff --git a/gcc/config/microblaze/microblaze.md b/gcc/config/microblaze/microblaze.md
+index 394cbf3..50b24e0 100644
+--- a/gcc/config/microblaze/microblaze.md
++++ b/gcc/config/microblaze/microblaze.md
+@@ -1799,7 +1799,25 @@
+   (set_attr "mode"	"QI")
+   (set_attr "length"	"8,8,8,8,8,8")])
+ 
+-
++;; Block moves, see microblaze.c for more details.
++;; Argument 0 is the destination
++;; Argument 1 is the source
++;; Argument 2 is the length
++;; Argument 3 is the alignment
++ 
++(define_expand "movmemsi"
++  [(parallel [(set (match_operand:BLK 0 "general_operand")
++		   (match_operand:BLK 1 "general_operand"))
++	      (use (match_operand:SI 2 ""))
++	      (use (match_operand:SI 3 "const_int_operand"))])]
++  ""
++  {
++    if (microblaze_expand_block_move (operands[0], operands[1], operands[2], operands[3]))
++        DONE;
++    else  
++        FAIL;
++  }
++)
+ 
+ ;; 32-bit floating point moves
+ 
+@@ -1931,136 +1949,10 @@
+   (set (subreg:SI (match_dup 0) 4) (subreg:SI (match_dup 1) 4))]
+   "")
+ 
+-;; Block moves, see microblaze.c for more details.
+-;; Argument 0 is the destination
+-;; Argument 1 is the source
+-;; Argument 2 is the length
+-;; Argument 3 is the alignment
+-
+-(define_expand "movstrsi"
+-  [(parallel [(set (match_operand:BLK 0 "general_operand" "")
+-		   (match_operand:BLK 1 "general_operand" ""))
+-             (use (match_operand:SI 2 "arith_operand" ""))
+-             (use (match_operand:SI 3 "immediate_operand" ""))])]
+-  ""
+-  {
+-    if (operands[0])		/* avoid unused code messages */
+-    {
+-        expand_block_move (operands);
+-        DONE;
+-    }
+-  }
+-)
+-
+-;; Insn generated by block moves
+-
+-(define_insn "movstrsi_internal"
+-  [(set (match_operand:BLK 0 "memory_operand" "=o") ;; destination
+-	(match_operand:BLK 1 "memory_operand" "o")) ;; source
+-  (clobber (match_scratch:SI 4 "=&d")) ;; temp 1
+-  (clobber (match_scratch:SI 5 "=&d")) ;; temp 2
+-  (clobber (match_scratch:SI 6 "=&d")) ;; temp 3
+-  (clobber (match_scratch:SI 7 "=&d")) ;; temp 4
+-  (use (match_operand:SI 2 "small_int" "I")) ;; # bytes to move
+-  (use (match_operand:SI 3 "small_int" "I")) ;; alignment
+-  (use (const_int 0))] ;; normal block move
+-  ""
+-  {
+-	 return output_block_move (insn, operands, 4, BLOCK_MOVE_NORMAL);
+-  }
+-  [(set_attr "type"	"no_delay_store")
+-  (set_attr "mode"	"none")
+-  (set_attr "length"	"20")])
+-
+-;; Split a block move into 2 parts, the first part is everything
+-;; except for the last move, and the second part is just the last
+-;; store, which is exactly 1 instruction (ie, not a usw), so it can
+-;; fill a delay slot.  This also prevents a bug in delayed branches
+-;; from showing up, which reuses one of the registers in our clobbers.
+-
+-(define_split
+-  [(set (mem:BLK (match_operand:SI 0 "register_operand" ""))
+-	(mem:BLK (match_operand:SI 1 "register_operand" "")))
+-  (clobber (match_operand:SI 4 "register_operand" ""))
+-  (clobber (match_operand:SI 5 "register_operand" ""))
+-  (clobber (match_operand:SI 6 "register_operand" ""))
+-  (clobber (match_operand:SI 7 "register_operand" ""))
+-  (use (match_operand:SI 2 "small_int" ""))
+-  (use (match_operand:SI 3 "small_int" ""))
+-  (use (const_int 0))]
+-
+-  "reload_completed && !TARGET_DEBUG_D_MODE && INTVAL (operands[2]) > 0"
+-
+-  ;; All but the last move
+-  [(parallel [(set (mem:BLK (match_dup 0))
+-		   (mem:BLK (match_dup 1)))
+-             (clobber (match_dup 4))
+-             (clobber (match_dup 5))
+-             (clobber (match_dup 6))
+-             (clobber (match_dup 7))
+-             (use (match_dup 2))
+-             (use (match_dup 3))
+-             (use (const_int 1))])
+-
+-  ;; The last store, so it can fill a delay slot
+-  (parallel [(set (mem:BLK (match_dup 0))
+-                  (mem:BLK (match_dup 1)))
+-            (clobber (match_dup 4))
+-            (clobber (match_dup 5))
+-            (clobber (match_dup 6))
+-            (clobber (match_dup 7))
+-            (use (match_dup 2))
+-            (use (match_dup 3))
+-            (use (const_int 2))])]
+-
+-  "")
+-
+-(define_insn "movstrsi_internal2"
+-  [(set (match_operand:BLK 0 "memory_operand" "=o") ;; destination
+-	(match_operand:BLK 1 "memory_operand" "o")) ;; source
+-  (clobber (match_scratch:SI 4 "=&d")) ;; temp 1
+-  (clobber (match_scratch:SI 5 "=&d")) ;; temp 2
+-  (clobber (match_scratch:SI 6 "=&d")) ;; temp 3
+-  (clobber (match_scratch:SI 7 "=&d")) ;; temp 4
+-  (use (match_operand:SI 2 "small_int" "I")) ;; # bytes to move
+-  (use (match_operand:SI 3 "small_int" "I")) ;; alignment
+-  (use (const_int 1))] ;; all but last store
+-  ""
+-  {
+-     return output_block_move (insn, operands, 4, BLOCK_MOVE_NOT_LAST);
+-  } 
+-  [(set_attr "type"	"no_delay_store")
+-  (set_attr "mode"	"none")
+-  (set_attr "length"	"20")])
+-
+-
+-(define_insn "movstrsi_internal3"
+-  [(set (match_operand:BLK 0 "memory_operand" "=Ro") ;; destination
+-	(match_operand:BLK 1 "memory_operand" "Ro")) ;; source
+-  (clobber (match_scratch:SI 4 "=&d")) ;; temp 1
+-  (clobber (match_scratch:SI 5 "=&d")) ;; temp 2
+-  (clobber (match_scratch:SI 6 "=&d")) ;; temp 3
+-  (clobber (match_scratch:SI 7 "=&d")) ;; temp 4
+-  (use (match_operand:SI 2 "small_int" "I")) ;; # bytes to move
+-  (use (match_operand:SI 3 "small_int" "I")) ;; alignment
+-  (use (const_int 2))] ;; just last store of block move
+-  ""
+-  {
+-      return output_block_move (insn, operands, 4, BLOCK_MOVE_LAST);
+-  }
+-  [(set_attr "type"	"no_delay_store")
+-  (set_attr "mode"	"none")
+-  (set_attr "length"	"20")])
+-
+-
+-
+-
+ ;;----------------------------------------------------------------
+ ;; Shifts
+ ;;----------------------------------------------------------------
+ 
+-
+-
+ ;;----------------------------------------------------------------
+ ;; 32-bit left shifts
+ ;;----------------------------------------------------------------
+-- 
+1.5.3.8
+

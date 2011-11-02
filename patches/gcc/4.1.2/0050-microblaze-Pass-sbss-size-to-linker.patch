@@ -1,0 +1,29 @@
+From bb06d091e4801c9dc785bf026e2a653cdf97805a Mon Sep 17 00:00:00 2001
+Message-Id: <bb06d091e4801c9dc785bf026e2a653cdf97805a.1241484430.git.john.williams@petalogix.com>
+In-Reply-To: <930a7bf07b58a3d6a48393a6419b2c958fc9dc2a.1241484427.git.john.williams@petalogix.com>
+References: <930a7bf07b58a3d6a48393a6419b2c958fc9dc2a.1241484427.git.john.williams@petalogix.com>
+From: John Williams <john.williams@petalogix.com>
+Date: Tue, 28 Apr 2009 14:40:10 +1000
+Subject: [PATCH 50/63] microblaze: Pass sbss size to linker
+
+---
+ gcc/config/microblaze/microblaze.h |    3 ++-
+ 1 files changed, 2 insertions(+), 1 deletions(-)
+
+diff --git a/gcc/config/microblaze/microblaze.h b/gcc/config/microblaze/microblaze.h
+index 8a38090..4006321 100644
+--- a/gcc/config/microblaze/microblaze.h
++++ b/gcc/config/microblaze/microblaze.h
+@@ -429,7 +429,8 @@ while (0)
+ /* ??? The bestGnum will never be passed to the linker, because the gcc driver
+    will interpret it as a -b option.  */
+ 
+-#define LINK_SPEC "%{shared:-shared} -relax %{Zxl-mode-xmdstub:-defsym _TEXT_START_ADDR=0x800} %{!Wl,-T*: %{!T*: -T xilinx.ld%s}}"
++#define LINK_SPEC "%{shared:-shared} -relax %{Zxl-mode-xmdstub:-defsym _TEXT_START_ADDR=0x800} \
++  %{!mxl-gp-opt: -G 0} %{!Wl,-T*: %{!T*: -T xilinx.ld%s}}"
+ 
+ /* Specs for the compiler proper */
+ 
+-- 
+1.5.3.8
+

@@ -1,0 +1,87 @@
+diff -Naur gcc-4.1.2.org/gcc/config/microblaze/microblaze.h gcc-4.1.2.new/gcc/config/microblaze/microblaze.h
+--- gcc-4.1.2.org/gcc/config/microblaze/microblaze.h	2010-07-11 21:21:11.773022700 +0200
++++ gcc-4.1.2.new/gcc/config/microblaze/microblaze.h	2010-07-12 13:26:34.770915432 +0200
+@@ -1412,8 +1412,7 @@
+ 
+ #define SMALL_INT(X) ((unsigned HOST_WIDE_INT) (INTVAL (X) + 0x8000) < 0x10000)
+ #define SMALL_INT_UNSIGNED(X) ((unsigned HOST_WIDE_INT) (INTVAL (X)) < 0x10000)
+-#define LARGE_INT(X) (((unsigned HOST_WIDE_INT) (INTVAL (X) + 0xffffffff)) \
+-	== ((unsigned HOST_WIDE_INT) (INTVAL (X) + 0xffffffff)))
++#define LARGE_INT(X) (INTVAL (X) >= 0x80000000 && INTVAL (X) <= 0xffffffff)
+ #define PLT_ADDR_P(X) (GET_CODE (X) == UNSPEC && XINT (X,1) == UNSPEC_PLT)
+ /* Test for a valid operand for a call instruction.
+    Don't allow the arg pointer register or virtual regs
+diff -Naur gcc-4.1.2.org/gcc/config/microblaze/microblaze.md gcc-4.1.2.new/gcc/config/microblaze/microblaze.md
+--- gcc-4.1.2.org/gcc/config/microblaze/microblaze.md	2010-07-11 21:21:11.773022700 +0200
++++ gcc-4.1.2.new/gcc/config/microblaze/microblaze.md	2010-07-12 13:25:39.703389287 +0200
+@@ -495,43 +495,20 @@
+ 
+ ;; reg_DI_dest = reg_DI_src1 + DI_src2
+ 
+-(define_expand "adddi3"
+-  [(set (match_operand:DI 0 "register_operand" "")
+-	(plus:DI (match_operand: DI 1 "register_operand" "")
+-		 (match_operand: DI 2 "arith_operand" "")))]
+-  ""
+-  ""
+-)
+-
+-;; Adding 2 DI operands in register
+-
+-(define_insn "adddi3_internal1"
+-  [(set (match_operand:DI 0 "register_operand" "=d")
+-	(plus:DI (match_operand:DI 1 "register_operand" "d")
+-		 (match_operand:DI 2 "register_operand" "d")))]
+-  ""
+-  { 
+-      return "add\t%L0,%L1,%L2\;addc\t%M0,%M1,%M2";
+-  }
+-  [(set_attr "type"	"darith")
+-  (set_attr "mode"	"DI")
+-  (set_attr "length"	"8")])
++;; Adding 2 DI operands in register or reg/imm
+ 
+-;; Adding 2 DI operands, one in reg, other imm.
+-(define_insn "adddi3_internal2"
+-  [(set (match_operand:DI 0 "register_operand" "=d")
+-	(plus:DI (match_operand:DI 1 "register_operand" "d")
+-		 (match_operand:SI 2 "large_int" "i")))]
++(define_insn "adddi3"
++  [(set (match_operand:DI 0 "register_operand" "=d,d,d")
++       (plus:DI (match_operand:DI 1 "register_operand" "%d,d,d")
++                (match_operand:DI 2 "arith_operand32" "d,P,N")))]
+   ""
+-  { 
+-        if (INTVAL (operands[2]) > 0)
+-                return "addi\t%L0,%L1,%2\;addc\t%M0,%M1,r0";
+-        else
+-                return "addi\t%L0,%L1,%2\;addc\t%M0,%M1,r0\;addi\t%M0,%M0,-1";
+-  }
+-  [(set_attr "type"	"darith")
+-  (set_attr "mode"	"DI")
+-  (set_attr "length"	"8")])
++  "@
++  add\t%L0,%L1,%L2\;addc\t%M0,%M1,%M2
++  addi\t%L0,%L1,%2\;addc\t%M0,%M1,r0
++  addi\t%L0,%L1,%2\;addc\t%M0,%M1,r0\;addi\t%M0,%M0,-1"
++  [(set_attr "type"    "darith")
++  (set_attr "mode"     "DI")
++  (set_attr "length"   "8,8,12")])
+ 
+ 
+ ;;----------------------------------------------------------------
+diff -Naur gcc-4.1.2.org/gcc/config/microblaze/predicates.md gcc-4.1.2/gcc/config/microblaze/predicates.md
+--- gcc-4.1.2.org/gcc/config/microblaze/predicates.md	2010-07-12 13:28:36.175461737 +0200
++++ gcc-4.1.2/gcc/config/microblaze/predicates.md	2010-07-12 13:32:35.394715077 +0200
+@@ -24,6 +24,11 @@
+   (ior (match_code "const_int")
+        (match_operand 0 "register_operand")))
+ 
++(define_predicate "arith_operand32"
++  (ior (match_operand 0 "register_operand")
++       (and (match_code "const_int,const_double")
++           (match_test "LARGE_INT (op)"))))
++
+ ;; FIXME:  Should this include test INTVAL(op)==0
+ (define_predicate "const_0_operand"
+   (and (match_code "const_int,const_double")

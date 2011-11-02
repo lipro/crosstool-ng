@@ -1,0 +1,2166 @@
+From f7312cce1de755fda8cd2f1c946357ba2b58b202 Mon Sep 17 00:00:00 2001
+Message-Id: <f7312cce1de755fda8cd2f1c946357ba2b58b202.1241484427.git.john.williams@petalogix.com>
+In-Reply-To: <930a7bf07b58a3d6a48393a6419b2c958fc9dc2a.1241484427.git.john.williams@petalogix.com>
+References: <930a7bf07b58a3d6a48393a6419b2c958fc9dc2a.1241484427.git.john.williams@petalogix.com>
+From: John Williams <john.williams@petalogix.com>
+Date: Tue, 28 Apr 2009 14:38:59 +1000
+Subject: [PATCH 04/63] microblaze: Port patch
+
+---
+ gcc/config/microblaze/microblaze.c   |  751 ++++++++++++++++++----------------
+ gcc/config/microblaze/microblaze.h   |   69 ++--
+ gcc/config/microblaze/microblaze.md  |   22 +-
+ gcc/config/microblaze/microblaze.opt |   24 +-
+ 4 files changed, 458 insertions(+), 408 deletions(-)
+
+diff --git a/gcc/config/microblaze/microblaze.c b/gcc/config/microblaze/microblaze.c
+index e6ebd9c..054d005 100644
+--- a/gcc/config/microblaze/microblaze.c
++++ b/gcc/config/microblaze/microblaze.c
+@@ -170,7 +170,7 @@ static void microblaze_select_rtx_section       PARAMS ((enum machine_mode, rtx,
+ bool microblaze_legitimate_address_p            PARAMS ((enum machine_mode, rtx, int ));
+ rtx  microblaze_legitimize_address              PARAMS ((rtx , rtx, enum machine_mode));
+ int microblaze_regno_ok_for_base_p              PARAMS ((int, int));
+-static char* microblaze_mode_to_mem_modifier    PARAMS ((int, enum machine_mode));
++static const char* microblaze_mode_to_mem_modifier    PARAMS ((int, enum machine_mode));
+ static bool microblaze_valid_base_register_p    PARAMS ((rtx, enum machine_mode, int));
+ static bool microblaze_valid_index_register_p   PARAMS ((rtx, enum machine_mode, int));
+ static bool microblaze_classify_address         PARAMS ((struct microblaze_address_info *, rtx, enum machine_mode, int));
+@@ -190,6 +190,33 @@ static rtx add_constant				PARAMS ((struct constant **, rtx, enum machine_mode))
+ static void dump_constants			PARAMS ((struct constant *, rtx));
+ static int microblaze_version_to_int            PARAMS ((const char *));
+ static int microblaze_version_compare           PARAMS ((const char *, const char *));
++void microblaze_order_regs_for_local_alloc 	PARAMS ((void));
++void print_operand 				PARAMS ((FILE *, rtx, int));
++void print_operand_address 			PARAMS ((FILE *, rtx));
++int microblaze_output_external 			PARAMS ((FILE *, tree, char *));
++void final_prescan_insn 			PARAMS ((rtx, rtx *, int));
++void microblaze_internal_label 			PARAMS ((FILE *, const char*, unsigned long));
++void microblaze_output_float 			PARAMS ((FILE *, REAL_VALUE_TYPE value));
++int microblaze_can_use_return_insn 		PARAMS ((void));
++enum reg_class microblaze_secondary_reload_class PARAMS ((enum reg_class, enum machine_mode, rtx, int));
++int simple_memory_operand 			PARAMS ((rtx, enum machine_mode));
++void trace 					PARAMS ((const char *, const char *, const char *));
++void gen_conditional_branch 			PARAMS ((rtx *, enum rtx_code));
++void init_cumulative_args 			PARAMS ((CUMULATIVE_ARGS *,tree, rtx));
++void function_arg_advance 			PARAMS ((CUMULATIVE_ARGS *, enum machine_mode, tree, int));
++struct rtx_def *function_arg 			PARAMS ((CUMULATIVE_ARGS *, enum machine_mode, tree, int));
++int function_arg_partial_nregs 			PARAMS ((CUMULATIVE_ARGS *, enum machine_mode, tree, int));
++HOST_WIDE_INT microblaze_debugger_offset 	PARAMS ((rtx, HOST_WIDE_INT));
++void microblaze_output_lineno 			PARAMS ((FILE *, int));
++void microblaze_internal_label 			PARAMS ((FILE *, const char*, unsigned long));
++void microblaze_output_double 			PARAMS ((FILE *, REAL_VALUE_TYPE));
++static int microblaze_save_volatiles 		PARAMS ((tree func));
++const char* microblaze_move_2words 		PARAMS ((rtx *, rtx));
++const char * output_block_move 			PARAMS ((rtx, rtx *, int, enum block_move_type));
++void microblaze_declare_object 			PARAMS ((FILE *, char *, char *, char *, int));
++int microblaze_valid_machine_decl_attribute 	PARAMS ((tree, tree, tree, tree));
++static bool microblaze_handle_option 		PARAMS ((size_t, const char *, int));
++int microblaze_is_interrupt_handler		PARAMS ((void));
+ 
+ /* Global variables for machine-dependent things.  */
+ 
+@@ -200,9 +227,6 @@ struct microblaze_cpu_select microblaze_select =
+   0                                       /* Flags    */
+ };
+ 
+-/* Toggle whether CRT clears BSS or not and whether zero initialized goes into BSS or not */
+-char *microblaze_no_clearbss = "default";
+-
+ /* Toggle which pipleline interface to use */
+ int microblaze_sched_use_dfa = 0;
+ 
+@@ -471,9 +495,10 @@ enum reg_class microblaze_char_to_class[256] =
+ };
+ 
+ int div_count = 0;
+-/*extern void rodata_section();
+-  extern void sbss_section();
+-  extern void bss_section();*/
++extern void rodata_section(void);
++extern void sbss_section(void);
++extern void bss_section(void);
++extern void sdata2_section(void);
+ int get_base_reg(rtx);
+ static int printed = 0;
+ enum load_store {LOAD = 0, STORE=1};
+@@ -553,14 +578,52 @@ static int microblaze_save_volatiles (tree);
+ #define TARGET_ASM_FUNCTION_END_PROLOGUE \
+                                         microblaze_function_end_prologue 
+ 
+-struct gcc_target targetm = (struct gcc_target)TARGET_INITIALIZER;
++#undef TARGET_HANDLE_OPTION
++#define TARGET_HANDLE_OPTION		microblaze_handle_option
++
++struct gcc_target targetm = TARGET_INITIALIZER;
+ 
+-/* Return truth value of whether OP is a integer which fits in 16 bits  */
++/* Return truth value if a CONST_DOUBLE is ok to be a legitimate constant.  */
+ 
+ int
+-small_int (rtx op, enum machine_mode mode ATTRIBUTE_UNUSED)
++microblaze_const_double_ok (rtx op, enum machine_mode mode)
+ {
+-  return (GET_CODE (op) == CONST_INT && SMALL_INT (op));
++  REAL_VALUE_TYPE d;
++
++  if (GET_CODE (op) != CONST_DOUBLE)
++    return 0;
++
++  if (mode == VOIDmode)
++    return 1;
++
++  if (mode != SFmode && mode != DFmode)
++    return 0;
++
++  if (op == CONST0_RTX (mode))
++    return 1;
++
++  REAL_VALUE_FROM_CONST_DOUBLE (d, op);
++
++  if (REAL_VALUE_ISNAN (d))
++    return FALSE;
++
++  if (REAL_VALUE_NEGATIVE (d))
++    d = REAL_VALUE_NEGATE (d);
++
++  if (mode == DFmode)
++  {
++    if (REAL_VALUES_LESS (d, dfhigh)
++        && REAL_VALUES_LESS (dflow, d))
++      return 1;
++  }
++  else
++  {
++    if (REAL_VALUES_LESS (d, sfhigh)
++        && REAL_VALUES_LESS (sflow, d))
++      return 1;
++  }
++
++  return 0;
+ }
+ 
+ /* Return truth value if a memory operand fits in a single instruction
+@@ -671,8 +734,7 @@ int microblaze_sched_use_dfa_pipeline_interface (void)
+    include stdio.h).  */
+ 
+ void
+-trace (s, s1, s2)
+-    char *s, *s1, *s2;
++trace (const char *s, const char *s1, const char *s2)
+ {
+     fprintf (stderr, s, s1, s2);
+ }
+@@ -702,7 +764,7 @@ microblaze_regno_ok_for_base_p (int regno, int strict)
+    Allow only hard registers if STRICT.  */
+ 
+ static bool
+-microblaze_valid_base_register_p (rtx x, enum machine_mode mode, int strict)
++microblaze_valid_base_register_p (rtx x, enum machine_mode mode ATTRIBUTE_UNUSED, int strict)
+ {
+   if (!strict && GET_CODE (x) == SUBREG)
+     x = SUBREG_REG (x);
+@@ -715,7 +777,7 @@ microblaze_valid_base_register_p (rtx x, enum machine_mode mode, int strict)
+    Allow only hard registers if STRICT.  */
+ 
+ static bool
+-microblaze_valid_index_register_p (rtx x, enum machine_mode mode, int strict)
++microblaze_valid_index_register_p (rtx x, enum machine_mode mode ATTRIBUTE_UNUSED, int strict)
+ {
+   if (!strict && GET_CODE (x) == SUBREG)
+     x = SUBREG_REG (x);
+@@ -879,7 +941,7 @@ microblaze_legitimate_address_p (enum machine_mode mode, rtx x, int strict)
+    memory (reg+large int).  */
+ rtx
+ microblaze_legitimize_address (rtx x, rtx oldx ATTRIBUTE_UNUSED,
+-                               enum machine_mode mode)
++                               enum machine_mode mode ATTRIBUTE_UNUSED)
+ {									
+   register rtx xinsn = x, result;						
+ 									
+@@ -897,7 +959,7 @@ microblaze_legitimize_address (rtx x, rtx oldx ATTRIBUTE_UNUSED,
+ 									
+     emit_move_insn (ptr_reg, XEXP (XEXP (xinsn, 0), 0));		
+ 									
+-    result = gen_rtx (PLUS, Pmode, ptr_reg, constant);			
++    result = gen_rtx_PLUS (Pmode, ptr_reg, constant);			
+     if (SMALL_INT (constant))						
+       return result;							
+     /* Otherwise we fall through so the code below will fix the	
+@@ -929,11 +991,11 @@ microblaze_legitimize_address (rtx x, rtx oldx ATTRIBUTE_UNUSED,
+       emit_move_insn (int_reg,					
+                       GEN_INT (INTVAL (xplus1) & ~ 0x7fff));	
+ 									
+-      emit_insn (gen_rtx (SET, VOIDmode,				
++      emit_insn (gen_rtx_SET (VOIDmode,				
+                           ptr_reg,					
+-                          gen_rtx (PLUS, Pmode, xplus0, int_reg)));	
++                          gen_rtx_PLUS (Pmode, xplus0, int_reg)));	
+ 									
+-      result = gen_rtx (PLUS, Pmode, ptr_reg,				
++      result = gen_rtx_PLUS (Pmode, ptr_reg,				
+                         GEN_INT (INTVAL (xplus1) & 0x7fff));		
+       return result;							
+     }								
+@@ -959,11 +1021,11 @@ microblaze_legitimize_address (rtx x, rtx oldx ATTRIBUTE_UNUSED,
+    now will never emit a nop.  */
+ 
+ char *
+-microblaze_fill_delay_slot (ret, type, operands, cur_insn)
+-  char *ret;			/* normal string to return */
+-  enum delay_type type;	/* type of delay */
+-  rtx operands[];		/* operands to use */
+-  rtx cur_insn;		/* current insn */
++microblaze_fill_delay_slot (
++  char *ret,			/* normal string to return */
++  enum delay_type type,		/* type of delay */
++  rtx operands[],		/* operands to use */
++  rtx cur_insn)			/* current insn */
+ {
+   register rtx set_reg;
+   register enum machine_mode mode;
+@@ -1014,14 +1076,14 @@ microblaze_fill_delay_slot (ret, type, operands, cur_insn)
+   microblaze_load_reg = set_reg;
+   if (GET_MODE_SIZE (mode)
+       > (FP_REG_P (REGNO (set_reg)) ? UNITS_PER_FPREG : UNITS_PER_WORD))
+-    microblaze_load_reg2 = gen_rtx (REG, SImode, REGNO (set_reg) + 1);
++    microblaze_load_reg2 = gen_rtx_REG (SImode, REGNO (set_reg) + 1);
+   else
+     microblaze_load_reg2 = 0;
+ 
+   if (type == DELAY_HILO)
+   {
+-    microblaze_load_reg3 = gen_rtx (REG, SImode, MD_REG_FIRST);
+-    microblaze_load_reg4 = gen_rtx (REG, SImode, MD_REG_FIRST+1);
++    microblaze_load_reg3 = gen_rtx_REG (SImode, MD_REG_FIRST);
++    microblaze_load_reg4 = gen_rtx_REG (SImode, MD_REG_FIRST+1);
+   }
+   else
+   {
+@@ -1038,9 +1100,7 @@ microblaze_fill_delay_slot (ret, type, operands, cur_insn)
+    appropriate counter for -mstats.  */
+ 
+ void
+-microblaze_count_memory_refs (op, num)
+-  rtx op;
+-  int num;
++microblaze_count_memory_refs (rtx op, int num)
+ {
+   int additional = 0;
+   int n_words = 0;
+@@ -1150,7 +1210,7 @@ microblaze_count_memory_refs (op, num)
+ 
+ 
+ rtx
+-embedded_pic_fnaddr_reg ()
++embedded_pic_fnaddr_reg (void)
+ {
+ #if 0
+   if (cfun->machine->embedded_pic_fnaddr_rtx == NULL)
+@@ -1188,8 +1248,7 @@ embedded_pic_fnaddr_reg ()
+ 
+ /* Looks like this is not called anywhere */
+ rtx
+-embedded_pic_offset (x)
+-  rtx x;
++embedded_pic_offset (rtx x)
+ {
+   /* Make sure it is emitted.  */
+   embedded_pic_fnaddr_reg ();
+@@ -1201,7 +1260,7 @@ embedded_pic_offset (x)
+ }
+ 
+ 
+-char* 
++static const char* 
+ microblaze_mode_to_mem_modifier (int load, enum machine_mode mode)
+ {
+   switch (mode) {
+@@ -1224,10 +1283,10 @@ microblaze_mode_to_mem_modifier (int load, enum machine_mode mode)
+ /* Return the appropriate instructions to move one operand to another.  */
+ 
+ const char *
+-microblaze_move_1word (operands, insn, unsignedp)
+-  rtx operands[];
+-  rtx insn;
+-  int unsignedp;
++microblaze_move_1word (
++  rtx operands[],
++  rtx insn,
++  int unsignedp ATTRIBUTE_UNUSED)
+ {
+   char *ret=0; 
+   rtx op0 = operands[0];
+@@ -1235,7 +1294,9 @@ microblaze_move_1word (operands, insn, unsignedp)
+   enum rtx_code code0 = GET_CODE (op0);
+   enum rtx_code code1 = GET_CODE (op1);
+   enum machine_mode mode0 = GET_MODE (op0);
++#if 0
+   enum machine_mode mode1 = GET_MODE (op1);
++#endif
+   int subreg_word0 = 0;
+   int subreg_word1 = 0;
+   enum delay_type delay = DELAY_NONE;
+@@ -1280,15 +1341,15 @@ microblaze_move_1word (operands, insn, unsignedp)
+          to itself, unless we are filling a delay slot.  */
+       if (regno0 == regno1 && set_nomacro == 0){
+         empty_ret = 1;
+-        ret = "";
++	ret[0] = '\0';
+       }
+ 	  
+       else if (GP_REG_P (regno0) && GP_REG_P (regno1) )
+-        ret = "addk\t%0,%1,r0";
++        strcpy(ret, "addk\t%0,%1,r0");
+       else if (GP_REG_P (regno0) && ST_REG_P (regno1))
+-        ret = "mfs\t%0,%1";
++        strcpy(ret, "mfs\t%0,%1");
+       else if (ST_REG_P (regno0) && GP_REG_P (regno1))
+-        ret = "mts\t%0,%1";
++        strcpy(ret, "mts\t%0,%1");
+     } else if (code1 == MEM) {
+       rtx offset = const0_rtx;
+       op1 = eliminate_constant_term (XEXP (op1, 0), &offset);
+@@ -1316,6 +1377,9 @@ microblaze_move_1word (operands, insn, unsignedp)
+           case ADDRESS_SYMBOLIC:
+             sprintf (ret, "l%si\t%%0,%%1", microblaze_mode_to_mem_modifier (1, GET_MODE (operands[1])));
+             break;
++	  case ADDRESS_INVALID:
++	    fatal_insn("Invalid address", operands[1]);
++	    break;
+         }
+         return ret;
+       }
+@@ -1331,10 +1395,10 @@ microblaze_move_1word (operands, insn, unsignedp)
+       if (INTVAL (op1) == 0 )
+       {
+         if (GP_REG_P (regno0))
+-          ret = "addk\t%0,r0,%z1";
++          strcpy(ret, "addk\t%0,r0,%z1");
+       } else if (GP_REG_P (regno0))
+       {
+-        ret = "addik\t%0,r0,%1\t# %X1";
++        strcpy(ret, "addik\t%0,r0,%1\t# %X1");
+       }
+     }
+     /* Sid [07/16/01] Need to get DOUBLE and FLOATS out . Instead have either normal moves or function calls */
+@@ -1343,7 +1407,7 @@ microblaze_move_1word (operands, insn, unsignedp)
+       if (op1 == CONST0_RTX (SFmode))
+       {
+         if (GP_REG_P (regno0))
+-          ret = "addk\t%0,r0,%.";
++          strcpy(ret, "addk\t%0,r0,%.");
+       }
+ 
+       else
+@@ -1371,7 +1435,9 @@ microblaze_move_1word (operands, insn, unsignedp)
+     else if (code1 == LABEL_REF)
+     {
+ 
++#if 0
+       int base_reg = get_base_reg (XEXP (operands[1], 0));
++#endif
+       
+       if (TARGET_STATS)
+         microblaze_count_memory_refs (op1, 1);
+@@ -1400,20 +1466,22 @@ microblaze_move_1word (operands, insn, unsignedp)
+           {
+             /*		      delay = DELAY_LOAD;*/
+             delay = DELAY_NONE;
+-            ret = "lw\t%0,%2";
++            strcpy (ret, "lw\t%0,%2");
+           }
+           else
+           {
+             /* XLNX [Check out]*/
+             dslots_load_total++;
+             operands[3] = offset;
+-            ret = "lwi\t%0,%2,0\n\tadd\t%0,%0,%3";
++            strcpy (ret, "lwi\t%0,%2,0\n\tadd\t%0,%0,%3");
+           }
+         }
+       }
+       else
+       {
++#if 0
+         int base_reg = get_base_reg (operands[1]);
++#endif
+         sprintf (ret,"addik\t%%0,%%a1");
+         
+         if (TARGET_STATS)
+@@ -1432,13 +1500,13 @@ microblaze_move_1word (operands, insn, unsignedp)
+ 
+       operands[2] = add_op0;
+       operands[3] = add_op1;
+-      ret = "addk%:\t%0,%2,%3";
++      strcpy (ret, "addk%:\t%0,%2,%3");
+     }
+ 
+     else if (code1 == HIGH)
+     {
+       operands[1] = XEXP (op1, 0);
+-      ret = "lui\t%0,%%hi(%1)";
++      strcpy (ret, "lui\t%0,%%hi(%1)");
+     }
+   }
+ 
+@@ -1460,6 +1528,9 @@ microblaze_move_1word (operands, insn, unsignedp)
+       case ADDRESS_SYMBOLIC:
+         sprintf (ret, "s%si\t%%z1,%%0", microblaze_mode_to_mem_modifier (0, GET_MODE (operands[0])));
+         break;
++      case ADDRESS_INVALID:
++	fatal_insn ("invalid address", insn);
++	break;
+     }
+     return ret;
+   }
+@@ -1485,11 +1556,11 @@ microblaze_move_1word (operands, insn, unsignedp)
+ /* Return the appropriate instructions to move 2 words */
+ 
+ const char*
+-microblaze_move_2words (operands, insn)
+-  rtx operands[];
+-  rtx insn;
++microblaze_move_2words (
++  rtx operands[],
++  rtx insn)
+ {
+-  char *ret = 0;
++  static char ret[100];
+   rtx op0 = operands[0];
+   rtx op1 = operands[1];
+   enum rtx_code code0 = GET_CODE (operands[0]);
+@@ -1498,9 +1569,11 @@ microblaze_move_2words (operands, insn)
+   int subreg_word1 = 0;
+   enum delay_type delay = DELAY_NONE;
+ 
++  ret[0] = 0;
++
+   while (code0 == SUBREG)
+   {
+-    subreg_word0 += SUBREG_REG (op0);
++    subreg_word0 += /* SUBREG_REG (op0) MJE */ 1;
+     op0 = SUBREG_REG (op0);
+     code0 = GET_CODE (op0);
+   }
+@@ -1513,7 +1586,7 @@ microblaze_move_2words (operands, insn)
+ 
+   while (code1 == SUBREG)
+   {
+-    subreg_word1 += SUBREG_REG (op1);
++    subreg_word1 += /* SUBREG_REG (op1) MJE */ 1;
+     op1 = SUBREG_REG (op1);
+     code1 = GET_CODE (op1);
+   }
+@@ -1540,12 +1613,12 @@ microblaze_move_2words (operands, insn)
+       /* Just in case, don't do anything for assigning a register
+          to itself, unless we are filling a delay slot.  */
+       if (regno0 == regno1 && set_nomacro == 0)
+-        ret = "";
++        strcpy (ret, "");
+       else if (regno0 != (regno1+1))
+-        ret = "addk\t%0,r0,%1\n\taddk\t%D0,r0,%D1";
++        strcpy (ret, "addk\t%0,r0,%1\n\taddk\t%D0,r0,%D1");
+ 
+       else
+-        ret = "addk\t%D0,r0,%D1\n\taddk\t%0,r0,%1";
++        strcpy (ret, "addk\t%D0,r0,%D1\n\taddk\t%0,r0,%1");
+     }
+ 
+     else if (code1 == CONST_DOUBLE)
+@@ -1562,21 +1635,18 @@ microblaze_move_2words (operands, insn)
+ #ifdef TARGET_FP_CALL_32
+           if (FP_CALL_GP_REG_P (regno0))
+           {
+-            ret = "li.d\t%0,%1\n\tdsll\t%D0,%0,32\n\tdsrl\t%D0,32\n\tdsrl\t%0,32";
++            strcpy (ret, "li.d\t%0,%1\n\tdsll\t%D0,%0,32\n\tdsrl\t%D0,32\n\tdsrl\t%0,32");
+           }
+           else
+ #endif
+           {
+-            unsigned int value_long[2];
+-            int i;
++            union { long value_long; unsigned int value_int[2]; } val;
+             REAL_VALUE_TYPE value;
+             REAL_VALUE_FROM_CONST_DOUBLE(value,operands[1]);
+-            REAL_VALUE_TO_TARGET_DOUBLE (value, value_long);
++            REAL_VALUE_TO_TARGET_DOUBLE (value, &(val.value_long));
+ 
+-            ret = (char*)xmalloc (80); 
+-            for (i = 0; i < 80; i++) 
+-              ret[i] = 0;
+-            sprintf (ret, "addik\t%%0,r0,0x%x \n\taddik\t%%D0,r0,0x%x #Xfer Lo", value_long[0], value_long[1]);
++            sprintf (ret, "addik\t%%0,r0,0x%x \n\taddik\t%%D0,r0,0x%x #Xfer Lo", 
++		     val.value_int[0], val.value_int[1]);
+             printed = 1;
+           }
+         }
+@@ -1584,31 +1654,31 @@ microblaze_move_2words (operands, insn)
+         else
+         {
+           split_double (op1, operands + 2, operands + 3);
+-          /*		  ret = "MICROBLAZEli\t%0,%2\n\tMICROBLAZEli\t%D0,%3 #li1";*/
++          /*		  strcpy (ret, "MICROBLAZEli\t%0,%2\n\tMICROBLAZEli\t%D0,%3 #li1");*/
+           /*   	          fprintf(stderr,"li ==> la\n");*/
+-          ret="addik\t%0,r0,%2\n\taddik\t%D0,r0,%3 #li => la";
++          strcpy (ret, "addik\t%0,r0,%2\n\taddik\t%D0,r0,%3 #li => la");
+         }
+       }
+ 
+       else
+       {
+         if (GP_REG_P (regno0))
+-          ret = "addk\t%0,r0,%.\n\taddk\t%D0,r0,%.";
++          strcpy (ret, "addk\t%0,r0,%.\n\taddk\t%D0,r0,%.");
+       }
+     }
+ 
+     else if (code1 == CONST_INT && INTVAL (op1) == 0 )
+     {
+       if (GP_REG_P (regno0))
+-        ret = "addk\t%0,r0,%.\n\taddk\t%D0,r0,%.";
++        strcpy (ret, "addk\t%0,r0,%.\n\taddk\t%D0,r0,%.");
+     }
+ 	
+     else if (code1 == CONST_INT && GET_MODE (op0) == DImode
+              && GP_REG_P (regno0)){
+       if (HOST_BITS_PER_WIDE_INT < 64) {
+         operands[2] = GEN_INT (INTVAL (operands[1]) >= 0 ? 0 : -1);
+-        /*	      ret = "MICROBLAZEli\t%M0,%2\n\tMICROBLAZEli\t%L0,%1 #li7";*/
+-        ret = "addik\t%M0,r0,%2\n\taddik\t%L0,r0,%1";
++        /*	      strcpy (ret, "MICROBLAZEli\t%M0,%2\n\tMICROBLAZEli\t%L0,%1 #li7");*/
++        strcpy (ret, "addik\t%M0,r0,%2\n\taddik\t%L0,r0,%1");
+       }
+       else {
+         /* We use multiple shifts here, to avoid warnings about out
+@@ -1616,8 +1686,8 @@ microblaze_move_2words (operands, insn)
+         operands[2] = GEN_INT (INTVAL (operands[1]) >> 16 >> 16);
+         operands[1]
+           = GEN_INT (INTVAL (operands[1]) << 16 << 16 >> 16 >> 16);
+-        /*ret = "MICROBLAZEli\t%M0,%2\n\tMICROBLAZEli\t%L0,%1 #li8";*/
+-        ret = "addik\t%M0,r0,%2\n\taddik\t%L0,r0,%1";
++        /*strcpy (ret, "MICROBLAZEli\t%M0,%2\n\tMICROBLAZEli\t%L0,%1 #li8");*/
++        strcpy (ret, "addik\t%M0,r0,%2\n\taddik\t%L0,r0,%1");
+       }
+     }
+ 
+@@ -1633,16 +1703,12 @@ microblaze_move_2words (operands, insn)
+             
+         /* if operands[1] is REG or op1 = MEM, which points to REG */
+         if (GET_CODE(op1) == REG || GET_CODE (XEXP (op1,0)) == REG)
+-          ret = (reg_mentioned_p (op0, op1)
++          strcpy (ret, (reg_mentioned_p (op0, op1)
+                  ? "lwi\t%D0,%2\n\tlwi\t%0,%1"
+-                 : "lwi\t%0,%1\n\tlwi\t%D0,%2");
++                 : "lwi\t%0,%1\n\tlwi\t%D0,%2"));
+         else
+           if (GET_CODE(op1) == SYMBOL_REF || GET_CODE (XEXP (op1, 0)) == SYMBOL_REF) {
+-            int i;
+             int ret_reg;
+-            free(ret);
+-            ret = (char*) xmalloc(100);
+-            for(i = 0 ; i < 100; i++)ret[i] = '\0';
+             if (GET_CODE(op1) == SYMBOL_REF)
+               ret_reg = get_base_reg(op1);
+             else
+@@ -1655,14 +1721,14 @@ microblaze_move_2words (operands, insn)
+               sprintf (ret,"lwi\t%%0,%%1\n\tlwi\t%%D0,%%2 #MICROBLAZE-CHECK");
+           }
+           else if (GET_CODE(op1) == CONST || GET_CODE (XEXP (op1,0)) == CONST || GET_CODE (XEXP (op1, 0)) == CONST_INT) {
+-            ret = (reg_mentioned_p (op0, op1)
++            strcpy (ret, (reg_mentioned_p (op0, op1)
+                    ? "lwi\t%D0,%2\n\tlwi\t%0,%1"
+-                   : "lwi\t%0,%1\n\tlwi\t%D0,%2");
++                   : "lwi\t%0,%1\n\tlwi\t%D0,%2"));
+           }
+           else {
+-            ret = (reg_mentioned_p (op0, op1)
++            strcpy (ret, (reg_mentioned_p (op0, op1)
+                    ? "lwi\t%D0,%2\n\tlwi\t%0,%1"
+-                   : "lwi\t%0,%1\n\tlwi\t%D0,%2");
++                   : "lwi\t%0,%1\n\tlwi\t%D0,%2"));
+           }
+       }
+     }
+@@ -1686,24 +1752,22 @@ microblaze_move_2words (operands, insn)
+       int regno1 = REGNO (op1) + subreg_word1;
+ 
+       if (FP_REG_P (regno1))
+-        ret = "s.d\t%1,%0";
++        strcpy (ret, "s.d\t%1,%0");
+ 
+       else if (double_memory_operand (op0, GET_MODE (op0)))
+       {
++#if 0
+         int op0_base_reg = get_base_reg(op0);
+-        int i;
++#endif
+         operands[2] = adjust_address(op0,GET_MODE (op0), 4);
+ 	      
+-        ret = (char*)xmalloc(100); 
+-        for (i = 0; i <  100; i++) ret[i] = 0;
+-
+         /* if operands[0] happens to be plus, we shdn't add r0 to the resulting output */
+         /* Check this code properly..Seems to be complicated */
+         if (GET_CODE (XEXP (operands[0], 0)) == PLUS) 
+           if (GET_CODE (XEXP (operands[2], 0)) == PLUS)
+-            ret = "swi\t%1,%0\n\tswi\t%D1,%2";
++            strcpy (ret, "swi\t%1,%0\n\tswi\t%D1,%2");
+           else
+-            ret = "swi\t%1,%0\n\tswi\t%D1,%2";
++            strcpy (ret, "swi\t%1,%0\n\tswi\t%D1,%2");
+         else
+           if ((GET_CODE (XEXP (operands[0], 0)) == SYMBOL_REF) ||
+               (GET_CODE (XEXP (operands[0], 0)) == CONST)) {
+@@ -1711,9 +1775,9 @@ microblaze_move_2words (operands, insn)
+           }
+           else
+             if (GET_CODE (XEXP (operands[2], 0)) == PLUS)
+-              ret = "swi\t%1,%0\n\tswi\t%D1,%2";
++              strcpy (ret, "swi\t%1,%0\n\tswi\t%D1,%2");
+             else
+-              ret = "swi\t%1,%0\n\tswi\t%D1,%2";
++              strcpy (ret, "swi\t%1,%0\n\tswi\t%D1,%2");
+ 
+       }
+     }
+@@ -1725,14 +1789,14 @@ microblaze_move_2words (operands, insn)
+     {
+       operands[2] = adjust_address(op0, GET_MODE(op0),4);
+       /*         operands[2] = adj_offsettable_operand (op0, 4);*/
+-      ret = "swi\t%.,%0\n\tswi\t%.,%2";
++      strcpy (ret, "swi\t%.,%0\n\tswi\t%.,%2");
+     }
+ 
+     if (TARGET_STATS)
+       microblaze_count_memory_refs (op0, 2);
+   }
+ 
+-  if (ret == 0)
++  if (ret[0] == 0)
+   {
+     fatal_insn ("Bad move", insn);
+     return 0;
+@@ -1746,11 +1810,11 @@ microblaze_move_2words (operands, insn)
+ 
+ 
+ bool 
+-microblaze_rtx_costs (x, code, outer_code, total)
+-  rtx x;
+-  int code;
+-  int outer_code;
+-  int *total;
++microblaze_rtx_costs (
++  rtx x,
++  int code,
++  int outer_code ATTRIBUTE_UNUSED,
++  int *total)
+ {
+   enum machine_mode mode = GET_MODE (x);
+ 
+@@ -1900,8 +1964,7 @@ microblaze_address_insns (rtx x, enum machine_mode mode)
+ /* Provide the costs of an addressing mode that contains ADDR.
+    If ADDR is not a valid address, its cost is irrelevant.  */
+ int
+-microblaze_address_cost (addr)
+-  rtx addr;
++microblaze_address_cost (rtx addr)
+ {
+   return COSTS_N_INSNS (microblaze_address_insns (addr, GET_MODE (addr)));
+ }
+@@ -1911,8 +1974,7 @@ microblaze_address_cost (addr)
+ 
+ /* XLNX [08/16/01] Need to look into this*/
+ int
+-pic_address_needs_scratch (x)
+-  rtx x;
++pic_address_needs_scratch (rtx x)
+ {
+   /* An address which is a symbolic plus a non SMALL_INT needs a temp reg.  */
+   if (GET_CODE (x) == CONST && GET_CODE (XEXP (x, 0)) == PLUS
+@@ -1927,8 +1989,7 @@ pic_address_needs_scratch (x)
+ /* Make normal rtx_code into something we can index from an array */
+ 
+ static enum internal_test
+-map_test_to_internal_test (test_code)
+-  enum rtx_code test_code;
++map_test_to_internal_test (enum rtx_code test_code)
+ {
+   enum internal_test test = ITEST_MAX;
+ 
+@@ -1961,7 +2022,10 @@ gen_conditional_branch (rtx operands[], enum rtx_code test_code)
+   rtx cmp0 = branch_cmp[0];
+   rtx cmp1 = branch_cmp[1];
+   enum machine_mode mode;
++#if 0
+   rtx reg0, reg1;
++#endif
++  rtx reg0;
+   rtx label1, label2;
+ 
+   switch (type)
+@@ -1974,8 +2038,8 @@ gen_conditional_branch (rtx operands[], enum rtx_code test_code)
+       if (TARGET_HARD_FLOAT) {
+         reg0 = gen_reg_rtx (SImode);
+         /* For cmp0 != cmp1, build cmp0 == cmp1, and test for result == 0 in the following instruction. */
+-        emit_insn (gen_rtx (SET, VOIDmode, reg0,
+-                            gen_rtx ((test_code == NE ? EQ : test_code), SImode, cmp0, cmp1)));
++        emit_insn (gen_rtx_SET (VOIDmode, reg0,
++                            gen_rtx_fmt_ee ((test_code == NE ? EQ : test_code), SImode, cmp0, cmp1)));
+ 
+         /* Setup test and branch for following instruction
+            Setup a test for zero as opposed to non-zero.
+@@ -1986,9 +2050,9 @@ gen_conditional_branch (rtx operands[], enum rtx_code test_code)
+         cmp1 = const0_rtx;
+         break;
+       } else
+-        fatal_insn ("gen_conditional_branch:", gen_rtx (test_code, VOIDmode, cmp0, cmp1));
++        fatal_insn ("gen_conditional_branch:", gen_rtx_fmt_ee (test_code, VOIDmode, cmp0, cmp1));
+     default:
+-      fatal_insn ("gen_conditional_branch:", gen_rtx (test_code, VOIDmode, cmp0, cmp1));
++      fatal_insn ("gen_conditional_branch:", gen_rtx_fmt_ee (test_code, VOIDmode, cmp0, cmp1));
+   }
+ 
+   /* Generate the branch.  */
+@@ -1997,19 +2061,22 @@ gen_conditional_branch (rtx operands[], enum rtx_code test_code)
+   label2 = pc_rtx;
+ 
+   if (!(GET_CODE (cmp1) == CONST_INT && INTVAL (cmp1) == 0)) {          /* Except for branch_zero */
+-    emit_jump_insn (gen_rtx_PARALLEL (VOIDmode, 
+-                                      gen_rtvec (2,
+-                                                 gen_rtx (SET, VOIDmode, pc_rtx, gen_rtx (IF_THEN_ELSE, 
+-                                                                                          VOIDmode, 
+-                                                                                          gen_rtx (test_code, mode, cmp0, cmp1),
+-                                                                                          label1, 
+-                                                                                          label2)),
+-                                                 gen_rtx_CLOBBER (VOIDmode, gen_rtx_REG (SImode, MB_ABI_ASM_TEMP_REGNUM)))));
++    emit_jump_insn (
++      gen_rtx_PARALLEL (VOIDmode, 
++	gen_rtvec (2,
++          gen_rtx_SET (VOIDmode, pc_rtx, 
++	    gen_rtx_IF_THEN_ELSE (VOIDmode, 
++	      (test_code == EQ ? gen_rtx_EQ (mode, cmp0, cmp1) : 
++	        gen_rtx_NE (mode, cmp0, cmp1)), 
++	      label1, label2)),
++          gen_rtx_CLOBBER (VOIDmode, gen_rtx_REG (SImode, MB_ABI_ASM_TEMP_REGNUM)))));
+   } else 
+-    emit_jump_insn (gen_rtx (SET, VOIDmode, pc_rtx, 
+-                             gen_rtx (IF_THEN_ELSE, VOIDmode, 
+-                                      gen_rtx (test_code, mode, cmp0, cmp1),
+-                                      label1, label2)));
++    emit_jump_insn (
++      gen_rtx_SET (VOIDmode, pc_rtx, 
++        gen_rtx_IF_THEN_ELSE (VOIDmode, 
++	  (test_code == EQ ? gen_rtx_EQ (mode, cmp0, cmp1) : 
++	     gen_rtx_NE (mode, cmp0, cmp1)), 
++	  label1, label2)));
+ }
+ 
+ /* Write a loop to move a constant number of bytes.
+@@ -2043,13 +2110,13 @@ gen_conditional_branch (rtx operands[], enum rtx_code test_code)
+ 
+ 
+ static void
+-block_move_loop (dest_reg, src_reg, bytes, align, orig_dest, orig_src)
+-  rtx dest_reg;		/* register holding destination address */
+-  rtx src_reg;		/* register holding source address */
+-  int bytes;			/* # bytes to move */
+-  int align;			/* alignment */
+-  rtx orig_dest;		/* original dest for change_address */
+-  rtx orig_src;		/* original source for making a reg note */
++block_move_loop (
++  rtx dest_reg,		/* register holding destination address */
++  rtx src_reg,		/* register holding source address */
++  int bytes,		/* # bytes to move */
++  int align,		/* alignment */
++  rtx orig_dest,	/* original dest for change_address */
++  rtx orig_src)		/* original source for making a reg note */
+ {
+   rtx dest_mem = change_address (orig_dest, BLKmode, dest_reg);
+   rtx src_mem = change_address (orig_src, BLKmode, src_reg);
+@@ -2099,10 +2166,10 @@ block_move_loop (dest_reg, src_reg, bytes, align, orig_dest, orig_src)
+ /* Use a library function to move some bytes.  */
+ 
+ static void
+-block_move_call (dest_reg, src_reg, bytes_rtx)
+-  rtx dest_reg;
+-  rtx src_reg;
+-  rtx bytes_rtx;
++block_move_call (
++  rtx dest_reg,
++  rtx src_reg,
++  rtx bytes_rtx)
+ {
+   /* We want to pass the size as Pmode, which will normally be SImode
+      but will be DImode if we are using 64 bit longs and pointers.  */
+@@ -2110,19 +2177,11 @@ block_move_call (dest_reg, src_reg, bytes_rtx)
+       && GET_MODE (bytes_rtx) != Pmode)
+     bytes_rtx = convert_to_mode (Pmode, bytes_rtx, 1);
+ 
+-#ifdef TARGET_MEM_FUNCTIONS
+-  emit_library_call (gen_rtx (SYMBOL_REF, Pmode, "memcpy"), 0,
++  emit_library_call (gen_rtx_SYMBOL_REF (Pmode, "memcpy"), 0,
+                      VOIDmode, 3, dest_reg, Pmode, src_reg, Pmode,
+                      convert_to_mode (TYPE_MODE (sizetype), bytes_rtx,
+-                                      TREE_UNSIGNED (sizetype)),
++                                      /* TREE_UNSIGNED (sizetype) */ 1),
+                      TYPE_MODE (sizetype));
+-#else
+-  emit_library_call (gen_rtx (SYMBOL_REF, Pmode, "bcopy"), 0,
+-                     VOIDmode, 3, src_reg, Pmode, dest_reg, Pmode,
+-                     convert_to_mode (TYPE_MODE (integer_type_node), bytes_rtx,
+-                                      TREE_UNSIGNED (integer_type_node)),
+-                     TYPE_MODE (integer_type_node));
+-#endif
+ }
+ 
+ /* Expand string/block move operations.
+@@ -2133,8 +2192,7 @@ operands[2] is the number of bytes to move.
+ operands[3] is the alignment.  */
+ 
+ void
+-expand_block_move (operands)
+-  rtx operands[];
++expand_block_move (rtx operands[])
+ {
+   rtx bytes_rtx	= operands[2];
+   rtx align_rtx = operands[3];
+@@ -2233,11 +2291,11 @@ BLOCK_MOVE_NOT_LAST	Do all but the last store.
+ BLOCK_MOVE_LAST		Do just the last store. */
+ 
+ const char *
+-output_block_move (insn, operands, num_regs, move_type)
+-  rtx insn;
+-  rtx operands[];
+-  int num_regs;
+-  enum block_move_type move_type;
++output_block_move (
++  rtx insn,
++  rtx operands[],
++  int num_regs,
++  enum block_move_type move_type)
+ {
+   rtx dest_reg = XEXP (operands[0], 0);
+   rtx src_reg = XEXP (operands[1], 0);
+@@ -2466,12 +2524,12 @@ output_block_move (insn, operands, num_regs, move_type)
+             abort ();
+ 
+           if (GET_MODE (operands[i + 4]) != load_store[i].mode)
+-            operands[i + 4] = gen_rtx (REG, load_store[i].mode,
++            operands[i + 4] = gen_rtx_REG (load_store[i].mode,
+                                        REGNO (operands[i + 4]));
+ 
+           offset = load_store[i].offset;
+           xoperands[0] = operands[i + 4];
+-          xoperands[1] = gen_rtx (MEM, load_store[i].mode,
++          xoperands[1] = gen_rtx_MEM (load_store[i].mode,
+                                   plus_constant (src_reg, offset));
+ 
+           /*		  if(offset == 0){
+@@ -2489,7 +2547,7 @@ output_block_move (insn, operands, num_regs, move_type)
+             int extra_offset
+               = GET_MODE_SIZE (load_store[i].mode) - 1;
+ 
+-            xoperands[2] = gen_rtx (MEM, load_store[i].mode,
++            xoperands[2] = gen_rtx_MEM (load_store[i].mode,
+                                     plus_constant (src_reg,
+                                                    extra_offset
+                                                    + offset));
+@@ -2506,14 +2564,14 @@ output_block_move (insn, operands, num_regs, move_type)
+         int offset = load_store[i].offset;
+ 
+         xoperands[0] = operands[i + 4];
+-        xoperands[1] = gen_rtx (MEM, load_store[i].mode,
++        xoperands[1] = gen_rtx_MEM (load_store[i].mode,
+                                 plus_constant (dest_reg, offset));
+ 
+ 	      
+         if (use_lwl_lwr)
+         {
+           int extra_offset = GET_MODE_SIZE (load_store[i].mode) - 1;
+-          xoperands[2] = gen_rtx (MEM, load_store[i].mode,
++          xoperands[2] = gen_rtx_MEM (load_store[i].mode,
+                                   plus_constant (dest_reg,
+                                                  extra_offset
+                                                  + offset));
+@@ -2551,10 +2609,10 @@ output_block_move (insn, operands, num_regs, move_type)
+ /* Initialize CUMULATIVE_ARGS for a function.  */
+ 
+ void
+-init_cumulative_args (cum, fntype, libname)
+-  CUMULATIVE_ARGS *cum;		/* argument info to initialize */
+-  tree fntype;			/* tree ptr for function decl */
+-  rtx libname ATTRIBUTE_UNUSED;	/* SYMBOL_REF of library name or 0 */
++init_cumulative_args (
++  CUMULATIVE_ARGS *cum,		/* argument info to initialize */
++  tree fntype,			/* tree ptr for function decl */
++  rtx libname ATTRIBUTE_UNUSED)	/* SYMBOL_REF of library name or 0 */
+ {
+   static CUMULATIVE_ARGS zero_cum;
+   tree param, next_param;
+@@ -2595,11 +2653,11 @@ init_cumulative_args (cum, fntype, libname)
+ /* Advance the argument to the next argument position.  */
+ 
+ void
+-function_arg_advance (cum, mode, type, named)
+-  CUMULATIVE_ARGS *cum;	/* current arg information */
+-  enum machine_mode mode;	/* current arg mode */
+-  tree type;			/* type of the argument or 0 if lib support */
+-  int named;			/* whether or not the argument was named */
++function_arg_advance (
++  CUMULATIVE_ARGS *cum,		/* current arg information */
++  enum machine_mode mode,	/* current arg mode */
++  tree type,			/* type of the argument or 0 if lib support */
++  int named)			/* whether or not the argument was named */
+ {
+   if (TARGET_DEBUG_E_MODE)
+   {
+@@ -2607,7 +2665,7 @@ function_arg_advance (cum, mode, type, named)
+              "function_adv({gp reg found = %d, arg # = %2d, words = %2d}, %4s, ",
+              cum->gp_reg_found, cum->arg_number, cum->arg_words,
+              GET_MODE_NAME (mode));
+-    fprintf (stderr, HOST_PTR_PRINTF, type);
++    fprintf (stderr, "%p", (void *)type);
+     fprintf (stderr, ", %d )\n\n", named);
+   }
+ 
+@@ -2663,11 +2721,11 @@ function_arg_advance (cum, mode, type, named)
+    or 0 if the argument is to be passed on the stack.  */
+ 
+ struct rtx_def *
+-function_arg (cum, mode, type, named)
+-  CUMULATIVE_ARGS *cum;	/* current arg information */
+-  enum machine_mode mode;	/* current arg mode */
+-  tree type;			/* type of the argument or 0 if lib support */
+-  int named;			/* != 0 for normal args, == 0 for ... args */
++function_arg (
++  CUMULATIVE_ARGS *cum,		/* current arg information */
++  enum machine_mode mode,	/* current arg mode */
++  tree type,			/* type of the argument or 0 if lib support */
++  int named)			/* != 0 for normal args, == 0 for ... args */
+ {
+   rtx ret;
+   int regbase = -1;
+@@ -2683,7 +2741,7 @@ function_arg (cum, mode, type, named)
+              "function_arg( {gp reg found = %d, arg # = %2d, words = %2d}, %4s, ",
+              cum->gp_reg_found, cum->arg_number, cum->arg_words,
+              GET_MODE_NAME (mode));
+-    fprintf (stderr, HOST_PTR_PRINTF, type);
++    fprintf (stderr, "%p", (void *)type);
+     fprintf (stderr, ", %d ) = ", named);
+   }
+   
+@@ -2727,7 +2785,7 @@ function_arg (cum, mode, type, named)
+     if (regbase == -1)
+       abort ();
+ 
+-    ret = gen_rtx (REG, mode, regbase + *arg_words);
++    ret = gen_rtx_REG (mode, regbase + *arg_words);
+ 
+     if (TARGET_DEBUG_E_MODE)
+       fprintf (stderr, "%s%s\n", reg_names[regbase + *arg_words],
+@@ -2752,25 +2810,23 @@ function_arg (cum, mode, type, named)
+ 
+     /* XLNX [We might not need to do this for MicroBlaze . Seems to cause a problem 
+        while passing small structs */
+-#ifndef MICROBLAZE
++#if 0
+     if (struct_p && int_size_in_bytes (type) < UNITS_PER_WORD)
+     {
+       rtx amount = GEN_INT (BITS_PER_WORD
+                             - int_size_in_bytes (type) * BITS_PER_UNIT);
+-      rtx reg = gen_rtx (REG, word_mode, regbase + *arg_words);
++      rtx reg = gen_rtx_REG (word_mode, regbase + *arg_words);
+ 
+ 	  
+       cum->adjust[cum->num_adjusts++] = gen_ashlsi3 (reg, reg, amount);
+     }
+-
+-    asdakdakdksada
+ #endif
+       }
+ 
+   if (mode == VOIDmode)
+   {
+     if (cum->num_adjusts > 0)
+-      ret = gen_rtx (PARALLEL, (enum machine_mode) cum->fp_code,
++      ret = gen_rtx_PARALLEL ((enum machine_mode) cum->fp_code,
+                      gen_rtvec_v (cum->num_adjusts, cum->adjust));
+   }
+ 
+@@ -2778,11 +2834,11 @@ function_arg (cum, mode, type, named)
+ }
+ 
+ int
+-function_arg_partial_nregs (cum, mode, type, named)
+-  CUMULATIVE_ARGS *cum;	/* current arg information */
+-  enum machine_mode mode;	/* current arg mode */
+-  tree type;			/* type of the argument or 0 if lib support */
+-  int named;                  /* != 0 for normal args, == 0 for ... args */
++function_arg_partial_nregs (
++  CUMULATIVE_ARGS *cum,		/* current arg information */
++  enum machine_mode mode,	/* current arg mode */
++  tree type,			/* type of the argument or 0 if lib support */
++  int named ATTRIBUTE_UNUSED)   /* != 0 for normal args, == 0 for ... args */
+ {
+   if ((mode == BLKmode
+        || GET_MODE_CLASS (mode) != MODE_COMPLEX_INT
+@@ -2822,10 +2878,12 @@ function_arg_partial_nregs (cum, mode, type, named)
+ static int 
+ microblaze_version_to_int (const char *version)
+ {
+-  char *p, *v;
+-  char *tmpl = "vX.YY.Z";
++  const char *p, *v;
++  const char *tmpl = "vX.YY.Z";
+   int iver = 0;
++#if 0
+   int pos = 0;
++#endif
+   
+   iver = 0;
+   
+@@ -2874,8 +2932,25 @@ microblaze_version_compare (const char *va, const char *vb)
+ /* Set up the threshold for data to go into the small data area, instead
+    of the normal data area, and detect any conflicts in the switches.  */
+ 
++static bool
++microblaze_handle_option (size_t code, 
++			  const char *arg ATTRIBUTE_UNUSED, 
++		          int value ATTRIBUTE_UNUSED)
++{
++  switch (code)
++    {
++    /* Check if we are asked to not clear BSS 
++       If YES, we do not place zero initialized in BSS  */
++    case OPT_mno_clearbss:
++      flag_zero_initialized_in_bss = 0;
++      break;
++    }
++  return true;
++}
++
++
+ void
+-override_options ()
++override_options (void)
+ {
+   register int i, start;
+   register int regno;
+@@ -2909,11 +2984,6 @@ override_options ()
+ 
+   /* Always use DFA scheduler */
+   microblaze_sched_use_dfa = 1;
+-
+-  /* Check if we are asked to not clear BSS 
+-     If YES, we do not place zero initialized in BSS  */
+-  if (!strcmp (microblaze_no_clearbss, "yes")) 
+-    flag_zero_initialized_in_bss = 0;
+   
+   /* Tell halfpic.c that we have half-pic code if we do.  */
+   if (TARGET_HALF_PIC)
+@@ -2928,7 +2998,7 @@ override_options ()
+     microblaze_abicalls = MICROBLAZE_ABICALLS_YES;
+     flag_pic = 1;
+     if (microblaze_section_threshold > 0)
+-      warning ("-G is incompatible with PIC code which is the default");
++      warning (0, "-G is incompatible with PIC code which is the default");
+   }
+   else
+     microblaze_abicalls = MICROBLAZE_ABICALLS_NO;
+@@ -2945,10 +3015,10 @@ override_options ()
+   {
+     flag_pic = 1;
+     if (TARGET_ABICALLS)
+-      warning ("-membedded-pic and -mabicalls are incompatible");
++      warning (0, "-membedded-pic and -mabicalls are incompatible");
+ 
+     if (g_switch_set)
+-      warning ("-G and -membedded-pic are incompatible");
++      warning (0, "-G and -membedded-pic are incompatible");
+ 
+     /* Setting microblaze_section_threshold is not required, because gas
+        will force everything to be GP addressable anyhow, but
+@@ -3030,7 +3100,9 @@ override_options ()
+        mode = (enum machine_mode) ((int)mode + 1))
+   {
+     register int size              = GET_MODE_SIZE (mode);
++#if 0
+     register enum mode_class class = GET_MODE_CLASS (mode);
++#endif
+ 
+     for (regno = 0; regno < FIRST_PSEUDO_REGISTER; regno++)
+     {
+@@ -3051,7 +3123,7 @@ override_options ()
+ }
+ 
+ void
+-microblaze_order_regs_for_local_alloc ()
++microblaze_order_regs_for_local_alloc (void)
+ {
+   register int i;
+ 
+@@ -3071,9 +3143,9 @@ microblaze_order_regs_for_local_alloc ()
+    the initial adjustments.  */
+ 
+ HOST_WIDE_INT
+-microblaze_debugger_offset (addr, offset)
+-  rtx addr;
+-  HOST_WIDE_INT offset;
++microblaze_debugger_offset (
++  rtx addr,
++  HOST_WIDE_INT offset)
+ {
+   rtx offset2 = const0_rtx;
+   rtx reg = eliminate_constant_term (addr, &offset2);
+@@ -3177,11 +3249,12 @@ microblaze_initial_elimination_offset (int from, int to)
+    '$'	Print the name of the stack pointer register (sp or rMB_ABI_STACK_POINTER_REGNUM).
+    '+'	Print the name of the gp register (gp or rMB_ABI_GPRO_REGNUM).  
+    '#'	Print nop if NOT in a .set noreorder section ie if the delay slot of a branch is not filled. */
++
+ void
+-print_operand (file, op, letter)
+-  FILE *file;		/* file to write to */
+-  rtx op;		/* operand to print */
+-  int letter;		/* %<letter> or 0 */
++print_operand (
++  FILE *file,		/* file to write to */
++  rtx op,		/* operand to print */
++  int letter)		/* %<letter> or 0 */
+ {
+   register enum rtx_code code;
+ 
+@@ -3408,9 +3481,9 @@ print_operand (file, op, letter)
+ */
+ 
+ void
+-print_operand_address (file, addr)
+-  FILE *file;
+-  rtx addr;
++print_operand_address (
++  FILE *file,
++  rtx addr)
+ {
+   struct microblaze_address_info info;
+   if (!microblaze_classify_address (&info, addr, GET_MODE (addr), 1)) 
+@@ -3435,6 +3508,9 @@ print_operand_address (file, addr)
+       fprintf (file, "%s,", reg_names[REGNO (info.regA)]);
+       output_addr_const (file, info.symbol);
+       break;
++    case ADDRESS_INVALID:
++      fatal_insn ("invalid address", addr);
++      break;
+   }
+ }
+ 
+@@ -3450,10 +3526,10 @@ print_operand_address (file, addr)
+    required as otherwise GAS will think the object lives in .sbss/.sdata.  */
+ 
+ int
+-microblaze_output_external (file, decl, name)
+-  FILE *file ATTRIBUTE_UNUSED;
+-  tree decl;
+-  char *name;
++microblaze_output_external (
++  FILE *file ATTRIBUTE_UNUSED,
++  tree decl,
++  char *name)
+ {
+   register struct extern_list *p;
+   int len;
+@@ -3466,7 +3542,7 @@ microblaze_output_external (file, decl, name)
+           || strcmp (TREE_STRING_POINTER (section_name), ".sbss") == 0
+           || strcmp (TREE_STRING_POINTER (section_name), ".sdata") == 0))
+   {
+-    p = (struct extern_list *) permalloc (sizeof (struct extern_list));
++    p = (struct extern_list *) /* permalloc */ xmalloc (sizeof (struct extern_list));
+     p->next = extern_head;
+     p->name = name;
+     p->size = len;
+@@ -3482,7 +3558,7 @@ microblaze_output_external (file, decl, name)
+          bootstrap under Irix 5.1.  */
+       && strcmp (name, "__builtin_next_arg"))
+   {
+-    p = (struct extern_list *) permalloc (sizeof (struct extern_list));
++    p = (struct extern_list *) /* permalloc */ xmalloc (sizeof (struct extern_list));
+     p->next = extern_head;
+     p->name = name;
+     p->size = -1;
+@@ -3501,7 +3577,7 @@ microblaze_output_external_libcall (file, name)
+ {
+   register struct extern_list *p;
+ 
+-  p = (struct extern_list *) permalloc (sizeof (struct extern_list));
++  p = (struct extern_list *) /* permalloc */ xmalloc (sizeof (struct extern_list));
+   p->next = extern_head;
+   p->name = name;
+   p->size = -1;
+@@ -3526,9 +3602,9 @@ microblaze_output_external_libcall (file, name)
+    put out a MICROBLAZE ECOFF file and a stab.  */
+ 
+ void
+-microblaze_output_filename (stream, name)
+-  FILE *stream;
+-  const char* name;
++microblaze_output_filename (
++  FILE *stream,
++  const char* name)
+ {
+   static int first_time = 1;
+   char ltext_label_name[100];
+@@ -3560,14 +3636,15 @@ microblaze_output_filename (stream, name)
+       {
+         file_in_function_warning = 1;
+         ignore_line_number = 1;
+-        warning ("MICROBLAZE ECOFF format does not allow changing filenames within functions with #line");
++        warning (0, "MICROBLAZE ECOFF format does not allow changing filenames within functions with #line");
+       }
+     }
+     else
+     {
+       SET_FILE_NUMBER ();
+       current_function_file = name;
+-      ASM_OUTPUT_FILENAME (stream, num_source_filenames, name);
++      fprintf (stream, "\t.file\t%d", num_source_filenames);
++      output_quoted_string (stream, name);
+     }
+   }
+ }
+@@ -3578,9 +3655,9 @@ microblaze_output_filename (stream, name)
+    file.  */
+ 
+ void
+-microblaze_output_lineno (stream, line)
+-  FILE *stream;
+-  int line;
++microblaze_output_lineno (
++  FILE *stream,
++  int line)
+ {
+   if (write_symbols == DBX_DEBUG)
+   {
+@@ -3618,7 +3695,9 @@ microblaze_output_lineno (stream, line)
+        to minimize the number of times that this congestion occurs
+     3) Update the delay slot statistics.  */
+ void
+-final_prescan_insn (rtx insn, rtx opvec[], int noperands)
++final_prescan_insn (rtx insn, 
++		    rtx opvec[] ATTRIBUTE_UNUSED, 
++		    int noperands ATTRIBUTE_UNUSED)
+ {
+   /* GTi stuff here 
+      -- Scan instruction sequence to see if a stall on a 'sw' can be avoided
+@@ -3685,7 +3764,7 @@ microblaze_asm_file_start (void)
+    are needed to reference the data pointers.  */
+ 
+ void
+-microblaze_asm_file_end ()
++microblaze_asm_file_end (void)
+ {
+   char buffer[8192];
+   tree name_tree;
+@@ -3728,17 +3807,17 @@ microblaze_asm_file_end ()
+     fprintf (asm_out_file, "\n\t.text\n");
+     rewind (asm_out_text_file);
+     if (ferror (asm_out_text_file))
+-      fatal_io_error (temp_filename);
++      fatal_error ("can't rewind asm text file");
+ 
+     while ((len = fread (buffer, 1, sizeof (buffer), asm_out_text_file)) > 0)
+       if ((int) fwrite (buffer, 1, len, asm_out_file) != len)
+-        pfatal_with_name (asm_file_name);
++        fatal_error ("while reading asm text file");
+ 
+     if (len < 0)
+-      pfatal_with_name (temp_filename);
++      fatal_error ("while reading asm text file");
+ 
+     if (fclose (asm_out_text_file) != 0)
+-      pfatal_with_name (temp_filename);
++      fatal_error ("closing asm text file");
+ 
+ #ifdef __MSDOS__
+     unlink (temp_filename);
+@@ -3748,7 +3827,7 @@ microblaze_asm_file_end ()
+ 
+ /* Output an element in the table of global constructors. */
+ void 
+-microblaze_asm_constructor (rtx symbol, int priority) 
++microblaze_asm_constructor (rtx symbol ATTRIBUTE_UNUSED, int priority) 
+ { 
+ 
+   const char *section = ".ctors";
+@@ -3766,7 +3845,7 @@ microblaze_asm_constructor (rtx symbol, int priority)
+ 
+   named_section_flags (section, SECTION_WRITE);
+   fprintf (asm_out_file, "\t%s\t", ".word");     
+-  assemble_name (asm_out_file, XEXP (symbol, 0));                                       
++  assemble_name (asm_out_file, XSTR (XEXP (symbol, 0), 0));                                       
+   fprintf (asm_out_file, "\n");                                             
+ } 
+ 
+@@ -3789,7 +3868,7 @@ microblaze_asm_destructor (rtx symbol, int priority)
+ 
+   named_section_flags (section, SECTION_WRITE);
+   fprintf (asm_out_file, "\t%s\t", ".word");     
+-  assemble_name (asm_out_file, XEXP (symbol, 0));                                       
++  assemble_name (asm_out_file, XSTR (XEXP (symbol, 0), 0));                                       
+   fprintf (asm_out_file, "\n");                                             
+ } 
+    
+@@ -3797,10 +3876,10 @@ microblaze_asm_destructor (rtx symbol, int priority)
+ /* A function to output to the stdio stream stream a label whose name is made from the string prefix 
+    and the number labelno. */
+ void 
+-microblaze_internal_label (STREAM, prefix, labelno)
+-  FILE *STREAM;
+-  const char* prefix;
+-  unsigned long labelno;
++microblaze_internal_label (
++  FILE *STREAM,
++  const char* prefix,
++  unsigned long labelno)
+ {
+   fprintf (STREAM, "%s%s%ld:\n", LOCAL_LABEL_PREFIX, prefix, labelno);
+ }
+@@ -3827,9 +3906,9 @@ void
+ microblaze_declare_comm_object (FILE *stream, char *name, char *section, char *fmt, int size, int align)
+ {
+   if (size > 0 && size <= microblaze_section_threshold && TARGET_XLGP_OPT)
+-    SBSS_SECTION();
++    named_section (0, ".sbss", 0);
+   else
+-    BSS_SECTION();
++    named_section (0, ".bss", 0);
+ 
+   fputs (section, stream);		
+   assemble_name (stream, name);
+@@ -3851,14 +3930,17 @@ microblaze_declare_comm_object (FILE *stream, char *name, char *section, char *f
+ void
+ microblaze_output_double (FILE *stream, REAL_VALUE_TYPE value)
+ {
++  union {double d; REAL_VALUE_TYPE value; } val;
+ #ifdef REAL_VALUE_TO_TARGET_DOUBLE
+   long value_long[2];
++  val.value = value;
+   REAL_VALUE_TO_TARGET_DOUBLE (value, value_long);
+    
+   fprintf (stream, "\t.word\t0x%08lx\t\t# %.20g\n\t.word\t0x%08lx\n",
+-           value_long[0], value, value_long[1]);
++           value_long[0], val.d, value_long[1]);
+ #else
+-  fprintf (stream, "\t.double\t%.20g\n", value);
++  val.value = value;
++  fprintf (stream, "\t.double\t%.20g\n", val.d);
+ #endif
+ }
+ 
+@@ -3868,13 +3950,16 @@ microblaze_output_double (FILE *stream, REAL_VALUE_TYPE value)
+ void
+ microblaze_output_float (FILE *stream, REAL_VALUE_TYPE value)
+ {
++  union {double d; REAL_VALUE_TYPE value; } val;
+ #ifdef REAL_VALUE_TO_TARGET_SINGLE
+   long value_long;
++  val.value = value;
+   REAL_VALUE_TO_TARGET_SINGLE (value, value_long);
+     
+-  fprintf (stream, "\t.word\t0x%08lx\t\t# %.12g (float)\n", value_long, value);
++  fprintf (stream, "\t.word\t0x%08lx\t\t# %.12g (float)\n", value_long, val.d);
+ #else
+-  fprintf (stream, "\t.float\t%.12g\n", value);
++  val.value = value;
++  fprintf (stream, "\t.float\t%.12g\n", val.d);
+ #endif
+ }
+ 
+@@ -3924,8 +4009,8 @@ microblaze_output_float (FILE *stream, REAL_VALUE_TYPE value)
+ */
+ 
+ HOST_WIDE_INT
+-compute_frame_size (size)
+-  HOST_WIDE_INT size;                 /* # of var. bytes allocated */
++compute_frame_size (
++  HOST_WIDE_INT size)                 /* # of var. bytes allocated */
+ {
+   int regno;
+   HOST_WIDE_INT total_size;           /* # bytes that the entire frame takes up */
+@@ -3934,7 +4019,9 @@ compute_frame_size (size)
+   int link_debug_size;                /* # bytes for link register */
+   HOST_WIDE_INT gp_reg_size;          /* # bytes needed to store calle-saved gp regs */
+   long mask;                          /* mask of saved gp registers */
++#if 0
+   static int check = 0;
++#endif
+ 
+   interrupt_handler   = (microblaze_interrupt_function_p (current_function_decl));
+   save_volatiles      = (microblaze_save_volatiles (current_function_decl));
+@@ -3944,7 +4031,7 @@ compute_frame_size (size)
+   var_size   = size;
+   args_size  = current_function_outgoing_args_size;
+   
+-  if (args_size == 0 && current_function_calls_alloca)
++  if ((args_size == 0) && current_function_calls_alloca)
+     args_size = NUM_OF_ARGS * UNITS_PER_WORD;
+     
+   total_size = var_size + args_size;
+@@ -3958,7 +4045,7 @@ compute_frame_size (size)
+       if (regno != MB_ABI_SUB_RETURN_ADDR_REGNUM)               /* Don't account for link register. It is accounted specially below */
+         gp_reg_size += GET_MODE_SIZE (gpr_mode);
+ 
+-      mask |= 1L << (regno - GP_REG_FIRST);
++      mask |= (1L << (regno - GP_REG_FIRST));
+     }
+   }
+   
+@@ -4025,7 +4112,7 @@ compute_frame_size (size)
+ static void
+ save_restore_insns (int prologue)
+ {
+-  rtx base_reg_rtx, reg_rtx, mem_rtx, msr_rtx, isr_reg_rtx, isr_mem_rtx, isr_msr_rtx, insn;
++  rtx base_reg_rtx, reg_rtx, mem_rtx, /* msr_rtx, */ isr_reg_rtx, isr_mem_rtx, isr_msr_rtx, insn;
+   long mask = current_frame_info.mask;
+   HOST_WIDE_INT base_offset, gp_offset;
+   int regno;
+@@ -4059,14 +4146,13 @@ save_restore_insns (int prologue)
+   
+   /* For interrupt_handlers, need to save/restore the MSR */
+   if (interrupt_handler) {
+-    isr_mem_rtx = gen_rtx (MEM, gpr_mode, 
+-                           gen_rtx (PLUS, Pmode, base_reg_rtx, 
++    isr_mem_rtx = gen_rtx_MEM (gpr_mode, 
++                           gen_rtx_PLUS (Pmode, base_reg_rtx, 
+                                     GEN_INT (current_frame_info.gp_offset - UNITS_PER_WORD)));
+ 
+-    RTX_UNCHANGING_P (isr_mem_rtx) = 1;
+     MEM_VOLATILE_P (isr_mem_rtx) = 1;                             /* Do not optimize in flow analysis */
+-    isr_reg_rtx = gen_rtx (REG, gpr_mode, MB_ABI_MSR_SAVE_REG);
+-    isr_msr_rtx = gen_rtx (REG, gpr_mode, ST_REG_FIRST);
++    isr_reg_rtx = gen_rtx_REG (gpr_mode, MB_ABI_MSR_SAVE_REG);
++    isr_msr_rtx = gen_rtx_REG (gpr_mode, ST_REG_FIRST);
+   }
+ 
+   if (interrupt_handler && !prologue) {
+@@ -4083,9 +4169,8 @@ save_restore_insns (int prologue)
+       if (regno == MB_ABI_SUB_RETURN_ADDR_REGNUM)             /* Don't handle here. Already handled as the first register */
+         continue;
+ 
+-      reg_rtx = gen_rtx (REG, gpr_mode, regno);  
+-      mem_rtx = gen_rtx (MEM, gpr_mode, gen_rtx (PLUS, Pmode, base_reg_rtx, GEN_INT (gp_offset)));    
+-      RTX_UNCHANGING_P (mem_rtx) = 1;
++      reg_rtx = gen_rtx_REG (gpr_mode, regno);  
++      mem_rtx = gen_rtx_MEM (gpr_mode, gen_rtx_PLUS (Pmode, base_reg_rtx, GEN_INT (gp_offset)));    
+       if (interrupt_handler)
+         MEM_VOLATILE_P (mem_rtx) = 1;                         /* Do not optimize in flow analysis */    
+ 
+@@ -4118,12 +4203,12 @@ save_restore_insns (int prologue)
+ 
+ /* Set up the stack and frame (if desired) for the function.  */
+ static void
+-microblaze_function_prologue (file, size)
+-  FILE *file;
+-  int size ATTRIBUTE_UNUSED;
++microblaze_function_prologue (
++  FILE *file,
++  int size ATTRIBUTE_UNUSED)
+ {
+ #ifndef FUNCTION_NAME_ALREADY_DECLARED
+-  char *fnname;
++  const char *fnname;
+ #endif
+   long fsiz = current_frame_info.total_size;
+ 
+@@ -4191,11 +4276,11 @@ microblaze_function_end_prologue (FILE *file)
+ /* Expand the prologue into a bunch of separate insns.  */
+ 
+ void
+-microblaze_expand_prologue ()
++microblaze_expand_prologue (void)
+ {
+   int regno;
+   HOST_WIDE_INT fsiz;
+-  char *arg_name = 0;
++  const char *arg_name = 0;
+   tree fndecl = current_function_decl;
+   tree fntype = TREE_TYPE (fndecl);
+   tree fnargs = DECL_ARGUMENTS (fndecl);
+@@ -4204,7 +4289,9 @@ microblaze_expand_prologue ()
+   tree next_arg;
+   tree cur_arg;
+   CUMULATIVE_ARGS args_so_far;
++#if 0
+   rtx reg_18_save = NULL_RTX;
++#endif
+   rtx mem_rtx, reg_rtx, insn;
+ 
+   /* If struct value address is treated as the first argument, make it so.  */
+@@ -4321,9 +4408,9 @@ microblaze_expand_prologue ()
+     for (; regno <= GP_ARG_LAST; regno++)
+     {
+       if (offset != 0)
+-        ptr = gen_rtx (PLUS, Pmode, stack_pointer_rtx, GEN_INT (offset));
+-      emit_move_insn (gen_rtx (MEM, gpr_mode, ptr),
+-                      gen_rtx (REG, gpr_mode, regno));
++        ptr = gen_rtx_PLUS (Pmode, stack_pointer_rtx, GEN_INT (offset));
++      emit_move_insn (gen_rtx_MEM (gpr_mode, ptr),
++                      gen_rtx_REG (gpr_mode, regno));
+          
+       offset += GET_MODE_SIZE (gpr_mode);
+     }
+@@ -4345,14 +4432,13 @@ microblaze_expand_prologue ()
+ 
+     /* Handle SUB_RETURN_ADDR_REGNUM specially at first */
+     if (!current_function_is_leaf || interrupt_handler) {
+-      mem_rtx = gen_rtx (MEM, gpr_mode,
+-                         gen_rtx (PLUS, Pmode, stack_pointer_rtx, const0_rtx));
++      mem_rtx = gen_rtx_MEM (gpr_mode,
++                         gen_rtx_PLUS (Pmode, stack_pointer_rtx, const0_rtx));
+       
+-      RTX_UNCHANGING_P (mem_rtx) = 1;
+       if (interrupt_handler)
+         MEM_VOLATILE_P (mem_rtx) = 1;                     /* Do not optimize in flow analysis */
+     
+-      reg_rtx = gen_rtx (REG, gpr_mode, MB_ABI_SUB_RETURN_ADDR_REGNUM);
++      reg_rtx = gen_rtx_REG (gpr_mode, MB_ABI_SUB_RETURN_ADDR_REGNUM);
+       insn = emit_move_insn (mem_rtx, reg_rtx);
+       RTX_FRAME_RELATED_P (insn) = 1;
+      }
+@@ -4406,11 +4492,11 @@ microblaze_expand_prologue ()
+ #define PIC_OFFSET_TABLE_MASK (1 << (PIC_OFFSET_TABLE_REGNUM - GP_REG_FIRST))
+ 
+ void
+-microblaze_function_epilogue (file, size)
+-  FILE *file ATTRIBUTE_UNUSED;
+-  HOST_WIDE_INT size ATTRIBUTE_UNUSED;
++microblaze_function_epilogue (
++  FILE *file ATTRIBUTE_UNUSED,
++  HOST_WIDE_INT size ATTRIBUTE_UNUSED)
+ {
+-  char *fnname;
++  const char *fnname;
+ 
+ #ifndef FUNCTION_NAME_ALREADY_DECLARED
+   /* Get the function name the same way that toplev.c does before calling
+@@ -4433,7 +4519,7 @@ microblaze_function_epilogue (file, size)
+   {
+     int num_gp_regs = current_frame_info.gp_reg_size / 4;
+     int num_regs = num_gp_regs;
+-    char *name = fnname;
++    const char *name = fnname;
+       
+     if (name[0] == '*')
+       name++;
+@@ -4503,20 +4589,22 @@ microblaze_function_epilogue (file, size)
+ /* Expand the epilogue into a bunch of separate insns.  */
+ 
+ void
+-microblaze_expand_epilogue ()
++microblaze_expand_epilogue (void)
+ {
+   HOST_WIDE_INT fsiz = current_frame_info.total_size;
+   rtx fsiz_rtx = GEN_INT (fsiz);
+   rtx reg_rtx;
+   rtx mem_rtx;
+   
++#if 0
+   char *fnname = XSTR (XEXP (DECL_RTL (current_function_decl), 0), 0);
++#endif
+     
+   /* In case of interrupt handlers use addki instead of addi for changing the stack pointer value */
+   
+   if (microblaze_can_use_return_insn ())
+   {
+-    emit_jump_insn (gen_return_internal (gen_rtx (REG, Pmode,
++    emit_jump_insn (gen_return_internal (gen_rtx_REG (Pmode,
+                                                   GP_REG_FIRST + MB_ABI_SUB_RETURN_ADDR_REGNUM)));
+     return;
+   }
+@@ -4528,11 +4616,10 @@ microblaze_expand_epilogue ()
+        This is also important to handle alloca. (See comments for if (frame_pointer_needed) below */
+ 
+     if (!current_function_is_leaf || interrupt_handler) {
+-      mem_rtx = gen_rtx (MEM, gpr_mode, gen_rtx (PLUS, Pmode, stack_pointer_rtx, const0_rtx));
+-      RTX_UNCHANGING_P (mem_rtx) = 1;
++      mem_rtx = gen_rtx_MEM (gpr_mode, gen_rtx_PLUS (Pmode, stack_pointer_rtx, const0_rtx));
+       if (interrupt_handler)
+         MEM_VOLATILE_P (mem_rtx) = 1;                       /* Do not optimize in flow analysis */
+-      reg_rtx = gen_rtx (REG, gpr_mode, MB_ABI_SUB_RETURN_ADDR_REGNUM);
++      reg_rtx = gen_rtx_REG (gpr_mode, MB_ABI_SUB_RETURN_ADDR_REGNUM);
+       emit_move_insn (reg_rtx, mem_rtx);
+     }
+ 
+@@ -4548,7 +4635,7 @@ microblaze_expand_epilogue ()
+     emit_insn (gen_addsi3 (stack_pointer_rtx, stack_pointer_rtx, fsiz_rtx));
+   }
+ 
+-  emit_jump_insn (gen_return_internal (gen_rtx (REG, Pmode, GP_REG_FIRST + MB_ABI_SUB_RETURN_ADDR_REGNUM)));
++  emit_jump_insn (gen_return_internal (gen_rtx_REG (Pmode, GP_REG_FIRST + MB_ABI_SUB_RETURN_ADDR_REGNUM)));
+ }
+ 
+ 
+@@ -4557,7 +4644,7 @@ microblaze_expand_epilogue ()
+    was created.  */
+ 
+ int
+-microblaze_can_use_return_insn ()
++microblaze_can_use_return_insn (void)
+ {
+   if (! reload_completed)
+     return 0;
+@@ -4578,11 +4665,11 @@ microblaze_can_use_return_insn ()
+    NO_REGS means that no secondary register is required.  */
+ 
+ enum reg_class
+-microblaze_secondary_reload_class (class, mode, x, in_p)
+-  enum reg_class class;
+-  enum machine_mode mode;
+-  rtx x;
+-  int in_p;
++microblaze_secondary_reload_class (
++  enum reg_class class,
++  enum machine_mode mode ATTRIBUTE_UNUSED,
++  rtx x,
++  int in_p)
+ {
+   enum reg_class gr_regs = GR_REGS;
+   int regno = -1;
+@@ -4602,7 +4689,9 @@ microblaze_secondary_reload_class (class, mode, x, in_p)
+     {
+       while (GET_CODE (x) == SUBREG)
+       {
++#ifdef MJE_SUBREG_REG
+         off += SUBREG_REG (x);
++#endif
+         x = SUBREG_REG (x);
+       }
+ 
+@@ -4656,10 +4745,10 @@ struct constant
+ /* Add a constant to the list in *PCONSTANTS.  */
+ 
+ static rtx
+-add_constant (pconstants, val, mode)
+-  struct constant **pconstants;
+-  rtx val;
+-  enum machine_mode mode;
++add_constant (
++  struct constant **pconstants,
++  rtx val,
++  enum machine_mode mode)
+ {
+   struct constant *c;
+ 
+@@ -4680,34 +4769,17 @@ add_constant (pconstants, val, mode)
+ /* Exported to toplev.c.
+    Do a final pass over the function, just before delayed branch scheduling.  */
+ void
+-machine_dependent_reorg ()
++machine_dependent_reorg (void)
+ {
+   return;
+ 
+ }
+ 
+-/* Accept any operator that can be used to shift the high half of the
+-   input value to the lower half, suitable for truncation.  The
+-   remainder (the lower half of the input, and the upper half of the
+-   output) will be discarded.  */
+-int
+-highpart_shift_operator (x, mode)
+-  rtx x;
+-  enum machine_mode mode ATTRIBUTE_UNUSED;
+-{
+-  enum rtx_code code = GET_CODE (x);
+-  return (code == LSHIFTRT
+-          || code == ASHIFTRT
+-          || code == ROTATERT
+-          || code == ROTATE);
+-}
+-
+ /* Get the base register for accessing a value from the memory or
+    Symbol ref. Used for Microblaze Small Data Area Pointer Optimization */
+ 
+ int
+-get_base_reg(x)
+-  rtx x;
++get_base_reg(rtx x)
+ {
+   int base_reg = (flag_pic ? 
+                   MB_ABI_PIC_ADDR_REGNUM : 
+@@ -4840,11 +4912,11 @@ format_load_store (char* ls_fmt,
+ /* Added to handle Xilinx interrupt handler for MicroBlaze */
+ 
+ int
+-microblaze_valid_machine_decl_attribute (decl, attributes, attr, args)
+-  tree decl;
+-  tree attributes;
+-  tree attr;
+-  tree args;
++microblaze_valid_machine_decl_attribute (
++  tree decl,
++  tree attributes ATTRIBUTE_UNUSED,
++  tree attr,
++  tree args)
+ {
+   if (args != NULL_TREE)
+     return 0;
+@@ -4865,8 +4937,7 @@ microblaze_valid_machine_decl_attribute (decl, attributes, attr, args)
+  * Eventually remove both the functions below 
+  */
+ static int
+-microblaze_interrupt_function_p (func)
+-  tree func;
++microblaze_interrupt_function_p (tree func)
+ {
+   tree a;
+ 
+@@ -4878,8 +4949,7 @@ microblaze_interrupt_function_p (func)
+ }
+ 
+ static int
+-microblaze_save_volatiles (func)
+-  tree func;
++microblaze_save_volatiles (tree func)
+ {
+   tree a;
+ 
+@@ -4890,14 +4960,14 @@ microblaze_save_volatiles (func)
+   return a != NULL_TREE;
+ }
+ 
+-int microblaze_is_interrupt_handler(){
++int microblaze_is_interrupt_handler(void){
+   return interrupt_handler;
+ }
+ 
+ static void
+-microblaze_globalize_label (stream, name)
+-  FILE *stream;
+-  const char *name;
++microblaze_globalize_label (
++  FILE *stream,
++  const char *name)
+ {									
+   fputs ("\t.globl\t", stream);					
+   if (interrupt_handler && strcmp (name, INTERRUPT_HANDLER_NAME)){      
+@@ -4916,10 +4986,10 @@ microblaze_globalize_label (stream, name)
+ /* This macro is not defined any more. The constants will be moved to
+    Readonly section */
+ void
+-microblaze_select_rtx_section (mode, x, align)
+-  enum machine_mode mode;
+-  rtx x ATTRIBUTE_UNUSED;
+-  unsigned HOST_WIDE_INT align;
++microblaze_select_rtx_section (
++  enum machine_mode mode ATTRIBUTE_UNUSED,
++  rtx x ATTRIBUTE_UNUSED,
++  unsigned HOST_WIDE_INT align ATTRIBUTE_UNUSED)
+ {
+   READONLY_DATA_SECTION ();
+ }
+@@ -4937,10 +5007,10 @@ microblaze_select_rtx_section (mode, x, align)
+    ENCODE_SECTION_INFO to see if it needs a similar change.  */
+ 
+ void
+-microblaze_select_section (decl, reloc, align)
+-  tree decl;
+-  int reloc;
+-  unsigned HOST_WIDE_INT align;
++microblaze_select_section (
++  tree decl,
++  int reloc,
++  unsigned HOST_WIDE_INT align ATTRIBUTE_UNUSED)
+ {
+   int size = int_size_in_bytes (TREE_TYPE (decl));
+ 
+@@ -4961,8 +5031,7 @@ microblaze_select_section (decl, reloc, align)
+   */
+   
+   if ((TARGET_EMBEDDED_PIC)
+-      && TREE_CODE (decl) == STRING_CST
+-      && !flag_writable_strings)
++      && TREE_CODE (decl) == STRING_CST)
+     /* For embedded position independent code, put constant strings in the
+        text section, because the data section is limited to 64K in size.
+     */
+@@ -4978,8 +5047,7 @@ microblaze_select_section (decl, reloc, align)
+             || TREE_CONSTANT (DECL_INITIAL (decl))))
+        /* Deal with calls from output_constant_def_contents.  */
+        || (TREE_CODE (decl) != VAR_DECL
+-           && (TREE_CODE (decl) != STRING_CST
+-               || !flag_writable_strings)))
++           && (TREE_CODE (decl) != STRING_CST)))
+       && ! (flag_pic && reloc)){
+     if(size > 0 && size <= microblaze_section_threshold && TARGET_XLGP_OPT)
+       READONLY_SDATA_SECTION ();
+@@ -4995,13 +5063,14 @@ microblaze_select_section (decl, reloc, align)
+ 
+ 
+ static void
+-microblaze_unique_section(decl, reloc)
+-  tree decl;
+-  int reloc;
++microblaze_unique_section (
++  tree decl,
++  int reloc)
+ {
+ 
+   int len, size, sec;
+-  char *name, *string, *prefix;
++  const char *name, *prefix;
++  char *string;
+   const char *prefixes[4][2] = {
+     { ".text.", ".gnu.linkonce.t." },
+     { ".rodata.", ".gnu.linkonce.r." },
+@@ -5017,8 +5086,7 @@ microblaze_unique_section(decl, reloc)
+   if (TREE_CODE (decl) == FUNCTION_DECL)
+     sec = 0;
+   else if ((TARGET_EMBEDDED_PIC)
+-           && TREE_CODE (decl) == STRING_CST
+-           && !flag_writable_strings)
++           && TREE_CODE (decl) == STRING_CST)
+   {
+     /* For embedded position independent code, put constant strings
+        in the text section, because the data section is limited to
+@@ -5069,10 +5137,10 @@ microblaze_unique_section(decl, reloc)
+  */
+ 
+ static void
+-microblaze_encode_section_info(DECL, rtl, new_decl_p)
+-  tree DECL;
+-  rtx rtl;
+-  int new_decl_p;
++microblaze_encode_section_info (
++  tree DECL,
++  rtx rtl,
++  int new_decl_p ATTRIBUTE_UNUSED)
+ {
+    
+   if (TARGET_EMBEDDED_DATA						
+@@ -5090,8 +5158,7 @@ microblaze_encode_section_info(DECL, rtl, new_decl_p)
+       SYMBOL_REF_FLAG (XEXP (rtl, 0)) = 1;		
+     else if (TREE_CODE (DECL) == FUNCTION_DECL)			
+       SYMBOL_REF_FLAG (XEXP (rtl, 0)) = 0;		
+-    else if (TREE_CODE (DECL) == STRING_CST				
+-             && ! flag_writable_strings)				
++    else if (TREE_CODE (DECL) == STRING_CST)
+       SYMBOL_REF_FLAG (XEXP (rtl, 0)) = 0;		
+     else								
+       SYMBOL_REF_FLAG (XEXP (rtl, 0)) = 1;		
+diff --git a/gcc/config/microblaze/microblaze.h b/gcc/config/microblaze/microblaze.h
+index 870fb72..6a8ec65 100644
+--- a/gcc/config/microblaze/microblaze.h
++++ b/gcc/config/microblaze/microblaze.h
+@@ -188,18 +188,6 @@ extern char *microblaze_no_clearbss;
+ #define TARGET_MICROBLAZE_AS		TARGET_UNIX_ASM
+ /*#define TARGET_MICROBLAZE_ASM         (target_flags & MASK_LCC_ASM)  */
+ #define TARGET_MICROBLAZE_ASM   0
+-#define TARGET_STACK_CHECK      (target_flags & MASK_STACK_CHECK)
+-
+-/* Debug Mode */
+-#define TARGET_DEBUG_MODE               (target_flags & MASK_DEBUG)
+-#define TARGET_DEBUG_A_MODE             (target_flags & MASK_DEBUG_A)
+-#define TARGET_DEBUG_B_MODE             (target_flags & MASK_DEBUG_B)
+-#define TARGET_DEBUG_D_MODE             (target_flags & MASK_DEBUG_D)
+-#define TARGET_DEBUG_E_MODE             (target_flags & MASK_DEBUG_E)
+-#define TARGET_DEBUG_F_MODE             (target_flags & MASK_DEBUG_F)
+-#define TARGET_DEBUG_G_MODE             (target_flags & MASK_DEBUG_G)
+-#define TARGET_DEBUG_H_MODE             (target_flags & MASK_DEBUG_H)
+-#define TARGET_DEBUG_I_MODE             (target_flags & MASK_DEBUG_I)
+ 
+ #define TARGET_GP_OPT            0       /* Vasanth: Cleanup */
+ 
+@@ -217,12 +205,6 @@ extern char *microblaze_no_clearbss;
+ /* OSF pic references to externs */
+ #define TARGET_HALF_PIC		(target_flags & MASK_HALF_PIC)
+ 
+-/* Use software floating point routines */
+-#define TARGET_SOFT_FLOAT	(target_flags & MASK_SOFT_FLOAT)
+-
+-/* Use hardware FPU instructions */
+-#define TARGET_HARD_FLOAT       (!TARGET_SOFT_FLOAT)
+-
+ /* always call through a register */
+ #define TARGET_LONG_CALLS	(target_flags & MASK_LONG_CALLS)
+ 
+@@ -237,18 +219,6 @@ extern char *microblaze_no_clearbss;
+ /* Generate big endian code.  */
+ #define TARGET_BIG_ENDIAN	(target_flags & MASK_BIG_ENDIAN)
+ 
+-/* Use software multiply routines */
+-#define TARGET_SOFT_MUL         (target_flags & MASK_SOFT_MUL)
+-
+-/* Use software divide routines */
+-#define TARGET_SOFT_DIV         (target_flags & MASK_SOFT_DIV)
+-
+-/* Use hardware barrel shifter */
+-#define TARGET_BARREL_SHIFT     (target_flags & MASK_BARREL_SHIFT)
+-
+-/* Use extended compare instructions */
+-#define TARGET_PATTERN_COMPARE  (target_flags & MASK_PATTERN_COMPARE)
+-
+ #define TARGET_SMALL_DIVIDES    (target_flags & MASK_SMALL_DIVIDES)
+ 
+ /* This is true if we must enable the assembly language file switching
+@@ -747,7 +717,7 @@ while (0)
+ 
+ /* The DWARF 2 CFA column which tracks the return address.  */
+ #define DWARF_FRAME_RETURN_COLUMN (FP_REG_LAST + 1)
+-#define INCOMING_RETURN_ADDR_RTX  gen_rtx (REG, VOIDmode, GP_REG_FIRST + MB_ABI_SUB_RETURN_ADDR_REGNUM)
++#define INCOMING_RETURN_ADDR_RTX  gen_rtx_REG (VOIDmode, GP_REG_FIRST + MB_ABI_SUB_RETURN_ADDR_REGNUM)
+ 
+ 
+ /* /\* Overrides for the COFF debug format.  *\/ */
+@@ -1664,7 +1634,7 @@ contain (16 bit zero-extended integers).
+ 
+ #define RETURN_ADDR_RTX(count, frame)			\
+   ((count == 0)						\
+-   ? gen_rtx (MEM, Pmode, gen_rtx (REG, Pmode, RETURN_ADDRESS_POINTER_REGNUM))\
++   ? gen_rtx_MEM (Pmode, gen_rtx_REG (Pmode, RETURN_ADDRESS_POINTER_REGNUM))\
+    : (rtx) 0)
+ 
+ /* Structure to be filled in by compute_frame_size with register
+@@ -1865,7 +1835,7 @@ extern struct microblaze_frame_info current_frame_info;
+    PROMOTE_MODE does.  */
+ 
+ #define LIBCALL_VALUE(MODE)						\
+-  gen_rtx (REG,								\
++  gen_rtx_REG (								\
+ 	   ((GET_MODE_CLASS (MODE) != MODE_INT				\
+ 	     || GET_MODE_SIZE (MODE) >= 4)				\
+ 	    ? (MODE)							\
+@@ -1993,11 +1963,11 @@ typedef struct microblaze_args {
+ 
+ #define MUST_SAVE_REGISTER(regno) \
+  (((regs_ever_live[regno] && !call_used_regs[regno])			\
+-  || (regno == HARD_FRAME_POINTER_REGNUM && frame_pointer_needed)       \
+-  || (((regs_ever_live[regno] || (regno == MB_ABI_MSR_SAVE_REG)) && interrupt_handler))   \
++  || ((regno == HARD_FRAME_POINTER_REGNUM) && frame_pointer_needed)       \
++  || (((regs_ever_live[regno] || ((regno == MB_ABI_MSR_SAVE_REG)) && interrupt_handler)))   \
+   || (regs_ever_live[regno] && save_volatiles)                 \
+-  || (regno == MB_ABI_ASM_TEMP_REGNUM && ( save_volatiles || interrupt_handler)) \
+-  || (regno == MB_ABI_EXCEPTION_RETURN_ADDR_REGNUM && ( save_volatiles || interrupt_handler)) \
++  || ((regno == MB_ABI_ASM_TEMP_REGNUM) && ( save_volatiles || interrupt_handler)) \
++  || ((regno == MB_ABI_EXCEPTION_RETURN_ADDR_REGNUM) && ( save_volatiles || interrupt_handler)) \
+   || ((regno == MB_ABI_SUB_RETURN_ADDR_REGNUM) && (!current_function_is_leaf))) \
+   || ((regno >= 3 && regno <= 12) && (interrupt_handler || save_volatiles) && (!current_function_is_leaf))\
+     && regno != 0)
+@@ -2078,13 +2048,13 @@ typedef struct microblaze_args {
+ #define INITIALIZE_TRAMPOLINE(ADDR, FUNC, CHAIN)			    \
+ {									    \
+   rtx addr = ADDR;							    \
+-  emit_move_insn (gen_rtx (MEM, SImode, plus_constant (addr, 32)), FUNC);   \
+-  emit_move_insn (gen_rtx (MEM, SImode, plus_constant (addr, 36)), CHAIN);  \
++  emit_move_insn (gen_rtx_MEM (SImode, plus_constant (addr, 32)), FUNC);   \
++  emit_move_insn (gen_rtx_MEM (SImode, plus_constant (addr, 36)), CHAIN);  \
+ 									    \
+   /* Flush both caches.  We need to flush the data cache in case	    \
+      the system has a write-back cache.  */				    \
+   /* ??? Should check the return value for errors.  */			    \
+-  emit_library_call (gen_rtx (SYMBOL_REF, Pmode, CACHE_FLUSH_FUNC),	    \
++  emit_library_call (gen_rtx_SYMBOL_REF (Pmode, CACHE_FLUSH_FUNC),	    \
+ 		     0, VOIDmode, 3, addr, Pmode,			    \
+ 		     GEN_INT (TRAMPOLINE_SIZE), TYPE_MODE (integer_type_node),\
+ 		     GEN_INT (3), TYPE_MODE (integer_type_node));	    \
+@@ -2199,8 +2169,8 @@ typedef struct microblaze_args {
+ #define GO_IF_MODE_DEPENDENT_ADDRESS(ADDR,LABEL) {}
+ 
+ #if 1
+-#define GO_PRINTF(x)	trace(x)
+-#define GO_PRINTF2(x,y)	trace(x,y)
++#define GO_PRINTF(x)	trace(x, 0, 0)
++#define GO_PRINTF2(x,y)	trace(x,y, 0)
+ #define GO_DEBUG_RTX(x) debug_rtx(x)
+ #else
+ #define GO_PRINTF(x)
+@@ -2229,12 +2199,24 @@ typedef struct microblaze_args {
+ 
+ #define LEGITIMATE_PIC_OPERAND_P(X)  (! pic_address_needs_scratch (X))
+ 
++/* Nonzero if the constant value X is a legitimate general operand.
++   It is given that X satisfies CONSTANT_P or is a CONST_DOUBLE.
++
++   At present, GAS doesn't understand li.[sd], so don't allow it
++   to be generated at present.  Also, the MICROBLAZE assembler does not
++   grok li.d Infinity.  */
++
++#define LEGITIMATE_CONSTANT_P(X)				\
++  (GET_CODE (X) != CONST_DOUBLE					\
++    || microblaze_const_double_ok (X, GET_MODE (X)))
++
+ /* Try a machine-dependent way of reloading an illegitimate address
+    operand.  If we find one, push the reload and jump to WIN.  This
+    macro is used in only one place: `find_reloads_address' in reload.c.
+ 
+    Implemented on microblaze by microblaze_legitimize_reload_address.  
+    Note that (X) is evaluated twice; this is safe in current usage.  */ 
++
+ #define LEGITIMIZE_ADDRESS(X,OLDX,MODE,WIN)			\
+ {  rtx result = microblaze_legitimize_address (X, OLDX, MODE);	\
+    if (result != NULL_RTX) {					\
+@@ -3124,7 +3106,8 @@ if(TARGET_MICROBLAZE_ASM){                                                    \
+ #define ASM_COMMENT_START " #"
+ #endif
+ 
+-
++#define VAR_SECTION(RTX) ((RTX)->var_section)
++#define SHIFT_TYPE(RTX) ((RTX)->shift_type)
+ 
+ /* Macros for microblaze-tfile.c to encapsulate stabs in ECOFF, and for
+    and microblaze-tdump.c to print them out.
+diff --git a/gcc/config/microblaze/microblaze.md b/gcc/config/microblaze/microblaze.md
+index ea60985..63c127c 100644
+--- a/gcc/config/microblaze/microblaze.md
++++ b/gcc/config/microblaze/microblaze.md
+@@ -713,8 +713,8 @@
+ 
+         emit_insn (gen_ashlsi3_bshift (regt1, operands[1], GEN_INT(4)));
+         emit_insn (gen_addsi3 (regt1, regt1, operands[2]));
+-        mem_rtx = gen_rtx (MEM, QImode,
+-                            gen_rtx (PLUS, Pmode, regt1, div_table_rtx));
++        mem_rtx = gen_rtx_MEM (QImode,
++                            gen_rtx_PLUS (Pmode, regt1, div_table_rtx));
+ 
+         insn = emit_insn (gen_movqi (regqi, mem_rtx)); 
+         insn = emit_insn (gen_movsi (operands[0], gen_rtx_SUBREG (SImode, regqi, 0)));
+@@ -1379,7 +1379,7 @@
+     {
+         rtx temp;
+         temp = embedded_pic_offset (operands[1]);
+-        temp = gen_rtx (PLUS, Pmode, embedded_pic_fnaddr_rtx,
++        temp = gen_rtx_PLUS (Pmode, embedded_pic_fnaddr_rtx,
+ 	                force_reg (DImode, temp));
+         emit_move_insn (operands[0], force_reg (DImode, temp));
+         DONE;
+@@ -1394,7 +1394,7 @@
+         /* if (! SMALL_INT (temp2))
+ 	temp2 = force_reg (DImode, temp2);
+         */
+-        emit_move_insn (operands[0], gen_rtx (PLUS, DImode, temp, temp2));
++        emit_move_insn (operands[0], gen_rtx_PLUS (DImode, temp, temp2));
+         DONE;
+     }
+ 
+@@ -1505,7 +1505,7 @@
+         rtx temp;
+ 
+         temp = embedded_pic_offset (operands[1]);
+-        temp = gen_rtx (PLUS, Pmode, embedded_pic_fnaddr_rtx,
++        temp = gen_rtx_PLUS (Pmode, embedded_pic_fnaddr_rtx,
+ 	                force_reg (SImode, temp));
+         emit_move_insn (operands[0], force_reg (SImode, temp));
+         DONE;
+@@ -1521,7 +1521,7 @@
+         /* if (! SMALL_INT (temp2))
+ 	   temp2 = force_reg (SImode, temp2);
+         */
+-        emit_move_insn (operands[0], gen_rtx (PLUS, SImode, temp, temp2));
++        emit_move_insn (operands[0], gen_rtx_PLUS (SImode, temp, temp2));
+         DONE;
+     }
+ 
+@@ -3410,7 +3410,7 @@
+ 	}
+ 
+         emit_call_insn (gen_call_internal0 (operands[0], operands[1],
+-                                            gen_rtx (REG, SImode, GP_REG_FIRST + MB_ABI_SUB_RETURN_ADDR_REGNUM)));
++                                            gen_rtx_REG (SImode, GP_REG_FIRST + MB_ABI_SUB_RETURN_ADDR_REGNUM)));
+ 
+         DONE;
+     }
+@@ -3434,7 +3434,7 @@
+   "!TARGET_ABICALLS && !TARGET_LONG_CALLS"
+   {
+     register rtx target = operands[0];
+-    register rtx target2=gen_rtx (REG, Pmode,GP_REG_FIRST + MB_ABI_SUB_RETURN_ADDR_REGNUM);
++    register rtx target2=gen_rtx_REG (Pmode,GP_REG_FIRST + MB_ABI_SUB_RETURN_ADDR_REGNUM);
+     /*  fprintf(stderr,"insn\t call_internal1  \n");	*/
+     if (GET_CODE (target) == SYMBOL_REF) {
+         gen_rtx_CLOBBER(VOIDmode,target2);
+@@ -3570,7 +3570,7 @@
+             operands[0] = XEXP (XVECEXP (operands[0], 0, 0), 0);
+ 
+         emit_call_insn (gen_call_value_internal0 (operands[0], operands[1], operands[2],
+-		        gen_rtx (REG, SImode, GP_REG_FIRST + MB_ABI_SUB_RETURN_ADDR_REGNUM)));
++		        gen_rtx_REG (SImode, GP_REG_FIRST + MB_ABI_SUB_RETURN_ADDR_REGNUM)));
+ 
+         DONE;
+     }
+@@ -3598,7 +3598,7 @@
+   "!TARGET_ABICALLS && !TARGET_LONG_CALLS"
+   {
+     register rtx target = operands[1];
+-    register rtx target2=gen_rtx (REG, Pmode,GP_REG_FIRST + MB_ABI_SUB_RETURN_ADDR_REGNUM);
++    register rtx target2=gen_rtx_REG (Pmode,GP_REG_FIRST + MB_ABI_SUB_RETURN_ADDR_REGNUM);
+ 
+     rtx operand0 = operands[0]; 
+     rtx operand1 = operands[1];
+@@ -3626,7 +3626,7 @@
+   ""
+   { 
+     register rtx target = operands[1];
+-    register rtx target2=gen_rtx (REG, Pmode,GP_REG_FIRST + MB_ABI_SUB_RETURN_ADDR_REGNUM);
++    register rtx target2=gen_rtx_REG (Pmode,GP_REG_FIRST + MB_ABI_SUB_RETURN_ADDR_REGNUM);
+ 
+     if (GET_CODE (target) == SYMBOL_REF){
+ 	gen_rtx_CLOBBER(VOIDmode,target2);
+diff --git a/gcc/config/microblaze/microblaze.opt b/gcc/config/microblaze/microblaze.opt
+index 0b705a7..7b66c05 100644
+--- a/gcc/config/microblaze/microblaze.opt
++++ b/gcc/config/microblaze/microblaze.opt
+@@ -64,34 +64,34 @@ Target Joined
+ Output compiler statistics
+ 
+ mdebug
+-Target Var(TARGET_DEBUG_MODE) Undocumented
++Target Mask(DEBUG_MODE) Undocumented
+ 
+ mdebuga
+-Target Var(TARGET_DEBUG_A_MODE) Undocumented
++Target Mask(DEBUG_A_MODE) Undocumented
+ 
+ mdebugb
+-Target Var(TARGET_DEBUG_B_MODE) Undocumented
++Target Mask(DEBUG_B_MODE) Undocumented
+ 
+ mdebugc
+-Target Var(TARGET_DEBUG_C_MODE) Undocumented
++Target Mask(DEBUG_C_MODE) Undocumented
+ 
+ mdebugd
+-Target Var(TARGET_DEBUG_D_MODE) Undocumented
++Target Mask(DEBUG_D_MODE) Undocumented
+ 
+ mdebuge
+-Target Var(TARGET_DEBUG_E_MODE) Undocumented
++Target Mask(DEBUG_E_MODE) Undocumented
+ 
+ mdebugf
+-Target Var(TARGET_DEBUG_F_MODE) Undocumented
++Target Mask(DEBUG_F_MODE) Undocumented
+ 
+ mdebugg
+-Target Var(TARGET_DEBUG_G_MODE) Undocumented
++Target Mask(DEBUG_G_MODE) Undocumented
+ 
+ mdebugh
+-Target Var(TARGET_DEBUG_H_MODE) Undocumented
++Target Mask(DEBUG_H_MODE) Undocumented
+ 
+ mdebugi
+-Target Var(TARGET_DEBUG_I_MODE) Undocumented
++Target Mask(DEBUG_I_MODE) Undocumented
+ 
+ mcpu=
+ Target RejectNegative Joined Var(microblaze_select_cpu)
+@@ -101,6 +101,6 @@ mtune=
+ Target RejectNegative Joined Var(microblaze_select_tune)
+ -mtune=PROCESSOR	Schedule code for given CPU
+ 
+-mclearbss
+-Target 
++mno-clearbss
++Target RejectNegative
+ Clear the BSS to zero and place zero initialized in BSS
+-- 
+1.5.3.8
+
