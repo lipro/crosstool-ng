@@ -1,0 +1,28 @@
+From 9176f6e98227ed5feb9157f6212100ce781fa218 Mon Sep 17 00:00:00 2001
+Message-Id: <9176f6e98227ed5feb9157f6212100ce781fa218.1241484031.git.john.williams@petalogix.com>
+In-Reply-To: <4c1022f018b2f64f88e2cbd4788085f347490488.1241484030.git.john.williams@petalogix.com>
+References: <4c1022f018b2f64f88e2cbd4788085f347490488.1241484030.git.john.williams@petalogix.com>
+From: John Williams <john.williams@petalogix.com>
+Date: Mon, 4 May 2009 20:32:26 +1000
+Subject: [PATCH 40/40] microblaze: Fix ELF_MAXPAGESIZE
+
+---
+ bfd/elf32-microblaze.c |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/bfd/elf32-microblaze.c b/bfd/elf32-microblaze.c
+index 537b483..44f74ca 100644
+--- a/bfd/elf32-microblaze.c
++++ b/bfd/elf32-microblaze.c
+@@ -3208,7 +3208,7 @@ microblaze_elf_add_symbol_hook (bfd *abfd,
+ 
+ #define ELF_ARCH		bfd_arch_microblaze
+ #define ELF_MACHINE_CODE	EM_MICROBLAZE
+-#define ELF_MAXPAGESIZE		0x4   		/* 4k, if we ever have 'em */
++#define ELF_MAXPAGESIZE		0x1000
+ #define elf_info_to_howto	microblaze_elf_info_to_howto
+ #define elf_info_to_howto_rel	NULL
+ 
+-- 
+1.5.3.8
+

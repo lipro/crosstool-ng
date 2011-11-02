@@ -1,0 +1,153 @@
+From 3cddf7be9a27d64e0b08c4dbb429264c3cd94a64 Mon Sep 17 00:00:00 2001
+Message-Id: <3cddf7be9a27d64e0b08c4dbb429264c3cd94a64.1241484031.git.john.williams@petalogix.com>
+In-Reply-To: <4c1022f018b2f64f88e2cbd4788085f347490488.1241484030.git.john.williams@petalogix.com>
+References: <4c1022f018b2f64f88e2cbd4788085f347490488.1241484030.git.john.williams@petalogix.com>
+From: John Williams <john.williams@petalogix.com>
+Date: Mon, 27 Apr 2009 16:05:16 +1000
+Subject: [PATCH 20/40] microblaze:Fix bugs with debug_loc when having multiple .text sections
+
+---
+ bfd/elf32-microblaze.c |   81 +++++++++++++++++++++++++++++++++++++++--------
+ 1 files changed, 67 insertions(+), 14 deletions(-)
+
+diff --git a/bfd/elf32-microblaze.c b/bfd/elf32-microblaze.c
+index 8a15303..24fa39e 100644
+--- a/bfd/elf32-microblaze.c
++++ b/bfd/elf32-microblaze.c
+@@ -64,7 +64,7 @@ static bfd_boolean microblaze_elf_is_local_label_name
+ static void microblaze_elf_final_sdp 
+   PARAMS (( struct bfd_link_info * ));
+ static void
+-microblaze_adjust_debug_loc (bfd *abfd, bfd_vma *deleted_addresses, int delete_count);
++microblaze_adjust_debug_loc (bfd *, asection *, struct bfd_link_info *, bfd_vma *, int);
+ 
+ static int ro_small_data_pointer = 0;
+ static int rw_small_data_pointer = 0;
+@@ -1318,7 +1318,7 @@ microblaze_elf_relax_section (bfd *abfd, asection *sec,
+        }
+ 
+      /* Fix location list entries. */
+-     microblaze_adjust_debug_loc (abfd, deleted_addresses, delete_count);
++     microblaze_adjust_debug_loc (abfd, sec, link_info, deleted_addresses, delete_count);
+ 
+      /* Physically move the code and change the cooked size */
+      for (i = 0, index=deleted_addresses[0]; i < delete_count; i++) {
+@@ -1386,19 +1386,27 @@ microblaze_elf_relax_section (bfd *abfd, asection *sec,
+    must have a sentinal value greater than the highest possible offset.
+  */
+ static void
+-microblaze_adjust_debug_loc (bfd *abfd, bfd_vma *deleted_addresses, int delete_count)
++microblaze_adjust_debug_loc (bfd *abfd, asection *text_sec, struct bfd_link_info *link_info,
++    bfd_vma *deleted_addresses, int delete_count)
+ {
+-   asection *sec = bfd_get_section_by_name (abfd, ".debug_loc");
+-   bfd_byte *contents, *dloc;
++   asection *debug_loc_sec = bfd_get_section_by_name (abfd, ".debug_loc");
++   bfd_byte *contents, *dloc, *dloc_end;
++   Elf_Internal_Rela *relocs, *irel, *irelend;
++   Elf_Internal_Shdr *symtab_hdr;
++   Elf_Internal_Sym *isymbuf;
++   int symcount;
++   unsigned long r_symndx, r_sect;
++   asection *map_sec;
+    bfd_vma *next_del = deleted_addresses;
+    int delete_size = 0;
+    int i;
+ 
+-   if (sec == NULL)
++   if (debug_loc_sec == NULL)
+      return; 
+ 
+ #if 0
+-   printf ("microblaze_adjust_debug_loc (%s, ...)\n", abfd->filename);
++   printf ("microblaze_adjust_debug_loc (%s, %s, ...)\n", abfd->filename, text_sec->name);
++   printf ("deleted_addresses @ 0x%8.8x\n", (int) deleted_addresses);
+    for (i = 0; i < delete_count; i++)
+    {
+       printf ("deleted_addresses[%d] = 0x%8.8x\n", i, (int) deleted_addresses[i]);
+@@ -1406,22 +1414,65 @@ microblaze_adjust_debug_loc (bfd *abfd, bfd_vma *deleted_addresses, int delete_c
+    printf("\n");
+ #endif
+    
+-   if (elf_section_data (sec)->this_hdr.contents != NULL)
+-	     contents = elf_section_data (sec)->this_hdr.contents;
++   /* Get location table contents. */
++   if (elf_section_data (debug_loc_sec)->this_hdr.contents != NULL)
++	     contents = elf_section_data (debug_loc_sec)->this_hdr.contents;
+    else 
+    {
+-     contents = (bfd_byte *) bfd_malloc (sec->size);
++     contents = (bfd_byte *) bfd_malloc (debug_loc_sec->size);
+      BFD_ASSERT (contents != NULL);
+-     if (! bfd_get_section_contents (abfd, sec, contents, 0, sec->size))
++     if (! bfd_get_section_contents (abfd, debug_loc_sec, contents, 0, debug_loc_sec->size))
+      {
+        free (contents);
+        return;   /* Quit silently. */
+      }
+-     elf_section_data (sec)->this_hdr.contents = contents;
++     elf_section_data (debug_loc_sec)->this_hdr.contents = contents;
++   }
++
++   /* Get relocation table contents. */
++   relocs = _bfd_elf_link_read_relocs (abfd, debug_loc_sec, (PTR) NULL, (Elf_Internal_Rela *) NULL,
++                       link_info->keep_memory);
++   if (relocs == NULL)
++   { 
++     /* If no relocations, search entire .debug_loc section. */
++     dloc = contents;
++     dloc_end = contents + debug_loc_sec->size;
++   } else {
++     /* Find portion of .debug_loc which applies to this text section. */
++     /* Get symbols for this file. */
++     symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
++     isymbuf = (Elf_Internal_Sym *) symtab_hdr->contents;
++     symcount =  symtab_hdr->sh_size / sizeof (Elf32_External_Sym);
++     if (isymbuf == NULL) 
++       isymbuf = bfd_elf_get_elf_syms (abfd, symtab_hdr, symcount, 
++	 			     0, NULL, NULL, NULL);
++     BFD_ASSERT(isymbuf != NULL);
++
++     /* Find first matching relocation entry. */
++     for (irel = relocs; irel < relocs + debug_loc_sec->reloc_count; irel++) {
++       unsigned long saved_r_sect = 0;
++       r_symndx = ELF32_R_SYM (irel->r_info);
++       r_sect = isymbuf[r_symndx].st_shndx;
++       if (r_sect != saved_r_sect) {
++         map_sec = bfd_section_from_elf_index (abfd, r_sect);
++         saved_r_sect = r_sect;
++       }
++       if (text_sec == map_sec) break;
++     }
++     BFD_ASSERT(text_sec == map_sec);
++
++     /* Find starting location list entry. */
++     dloc = contents + irel->r_offset;
++
++     /* Find last matching relocation entry and location list entry. */
++     for (irelend = irel; irelend < relocs + debug_loc_sec->reloc_count; irelend++) {
++       if (r_symndx != ELF32_R_SYM (irelend->r_info)) break;
++       dloc_end = contents + irelend->r_offset;  
++     }
+    }
+ 
+    // printf ("location lists:\n");
+-   for (dloc = contents; dloc < contents + sec->size;)
++   while (dloc < dloc_end)
+    {
+      bfd_vma soffset, eoffset;
+      int blklen;
+@@ -1434,7 +1485,9 @@ microblaze_adjust_debug_loc (bfd *abfd, bfd_vma *deleted_addresses, int delete_c
+      {
+        /* End of location list. */
+        dloc += 8;
+-       // printf("         ======== ========\n");
++        // printf("         ======== ========\n");
++       delete_size = 0;
++       next_del = deleted_addresses;
+        continue;
+      }
+ 
+-- 
+1.5.3.8
+

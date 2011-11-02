@@ -1,0 +1,59 @@
+From 276648cf5d3720dbe4f4e3ec9e852bfd5b6f1ff9 Mon Sep 17 00:00:00 2001
+Message-Id: <276648cf5d3720dbe4f4e3ec9e852bfd5b6f1ff9.1241484031.git.john.williams@petalogix.com>
+In-Reply-To: <4c1022f018b2f64f88e2cbd4788085f347490488.1241484030.git.john.williams@petalogix.com>
+References: <4c1022f018b2f64f88e2cbd4788085f347490488.1241484030.git.john.williams@petalogix.com>
+From: John Williams <john.williams@petalogix.com>
+Date: Mon, 27 Apr 2009 16:05:27 +1000
+Subject: [PATCH 23/40] microblaze:Fix PLT relocations
+
+---
+ bfd/elf32-microblaze.c     |   12 ++++++++++++
+ gas/config/tc-microblaze.c |    6 ++++--
+ 2 files changed, 16 insertions(+), 2 deletions(-)
+
+diff --git a/bfd/elf32-microblaze.c b/bfd/elf32-microblaze.c
+index 70bf2ab..5e8cbfa 100644
+--- a/bfd/elf32-microblaze.c
++++ b/bfd/elf32-microblaze.c
+@@ -801,6 +801,18 @@ microblaze_elf_relocate_section (bfd *output_bfd,
+                bfd_put_16 (input_bfd, (immediate >> 16) & 0xffff, contents + offset + 2);
+                bfd_put_16 (input_bfd, immediate & 0xffff, contents + offset + 2 + INST_WORD_SIZE);
+            }
++           else
++           {
++               /* fprintf(stderr,
++                       "microblaze_elf_relocate_section: PLT64 relocation with no PLT entry (relocation = %08x)\n",
++                       relocation); */
++               relocation -= (input_section->output_section->vma
++                              + input_section->output_offset
++                              + offset + INST_WORD_SIZE);
++               immediate = relocation;
++               bfd_put_16 (input_bfd, (immediate >> 16) & 0xffff, contents + offset + 2);
++               bfd_put_16 (input_bfd, immediate & 0xffff, contents + offset + 2 + INST_WORD_SIZE);
++           }
+            break;
+         }
+ 
+diff --git a/gas/config/tc-microblaze.c b/gas/config/tc-microblaze.c
+index 6abf312..d1cadba 100644
+--- a/gas/config/tc-microblaze.c
++++ b/gas/config/tc-microblaze.c
+@@ -2326,11 +2326,13 @@ md_apply_fix3 (fixS *   fixP,
+   
+       inst1 = opcode1->bit_sequence;
+ 
+-      /* We can fixup call to a defined non-global address only. */
++      /* We can fixup call to a defined non-global address 
++         within the same section only. */
+       if (fixP->fx_r_type == BFD_RELOC_MICROBLAZE_64_PLT
+           && (fixP->fx_addsy == NULL
+               || (S_IS_DEFINED (fixP->fx_addsy)
+-                  && !S_IS_EXTERN(fixP->fx_addsy)))) {
++                  && !S_IS_EXTERN(fixP->fx_addsy)))
++          && (S_GET_SEGMENT (fixP->fx_addsy) == segment)) {
+          inst1 |= ((val & 0xFFFF0000) >> 16) & IMM_MASK;
+          buf[6] |= ((val >> 8) & 0xff);
+          buf[7] |= (val & 0xff);
+-- 
+1.5.3.8
+

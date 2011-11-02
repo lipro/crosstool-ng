@@ -1,0 +1,31 @@
+From 8538725850b89d752edcfb05e650a0e1fe60bad1 Mon Sep 17 00:00:00 2001
+Message-Id: <8538725850b89d752edcfb05e650a0e1fe60bad1.1241484031.git.john.williams@petalogix.com>
+In-Reply-To: <4c1022f018b2f64f88e2cbd4788085f347490488.1241484030.git.john.williams@petalogix.com>
+References: <4c1022f018b2f64f88e2cbd4788085f347490488.1241484030.git.john.williams@petalogix.com>
+From: John Williams <john.williams@petalogix.com>
+Date: Mon, 27 Apr 2009 16:05:37 +1000
+Subject: [PATCH 26/40] microblaze:Don't gen dup line table
+
+---
+ gas/dwarf2dbg.c |    5 ++---
+ 1 files changed, 2 insertions(+), 3 deletions(-)
+
+diff --git a/gas/dwarf2dbg.c b/gas/dwarf2dbg.c
+index ba920d4..fe21c5b 100644
+--- a/gas/dwarf2dbg.c
++++ b/gas/dwarf2dbg.c
+@@ -1369,9 +1369,8 @@ dwarf2_finish (void)
+   info_seg = bfd_get_section_by_name (stdoutput, ".debug_info");
+   emit_other_sections = info_seg == NULL || !seg_not_empty_p (info_seg);
+ 
+-  if (!all_segs && emit_other_sections)
+-    /* There is no line information and no non-empty .debug_info
+-       section.  */
++  if (!all_segs)
++    /* There is no line information. */
+     return;
+ 
+   /* Calculate the size of an address for the target machine.  */
+-- 
+1.5.3.8
+

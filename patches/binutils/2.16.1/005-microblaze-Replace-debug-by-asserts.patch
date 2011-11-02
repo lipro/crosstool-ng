@@ -1,0 +1,104 @@
+From c44a569e36c96c2332f8025385640316e4223644 Mon Sep 17 00:00:00 2001
+Message-Id: <c44a569e36c96c2332f8025385640316e4223644.1241484031.git.john.williams@petalogix.com>
+In-Reply-To: <4c1022f018b2f64f88e2cbd4788085f347490488.1241484030.git.john.williams@petalogix.com>
+References: <4c1022f018b2f64f88e2cbd4788085f347490488.1241484030.git.john.williams@petalogix.com>
+From: John Williams <john.williams@petalogix.com>
+Date: Mon, 27 Apr 2009 16:04:24 +1000
+Subject: [PATCH 05/40] microblaze:Replace debug by asserts
+
+---
+ bfd/elf32-microblaze.c |   22 +++++-----------------
+ 1 files changed, 5 insertions(+), 17 deletions(-)
+
+diff --git a/bfd/elf32-microblaze.c b/bfd/elf32-microblaze.c
+index 0bc78dc..cbfc3ed 100644
+--- a/bfd/elf32-microblaze.c
++++ b/bfd/elf32-microblaze.c
+@@ -38,7 +38,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.  */
+  *	Xilinx, Inc.
+  */
+ 
+-int dbg = 1;
++int dbg = 0;
+ 
+ #include "bfd.h"
+ #include "sysdep.h"
+@@ -648,8 +648,6 @@ microblaze_elf_relocate_section (bfd *output_bfd,
+             immediate = relocation;
+             lo = immediate & 0x0000ffff;
+             high = (immediate >> 16) & 0x0000ffff;
+-       if (0) printf("microblaze_elf_relocate: filename = %s, section = %s, immediate = 0x%8.8x, r_addend = 0x%8.8x\n",
+-	   input_bfd->filename, input_section->name, (int) immediate, (int) rel->r_addend);
+             bfd_put_16 ( input_bfd, high, contents + offset + 2);
+             bfd_put_16 ( input_bfd, lo, contents + offset + INST_WORD_SIZE + 2);
+             break;
+@@ -699,8 +697,6 @@ microblaze_elf_relocate_section (bfd *output_bfd,
+             break;
+ 
+          case bfd_reloc_outofrange:
+-	    if (0) printf("out of range: rel# %d, rawsize = %d, offset = %d\n",
+-		rel-relocs, (int) input_section->rawsize, (int) offset);
+             errmsg = _("internal error: out of range error");
+             goto common_error;
+ 
+@@ -896,8 +892,6 @@ microblaze_elf_relax_section (bfd *abfd, asection *sec,
+        //immediate_val += (unsigned short) bfd_get_16 (abfd, contents + irel->r_offset + INST_WORD_SIZE + 2);
+ 
+        if (irel->r_addend != immediate_val)
+-       if (0) printf("global: filename = %s, section = %s, immediate_val = 0x%8.8x, r_addend = 0x%8.8x\n",
+-	   abfd->filename, sec->name, (int) immediate_val, (int) irel->r_addend);
+        /* If this is a PC-relative reloc, subtract the instr offset from the symbol value */
+        if (ELF32_R_TYPE (irel->r_info) == (int) R_MICROBLAZE_64_PCREL) {
+ 	 symval = symval - (irel->r_offset
+@@ -981,10 +975,7 @@ microblaze_elf_relax_section (bfd *abfd, asection *sec,
+ 		   if (i > 0) {
+                      immediate -= i * INST_WORD_SIZE;
+ 		     irel->r_addend -= i * INST_WORD_SIZE;
+-       if (0) printf("MICROBLAZE_64: filename = %s, section = %s, immediate = 0x%8.8x, r_addend = 0x%8.8x\n",
+-	   abfd->filename, sec->name, (int) immediate, (int) irel->r_addend);
+-                     // bfd_put_16 (abfd, (immediate & 0xffff0000) >> 16, contents + irel->r_offset + 2);
+-                     // bfd_put_16 (abfd, (immediate & 0x0000ffff), contents + irel->r_offset + INST_WORD_SIZE + 2);
++		     BFD_ASSERT (immediate != irel->r_addend);
+ 		   }
+ 		 }
+ 	       }
+@@ -1031,8 +1022,7 @@ microblaze_elf_relax_section (bfd *abfd, asection *sec,
+ 	       i = j-i;
+ 	       if (i != 0) {
+ 		 immediate -= i * INST_WORD_SIZE;
+-       if (0) printf("MICROBLAZE_64_NONE: filename = %s, section = %s, immediate = 0x%8.8x, r_addend = 0x%8.8x\n",
+-	   abfd->filename, sec->name, (int) immediate, (int) irel->r_addend);
++		 BFD_ASSERT (immediate != irel->r_addend);
+ 		 bfd_put_16 (abfd, (immediate & 0xffff0000) >> 16, contents + irel->r_offset + 2);
+ 		 bfd_put_16 (abfd, (immediate & 0x0000ffff), contents + irel->r_offset + INST_WORD_SIZE + 2);
+ 	       }
+@@ -1189,6 +1179,7 @@ microblaze_elf_relax_section (bfd *abfd, asection *sec,
+ 		    }
+ 		    if (i > 0) {
+ 		      immediate -= i * INST_WORD_SIZE;
++		      BFD_ASSERT (immediate != irelscan->r_addend);
+        if (dbg) printf("MICROBLAZE_32_PCREL_LO: filename = %s, section = %s, immediate = 0x%8.8x, r_addend = 0x%8.8x\n",
+ 	   abfd->filename, sec->name, (int) immediate, (int) irelscan->r_addend);
+ 		      bfd_put_16 (abfd, immediate, ocontents + irelscan->r_offset + 2);
+@@ -1236,10 +1227,6 @@ microblaze_elf_relax_section (bfd *abfd, asection *sec,
+                   if (i > 0) {
+                      immediate -= i * INST_WORD_SIZE;
+                      irelscan->r_addend -= i * INST_WORD_SIZE;
+-       if (0) printf("MICROBLAZE_64: filename = %s, section = %s, immediate = 0x%8.8x, r_addend = 0x%8.8x\n",
+-	   abfd->filename, sec->name, (int) immediate, (int) irelscan->r_addend);
+-		     // bfd_put_16 (abfd, ((immediate >> 16) & 0x0000ffff), ocontents + irelscan->r_offset + 2);
+-		     // bfd_put_16 (abfd, (immediate & 0x0000ffff), ocontents + irelscan->r_offset + INST_WORD_SIZE + 2);
+                   }
+                   
+                }
+@@ -1285,6 +1272,7 @@ microblaze_elf_relax_section (bfd *abfd, asection *sec,
+ 		    }
+ 		    if (i > 0) {
+ 		      immediate -= i * INST_WORD_SIZE;
++		      BFD_ASSERT (immediate != irelscan->r_addend);
+        if (dbg) printf("MICROBLAZE_64_PCREL: filename = %s, section = %s, immediate = 0x%8.8x, r_addend = 0x%8.8x\n",
+ 	   abfd->filename, sec->name, (int) immediate, (int) irelscan->r_addend);
+ 		      bfd_put_16 (abfd, ((immediate >> 16) & 0x0000ffff), ocontents + irelscan->r_offset + 2);
+-- 
+1.5.3.8
+

@@ -1,0 +1,64 @@
+From 2ef489317026d14e5dd60fe5871dcfab0d39f3b7 Mon Sep 17 00:00:00 2001
+Message-Id: <2ef489317026d14e5dd60fe5871dcfab0d39f3b7.1241484031.git.john.williams@petalogix.com>
+In-Reply-To: <4c1022f018b2f64f88e2cbd4788085f347490488.1241484030.git.john.williams@petalogix.com>
+References: <4c1022f018b2f64f88e2cbd4788085f347490488.1241484030.git.john.williams@petalogix.com>
+From: John Williams <john.williams@petalogix.com>
+Date: Mon, 27 Apr 2009 16:06:20 +1000
+Subject: [PATCH 38/40] microblaze:Fix inconsistent initialization of GOT_symbol
+
+---
+ gas/config/tc-microblaze.c |   24 +++++++++++++++++-------
+ 1 files changed, 17 insertions(+), 7 deletions(-)
+
+diff --git a/gas/config/tc-microblaze.c b/gas/config/tc-microblaze.c
+index d47b44b..6ccd9c3 100644
+--- a/gas/config/tc-microblaze.c
++++ b/gas/config/tc-microblaze.c
+@@ -902,10 +902,6 @@ parse_imm (char * s, expressionS * e, int min, int max)
+     e->X_md = 0;
+   }
+ 
+-  if (atp && !GOT_symbol) {
+-    GOT_symbol = symbol_find_or_make (GOT_SYMBOL_NAME);
+-  }
+-
+    new = parse_exp (s, e);
+   
+    if (e->X_op == O_absent)
+@@ -955,9 +951,6 @@ static char *check_got(int *got_type, int *got_len)
+     return NULL;
+   }
+ 
+-  if (!GOT_symbol)
+-    GOT_symbol = symbol_find_or_make (GOT_SYMBOL_NAME);
+-
+   first = atp - input_line_pointer;
+ 
+   past_got = atp + *got_len + 1;
+@@ -1829,6 +1822,23 @@ md_assemble (char * str)
+ symbolS *
+ md_undefined_symbol (char * name ATTRIBUTE_UNUSED)
+ {
++#ifdef OBJ_ELF
++  if (name[0] == '_' && name[1] == 'G'
++      && streq (name, GOT_SYMBOL_NAME))
++    {
++      if (!GOT_symbol)
++	{
++	  if (symbol_find (name))
++	    as_bad ("GOT already in the symbol table");
++
++          GOT_symbol = symbol_new (name, undefined_section, 
++                                   (valueT) 0, &zero_address_frag);
++	}
++
++      return GOT_symbol;
++    }
++#endif
++
+    return 0;
+ }
+ 
+-- 
+1.5.3.8
+

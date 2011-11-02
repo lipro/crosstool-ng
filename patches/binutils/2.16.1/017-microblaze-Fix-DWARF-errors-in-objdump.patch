@@ -1,0 +1,86 @@
+From 6752da8b6119289b29cab65a5e60c0f684b6bf10 Mon Sep 17 00:00:00 2001
+Message-Id: <6752da8b6119289b29cab65a5e60c0f684b6bf10.1241484031.git.john.williams@petalogix.com>
+In-Reply-To: <4c1022f018b2f64f88e2cbd4788085f347490488.1241484030.git.john.williams@petalogix.com>
+References: <4c1022f018b2f64f88e2cbd4788085f347490488.1241484030.git.john.williams@petalogix.com>
+From: John Williams <john.williams@petalogix.com>
+Date: Mon, 27 Apr 2009 16:05:06 +1000
+Subject: [PATCH 17/40] microblaze:Fix DWARF errors in objdump
+
+---
+ bfd/dwarf2.c |   46 +++++++++++++++++++++++++++++++++++-----------
+ 1 files changed, 35 insertions(+), 11 deletions(-)
+
+diff --git a/bfd/dwarf2.c b/bfd/dwarf2.c
+index fb5cf9f..1dfbd9a 100644
+--- a/bfd/dwarf2.c
++++ b/bfd/dwarf2.c
+@@ -769,31 +769,55 @@ concat_filename (struct line_info_table *table, unsigned int file)
+ 
+   if (file - 1 >= table->num_files)
+     {
+-      (*_bfd_error_handler)
+-	(_("Dwarf Error: mangled line number section (bad file number)."));
++      /* FILE == 0 means unknown.  */
++      if (file)
++	(*_bfd_error_handler)
++	  (_("Dwarf Error: mangled line number section (bad file number)."));
+       return strdup ("<unknown>");
+     }
+ 
+   filename = table->files[file - 1].name;
+ 
+-  if (! IS_ABSOLUTE_PATH (filename))
++  if (!IS_ABSOLUTE_PATH (filename))
+     {
+-      char *dirname = (table->files[file - 1].dir
+-		       ? table->dirs[table->files[file - 1].dir - 1]
+-		       : table->comp_dir);
++      char *dirname = NULL;
++      char *subdirname = NULL;
++      char *name;
++      size_t len;
+ 
+-      /* Not all tools set DW_AT_comp_dir, so dirname may be unknown.
+-	 The best we can do is return the filename part.  */
+-      if (dirname != NULL)
++      if (table->files[file - 1].dir)
++	subdirname = table->dirs[table->files[file - 1].dir - 1];
++
++      if (!subdirname || !IS_ABSOLUTE_PATH (subdirname))
++	dirname = table->comp_dir;
++
++      if (!dirname)
+ 	{
+-	  unsigned int len = strlen (dirname) + strlen (filename) + 2;
+-	  char * name;
++	  dirname = subdirname;
++	  subdirname = NULL;
++	}
+ 
++      if (!dirname)
++	return strdup (filename);
++
++      len = strlen (dirname) + strlen (filename) + 2;
++
++      if (subdirname)
++	{
++	  len += strlen (subdirname) + 1;
++	  name = bfd_malloc (len);
++	  if (name)
++	    sprintf (name, "%s/%s/%s", dirname, subdirname, filename);
++	}
++      else
++	{
+ 	  name = bfd_malloc (len);
+ 	  if (name)
+ 	    sprintf (name, "%s/%s", dirname, filename);
+ 	  return name;
+ 	}
++
++      return name;
+     }
+ 
+   return strdup (filename);
+-- 
+1.5.3.8
+

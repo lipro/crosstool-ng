@@ -1,0 +1,43 @@
+From 51ee440472211f544ed7e7139251fc498bd6dec4 Mon Sep 17 00:00:00 2001
+Message-Id: <51ee440472211f544ed7e7139251fc498bd6dec4.1241484031.git.john.williams@petalogix.com>
+In-Reply-To: <4c1022f018b2f64f88e2cbd4788085f347490488.1241484030.git.john.williams@petalogix.com>
+References: <4c1022f018b2f64f88e2cbd4788085f347490488.1241484030.git.john.williams@petalogix.com>
+From: John Williams <john.williams@petalogix.com>
+Date: Mon, 27 Apr 2009 16:04:55 +1000
+Subject: [PATCH 14/40] microblaze:Fix relax errors
+
+---
+ bfd/elf32-microblaze.c |    9 +++++++--
+ 1 files changed, 7 insertions(+), 2 deletions(-)
+
+diff --git a/bfd/elf32-microblaze.c b/bfd/elf32-microblaze.c
+index 4c0ea02..3cefbcb 100644
+--- a/bfd/elf32-microblaze.c
++++ b/bfd/elf32-microblaze.c
+@@ -843,6 +843,7 @@ microblaze_elf_relax_section (bfd *abfd, asection *sec,
+ 	       if (! bfd_get_section_contents (abfd, sec, contents,
+ 					       (file_ptr) 0, sec->size))
+ 		 goto error_return;
++               elf_section_data (sec)->this_hdr.contents = contents;
+ 	     }
+ 	 }
+        
+@@ -1167,9 +1168,13 @@ microblaze_elf_relax_section (bfd *abfd, asection *sec,
+ 		    }
+ 		    if (i > 0) {
+ 		      immediate -= i * INST_WORD_SIZE;
++		      irelscan->r_addend -= i * INST_WORD_SIZE;
+ 		      BFD_ASSERT (immediate == irelscan->r_addend);
+-       if (dbg) printf("MICROBLAZE_32_PCREL_LO: filename = %s, section = %s, immediate = 0x%8.8x, r_addend = 0x%8.8x\n",
+-	   abfd->filename, sec->name, (int) immediate, (int) irelscan->r_addend);
++       if (dbg) printf("MICROBLAZE_32_PCREL_LO: filename = %s, section = %s, reloc = 0x%8.8x, immediate = 0x%8.8x, r_offset = 0x%8.8x, r_addend = 0x%8.8x\n",
++	   abfd->filename, sec->name, (int) (irelscan-internal_relocs), 
++	   (int) immediate, 
++	   (int) irelscan->r_offset,
++	   (int) irelscan->r_addend);
+ 		      bfd_put_16 (abfd, immediate, ocontents + irelscan->r_offset + 2);
+ 		    }
+ 		  }
+-- 
+1.5.3.8
+

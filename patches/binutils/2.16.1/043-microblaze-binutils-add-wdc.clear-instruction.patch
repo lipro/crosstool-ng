@@ -1,0 +1,41 @@
+From 45b443692afc239502de4576123508bc156f8f46 Mon Sep 17 00:00:00 2001
+From: Vasanth <vasanth@xilinx.com>
+Date: Mon, 8 Dec 2008 10:36:38 -0800
+Subject: [PATCH 3/3] binutils: add wdc.clear instruction
+
+Add wdc.clear instruction to binutils.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ opcodes/microblaze-opc.h  |    1 +
+ opcodes/microblaze-opcm.h |    2 +-
+ 2 files changed, 2 insertions(+), 1 deletions(-)
+
+diff --git a/opcodes/microblaze-opc.h b/opcodes/microblaze-opc.h
+index c1ec736..7a6e833 100644
+--- a/opcodes/microblaze-opc.h
++++ b/opcodes/microblaze-opc.h
+@@ -173,6 +173,7 @@ struct op_code_struct {
+   {"sext16",INST_TYPE_RD_R1, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x90000061, OPCODE_MASK_H34, sext16, logical_inst },
+   {"wic",   INST_TYPE_RD_R1_SPECIAL, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x90000068, OPCODE_MASK_H34B, wic, special_inst },
+   {"wdc",   INST_TYPE_RD_R1_SPECIAL, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x90000064, OPCODE_MASK_H34B, wdc, special_inst },
++  {"wdc.clear", INST_TYPE_RD_R1_SPECIAL, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x90000066, OPCODE_MASK_H34B, wdcclear, special_inst },
+   {"wdc.flush", INST_TYPE_RD_R1_SPECIAL, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x90000074, OPCODE_MASK_H34B, wdcflush, special_inst },
+   {"mts",   INST_TYPE_SPECIAL_R1, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_MTS, 0x9400C000, OPCODE_MASK_H13S, mts, special_inst },
+   {"mfs",   INST_TYPE_RD_SPECIAL, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_MFS, 0x94008000, OPCODE_MASK_H23S, mfs, special_inst },
+diff --git a/opcodes/microblaze-opcm.h b/opcodes/microblaze-opcm.h
+index 04fe5c5..16697d4 100644
+--- a/opcodes/microblaze-opcm.h
++++ b/opcodes/microblaze-opcm.h
+@@ -25,7 +25,7 @@ enum microblaze_instr {
+    addi, rsubi, addic, rsubic, addik, rsubik, addikc, rsubikc, mul, mulh, mulhu, mulhsu,
+    idiv, idivu, bsll, bsra, bsrl, get, put, nget, nput, cget, cput,
+    ncget, ncput, muli, bslli, bsrai, bsrli, mului, or, and, xor,
+-   andn, pcmpbf, pcmpbc, pcmpeq, pcmpne, sra, src, srl, sext8, sext16, wic, wdc, wdcflush, mts, mfs, br, brd,
++   andn, pcmpbf, pcmpbc, pcmpeq, pcmpne, sra, src, srl, sext8, sext16, wic, wdc, wdcclear, wdcflush, mts, mfs, br, brd,
+    brld, bra, brad, brald, microblaze_brk, beq, beqd, bne, bned, blt,
+    bltd, ble, bled, bgt, bgtd, bge, bged, ori, andi, xori, andni,
+    imm, rtsd, rtid, rtbd, rted, bri, brid, brlid, brai, braid, bralid,
+-- 
+1.5.5.1
+

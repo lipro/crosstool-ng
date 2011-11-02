@@ -1,0 +1,41 @@
+From 874528e552bd640ec956bbd68cd2e82ecf8f735b Mon Sep 17 00:00:00 2001
+Message-Id: <874528e552bd640ec956bbd68cd2e82ecf8f735b.1241484031.git.john.williams@petalogix.com>
+In-Reply-To: <4c1022f018b2f64f88e2cbd4788085f347490488.1241484030.git.john.williams@petalogix.com>
+References: <4c1022f018b2f64f88e2cbd4788085f347490488.1241484030.git.john.williams@petalogix.com>
+From: John Williams <john.williams@petalogix.com>
+Date: Mon, 27 Apr 2009 16:04:45 +1000
+Subject: [PATCH 11/40] microblaze:More lin64 patches
+
+---
+ gas/config/tc-microblaze.c |    8 ++++++++
+ 1 files changed, 8 insertions(+), 0 deletions(-)
+
+diff --git a/gas/config/tc-microblaze.c b/gas/config/tc-microblaze.c
+index 3549f2d..c227a48 100644
+--- a/gas/config/tc-microblaze.c
++++ b/gas/config/tc-microblaze.c
+@@ -2369,6 +2369,10 @@ md_number_to_chars (char * ptr, valueT use, int nbytes)
+    if (! target_big_endian)
+       switch (nbytes)
+       {
++      case 8: ptr[7] = (use >> 56) & 0xff;
++              ptr[6] = (use >> 48) & 0xff;
++              ptr[5] = (use >> 40) & 0xff;
++              ptr[4] = (use >> 32) & 0xff; /* fall through */
+       case 4: ptr[3] = (use >> 24) & 0xff; /* fall through */
+       case 3: ptr[2] = (use >> 16) & 0xff; /* fall through */
+       case 2: ptr[1] = (use >>  8) & 0xff; /* fall through */
+@@ -2378,6 +2382,10 @@ md_number_to_chars (char * ptr, valueT use, int nbytes)
+    else
+       switch (nbytes)
+       {
++      case 8: *ptr++ = (use >> 56) & 0xff; 
++              *ptr++ = (use >> 48) & 0xff;
++              *ptr++ = (use >> 40) & 0xff;
++              *ptr++ = (use >> 32) & 0xff; /* fall through */              
+       case 4: *ptr++ = (use >> 24) & 0xff; /* fall through */
+       case 3: *ptr++ = (use >> 16) & 0xff; /* fall through */
+       case 2: *ptr++ = (use >>  8) & 0xff; /* fall through */
+-- 
+1.5.3.8
+

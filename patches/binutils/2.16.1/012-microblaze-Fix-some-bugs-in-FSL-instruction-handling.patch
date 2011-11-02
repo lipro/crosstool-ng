@@ -1,0 +1,321 @@
+From 69aa1a8efeaa7e278306ca8cfeb7be1c8abdf80f Mon Sep 17 00:00:00 2001
+Message-Id: <69aa1a8efeaa7e278306ca8cfeb7be1c8abdf80f.1241484031.git.john.williams@petalogix.com>
+In-Reply-To: <4c1022f018b2f64f88e2cbd4788085f347490488.1241484030.git.john.williams@petalogix.com>
+References: <4c1022f018b2f64f88e2cbd4788085f347490488.1241484030.git.john.williams@petalogix.com>
+From: John Williams <john.williams@petalogix.com>
+Date: Mon, 27 Apr 2009 16:04:48 +1000
+Subject: [PATCH 12/40] microblaze:Fix some bugs in FSL instruction handling
+
+---
+ gas/config/tc-microblaze.c |   12 ++--
+ opcodes/microblaze-dis.c   |   18 +++---
+ opcodes/microblaze-opc.h   |  137 +++++++++++++++++++++----------------------
+ opcodes/microblaze-opcm.h  |    4 +-
+ 4 files changed, 84 insertions(+), 87 deletions(-)
+
+diff --git a/gas/config/tc-microblaze.c b/gas/config/tc-microblaze.c
+index c227a48..1433f98 100644
+--- a/gas/config/tc-microblaze.c
++++ b/gas/config/tc-microblaze.c
+@@ -1381,7 +1381,7 @@ md_assemble (char * str)
+       output = frag_more (isize);
+       break;
+       
+-   case INST_TYPE_RD_IMM7: 
++   case INST_TYPE_RD_RFSL: 
+       if (strcmp(op_end, ""))
+          op_end = parse_reg(op_end + 1, &reg1);  /* get rd */
+       else {
+@@ -1400,7 +1400,7 @@ md_assemble (char * str)
+          as_bad(_("Cannot use special register with this instruction"));
+       
+       inst |= (reg1 << RD_LOW) & RD_MASK;
+-      inst |= (imm << IMM_LOW) & IMM7_MASK;
++      inst |= (imm << IMM_LOW) & RFSL_MASK;
+       output = frag_more (isize);
+       break;
+ 
+@@ -1431,7 +1431,7 @@ md_assemble (char * str)
+       inst |= (imm << IMM_LOW) & IMM15_MASK;
+       break;
+       
+-   case INST_TYPE_R1_IMM7:
++   case INST_TYPE_R1_RFSL:
+       if (strcmp(op_end, ""))
+          op_end = parse_reg(op_end + 1, &reg1);  /* get r1 */
+       else {
+@@ -1450,10 +1450,10 @@ md_assemble (char * str)
+          as_bad(_("Cannot use special register with this instruction"));
+       
+       inst |= (reg1 << RA_LOW) & RA_MASK;
+-      inst |= (imm << IMM_LOW) & IMM7_MASK;
++      inst |= (imm << IMM_LOW) & RFSL_MASK;
+       output = frag_more (isize);
+       break;
+-   case INST_TYPE_IMM7:
++   case INST_TYPE_RFSL:
+      if (strcmp(op_end, ""))
+          op_end = parse_reg(op_end + 1, &imm);  /* get rfslN */
+      else {
+@@ -1463,7 +1463,7 @@ md_assemble (char * str)
+      // Check for spl registers
+      if (check_spl_reg(&reg1))
+          as_bad(_("Cannot use special register with this instruction"));
+-     inst |= (imm << IMM_LOW) & IMM7_MASK;
++     inst |= (imm << IMM_LOW) & RFSL_MASK;
+      output = frag_more (isize);
+      break;
+    case INST_TYPE_R1:
+diff --git a/opcodes/microblaze-dis.c b/opcodes/microblaze-dis.c
+index 9aefea9..68513cd 100644
+--- a/opcodes/microblaze-dis.c
++++ b/opcodes/microblaze-dis.c
+@@ -53,7 +53,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.  */
+ static char * get_field (long instr, long mask, unsigned short low);
+ static char * get_field_imm (long instr);
+ static char * get_field_imm5 (long instr);
+-static char * get_field_imm7 (long instr);
++static char * get_field_rfsl (long instr);
+ static char * get_field_imm15 (long instr);
+ static char * get_field_unsigned_imm (long instr);
+ char * get_field_special (long instr, struct op_code_struct * op);
+@@ -105,10 +105,10 @@ get_field_imm5 (long instr)
+ }
+ 
+ static char *
+-get_field_imm7 (long instr)
++get_field_rfsl (long instr)
+ {
+   char tmpstr[25];
+-  sprintf(tmpstr, "%s%d", fsl_register_prefix, (short)((instr & IMM7_MASK) >> IMM_LOW));
++  sprintf(tmpstr, "%s%d", fsl_register_prefix, (short)((instr & RFSL_MASK) >> IMM_LOW));
+   return(strdup(tmpstr));
+ }
+ 
+@@ -309,11 +309,11 @@ print_insn_microblaze (bfd_vma memaddr, struct disassemble_info * info)
+ 	case INST_TYPE_RD_R1_IMM5:
+ 	  fprintf(stream, "\t%s, %s, %s", get_field_rd(inst), get_field_r1(inst), get_field_imm5(inst));
+ 	  break;
+-	case INST_TYPE_RD_IMM7:
+-	  fprintf(stream, "\t%s, %s", get_field_rd(inst), get_field_imm7(inst));
++	case INST_TYPE_RD_RFSL:
++	  fprintf(stream, "\t%s, %s", get_field_rd(inst), get_field_rfsl(inst));
+ 	  break;
+-	case INST_TYPE_R1_IMM7:
+-	  fprintf(stream, "\t%s, %s", get_field_r1(inst), get_field_imm7(inst));
++	case INST_TYPE_R1_RFSL:
++	  fprintf(stream, "\t%s, %s", get_field_r1(inst), get_field_rfsl(inst));
+ 	  break;
+ 	case INST_TYPE_RD_SPECIAL:
+ 	  fprintf(stream, "\t%s, %s", get_field_rd(inst), get_field_special(inst, op));
+@@ -407,8 +407,8 @@ print_insn_microblaze (bfd_vma memaddr, struct disassemble_info * info)
+   case INST_TYPE_RD:
+      fprintf(stream, "\t%s", get_field_rd(inst));
+      break;
+-  case INST_TYPE_IMM7:
+-     fprintf(stream, "\t%s", get_field_imm7(inst));
++  case INST_TYPE_RFSL:
++     fprintf(stream, "\t%s", get_field_rfsl(inst));
+      break;
+   default:
+ 	  /* if the disassembler lags the instruction set */
+diff --git a/opcodes/microblaze-opc.h b/opcodes/microblaze-opc.h
+index 744516b..d35e9d5 100644
+--- a/opcodes/microblaze-opc.h
++++ b/opcodes/microblaze-opc.h
+@@ -54,8 +54,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.  */
+ #define INST_TYPE_R1 12
+   // new instn type for barrel shift imms
+ #define INST_TYPE_RD_R1_IMM5  13
+-#define INST_TYPE_RD_IMM7    14
+-#define INST_TYPE_R1_IMM7    15
++#define INST_TYPE_RD_RFSL    14
++#define INST_TYPE_R1_RFSL    15
+ 
+   // new insn type for insn cache
+ #define INST_TYPE_RD_R1_SPECIAL 16
+@@ -67,7 +67,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.  */
+ #define INST_TYPE_RD    18
+ 
+ // new insn type for t*put
+-#define INST_TYPE_IMM7  19
++#define INST_TYPE_RFSL  19
+ 
+ #define INST_TYPE_NONE 25
+ 
+@@ -146,14 +146,14 @@ struct op_code_struct {
+   {"bsll",  INST_TYPE_RD_R1_R2, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x44000400, OPCODE_MASK_H3, bsll, barrel_shift_inst },
+   {"bsra",  INST_TYPE_RD_R1_R2, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x44000200, OPCODE_MASK_H3, bsra, barrel_shift_inst },
+   {"bsrl",  INST_TYPE_RD_R1_R2, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x44000000, OPCODE_MASK_H3, bsrl, barrel_shift_inst },
+-  {"get",   INST_TYPE_RD_IMM7, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C000000, OPCODE_MASK_H32, get, anyware_inst },
+-  {"put",   INST_TYPE_R1_IMM7, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C008000, OPCODE_MASK_H32, put, anyware_inst },
+-  {"nget",  INST_TYPE_RD_IMM7, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C004000, OPCODE_MASK_H32, nget, anyware_inst },
+-  {"nput",  INST_TYPE_R1_IMM7, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C00C000, OPCODE_MASK_H32, nput, anyware_inst },
+-  {"cget",  INST_TYPE_RD_IMM7, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C002000, OPCODE_MASK_H32, cget, anyware_inst },
+-  {"cput",  INST_TYPE_R1_IMM7, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C00A000, OPCODE_MASK_H32, cput, anyware_inst },
+-  {"ncget", INST_TYPE_RD_IMM7, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C006000, OPCODE_MASK_H32, ncget, anyware_inst },
+-  {"ncput", INST_TYPE_R1_IMM7, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C00E000, OPCODE_MASK_H32, ncput, anyware_inst },
++  {"get",   INST_TYPE_RD_RFSL, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C000000, OPCODE_MASK_H32, get, anyware_inst },
++  {"put",   INST_TYPE_R1_RFSL, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C008000, OPCODE_MASK_H32, put, anyware_inst },
++  {"nget",  INST_TYPE_RD_RFSL, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C004000, OPCODE_MASK_H32, nget, anyware_inst },
++  {"nput",  INST_TYPE_R1_RFSL, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C00C000, OPCODE_MASK_H32, nput, anyware_inst },
++  {"cget",  INST_TYPE_RD_RFSL, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C002000, OPCODE_MASK_H32, cget, anyware_inst },
++  {"cput",  INST_TYPE_R1_RFSL, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C00A000, OPCODE_MASK_H32, cput, anyware_inst },
++  {"ncget", INST_TYPE_RD_RFSL, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C006000, OPCODE_MASK_H32, ncget, anyware_inst },
++  {"ncput", INST_TYPE_R1_RFSL, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C00E000, OPCODE_MASK_H32, ncput, anyware_inst },
+   {"muli",  INST_TYPE_RD_R1_IMM, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x60000000, OPCODE_MASK_H, muli, mult_inst },
+   {"bslli", INST_TYPE_RD_R1_IMM5, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x64000400, OPCODE_MASK_H3, bslli, barrel_shift_inst },
+   {"bsrai", INST_TYPE_RD_R1_IMM5, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x64000200, OPCODE_MASK_H3, bsrai, barrel_shift_inst },
+@@ -259,68 +259,68 @@ struct op_code_struct {
+   {"flt",   INST_TYPE_RD_R1, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x58000280, OPCODE_MASK_H4, flt,   arithmetic_inst },
+   {"fint",  INST_TYPE_RD_R1, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x58000300, OPCODE_MASK_H4, fint,  arithmetic_inst },
+   {"fsqrt", INST_TYPE_RD_R1, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x58000380, OPCODE_MASK_H4, fsqrt, arithmetic_inst },
+-  {"tget",   INST_TYPE_RD_IMM7, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C001000, OPCODE_MASK_H32, tget,   anyware_inst },
+-  {"tcget",  INST_TYPE_RD_IMM7, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C003000, OPCODE_MASK_H32, tcget,  anyware_inst },
+-  {"tnget",  INST_TYPE_RD_IMM7, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C005000, OPCODE_MASK_H32, tnget,  anyware_inst },
+-  {"tncget", INST_TYPE_RD_IMM7, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C007000, OPCODE_MASK_H32, tncget, anyware_inst },
+-  {"tput",   INST_TYPE_IMM7,    INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C009000, OPCODE_MASK_H32, tput,   anyware_inst },
+-  {"tcput",  INST_TYPE_IMM7,    INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C00B000, OPCODE_MASK_H32, tcput,  anyware_inst },
+-  {"tnput",  INST_TYPE_IMM7,    INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C00D000, OPCODE_MASK_H32, tnput,  anyware_inst },
+-  {"tncput", INST_TYPE_IMM7,    INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C00F000, OPCODE_MASK_H32, tncput, anyware_inst },
++  {"tget",   INST_TYPE_RD_RFSL, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C001000, OPCODE_MASK_H32, tget,   anyware_inst },
++  {"tcget",  INST_TYPE_RD_RFSL, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C003000, OPCODE_MASK_H32, tcget,  anyware_inst },
++  {"tnget",  INST_TYPE_RD_RFSL, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C005000, OPCODE_MASK_H32, tnget,  anyware_inst },
++  {"tncget", INST_TYPE_RD_RFSL, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C007000, OPCODE_MASK_H32, tncget, anyware_inst },
++  {"tput",   INST_TYPE_RFSL,    INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C009000, OPCODE_MASK_H32, tput,   anyware_inst },
++  {"tcput",  INST_TYPE_RFSL,    INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C00B000, OPCODE_MASK_H32, tcput,  anyware_inst },
++  {"tnput",  INST_TYPE_RFSL,    INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C00D000, OPCODE_MASK_H32, tnput,  anyware_inst },
++  {"tncput", INST_TYPE_RFSL,    INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C00F000, OPCODE_MASK_H32, tncput, anyware_inst },
+  
+-  {"eget",   INST_TYPE_RD_IMM7,  INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C000400, OPCODE_MASK_H32, eget,   anyware_inst },
+-  {"ecget",  INST_TYPE_RD_IMM7,  INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C002400, OPCODE_MASK_H32, ecget,  anyware_inst },
+-  {"neget",  INST_TYPE_RD_IMM7,  INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C004400, OPCODE_MASK_H32, neget,  anyware_inst },
+-  {"necget", INST_TYPE_RD_IMM7,  INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C006400, OPCODE_MASK_H32, necget, anyware_inst },
+-  {"eput",   INST_TYPE_R1_IMM7,  INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C008400, OPCODE_MASK_H32, eput,   anyware_inst },
+-  {"ecput",  INST_TYPE_R1_IMM7,  INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C00A400, OPCODE_MASK_H32, ecput,  anyware_inst },
+-  {"neput",  INST_TYPE_R1_IMM7,  INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C00C400, OPCODE_MASK_H32, neput,  anyware_inst },
+-  {"necput", INST_TYPE_R1_IMM7,  INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C00E400, OPCODE_MASK_H32, necput, anyware_inst },
++  {"eget",   INST_TYPE_RD_RFSL,  INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C000400, OPCODE_MASK_H32, eget,   anyware_inst },
++  {"ecget",  INST_TYPE_RD_RFSL,  INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C002400, OPCODE_MASK_H32, ecget,  anyware_inst },
++  {"neget",  INST_TYPE_RD_RFSL,  INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C004400, OPCODE_MASK_H32, neget,  anyware_inst },
++  {"necget", INST_TYPE_RD_RFSL,  INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C006400, OPCODE_MASK_H32, necget, anyware_inst },
++  {"eput",   INST_TYPE_R1_RFSL,  INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C008400, OPCODE_MASK_H32, eput,   anyware_inst },
++  {"ecput",  INST_TYPE_R1_RFSL,  INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C00A400, OPCODE_MASK_H32, ecput,  anyware_inst },
++  {"neput",  INST_TYPE_R1_RFSL,  INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C00C400, OPCODE_MASK_H32, neput,  anyware_inst },
++  {"necput", INST_TYPE_R1_RFSL,  INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C00E400, OPCODE_MASK_H32, necput, anyware_inst },
+  
+-  {"teget",   INST_TYPE_RD_IMM7, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C001400, OPCODE_MASK_H32, teget,   anyware_inst },
+-  {"tecget",  INST_TYPE_RD_IMM7, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C003400, OPCODE_MASK_H32, tecget,  anyware_inst },
+-  {"tneget",  INST_TYPE_RD_IMM7, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C005400, OPCODE_MASK_H32, tneget,  anyware_inst },
+-  {"tnecget", INST_TYPE_RD_IMM7, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C007400, OPCODE_MASK_H32, tnecget, anyware_inst },
+-  {"teput",   INST_TYPE_IMM7,    INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C009400, OPCODE_MASK_H32, teput,   anyware_inst },
+-  {"tecput",  INST_TYPE_IMM7,    INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C00B400, OPCODE_MASK_H32, tecput,  anyware_inst },
+-  {"tneput",  INST_TYPE_IMM7,    INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C00D400, OPCODE_MASK_H32, tneput,  anyware_inst },
+-  {"tnecput", INST_TYPE_IMM7,    INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C00F400, OPCODE_MASK_H32, tnecput, anyware_inst },
++  {"teget",   INST_TYPE_RD_RFSL, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C001400, OPCODE_MASK_H32, teget,   anyware_inst },
++  {"tecget",  INST_TYPE_RD_RFSL, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C003400, OPCODE_MASK_H32, tecget,  anyware_inst },
++  {"tneget",  INST_TYPE_RD_RFSL, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C005400, OPCODE_MASK_H32, tneget,  anyware_inst },
++  {"tnecget", INST_TYPE_RD_RFSL, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C007400, OPCODE_MASK_H32, tnecget, anyware_inst },
++  {"teput",   INST_TYPE_RFSL,    INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C009400, OPCODE_MASK_H32, teput,   anyware_inst },
++  {"tecput",  INST_TYPE_RFSL,    INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C00B400, OPCODE_MASK_H32, tecput,  anyware_inst },
++  {"tneput",  INST_TYPE_RFSL,    INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C00D400, OPCODE_MASK_H32, tneput,  anyware_inst },
++  {"tnecput", INST_TYPE_RFSL,    INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C00F400, OPCODE_MASK_H32, tnecput, anyware_inst },
+  
+-  {"aget",   INST_TYPE_RD_IMM7,  INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C000800, OPCODE_MASK_H32, aget,   anyware_inst },
+-  {"caget",  INST_TYPE_RD_IMM7,  INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C002800, OPCODE_MASK_H32, caget,  anyware_inst },
+-  {"naget",  INST_TYPE_RD_IMM7,  INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C004800, OPCODE_MASK_H32, naget,  anyware_inst },
+-  {"ncaget", INST_TYPE_RD_IMM7,  INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C006800, OPCODE_MASK_H32, ncaget, anyware_inst },
+-  {"aput",   INST_TYPE_R1_IMM7,  INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C008800, OPCODE_MASK_H32, aput,   anyware_inst },
+-  {"caput",  INST_TYPE_R1_IMM7,  INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C00A800, OPCODE_MASK_H32, caput,  anyware_inst },
+-  {"naput",  INST_TYPE_R1_IMM7,  INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C00C800, OPCODE_MASK_H32, naput,  anyware_inst },
+-  {"ncaput", INST_TYPE_R1_IMM7,  INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C00E800, OPCODE_MASK_H32, ncaput, anyware_inst },
++  {"aget",   INST_TYPE_RD_RFSL,  INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C000800, OPCODE_MASK_H32, aget,   anyware_inst },
++  {"caget",  INST_TYPE_RD_RFSL,  INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C002800, OPCODE_MASK_H32, caget,  anyware_inst },
++  {"naget",  INST_TYPE_RD_RFSL,  INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C004800, OPCODE_MASK_H32, naget,  anyware_inst },
++  {"ncaget", INST_TYPE_RD_RFSL,  INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C006800, OPCODE_MASK_H32, ncaget, anyware_inst },
++  {"aput",   INST_TYPE_R1_RFSL,  INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C008800, OPCODE_MASK_H32, aput,   anyware_inst },
++  {"caput",  INST_TYPE_R1_RFSL,  INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C00A800, OPCODE_MASK_H32, caput,  anyware_inst },
++  {"naput",  INST_TYPE_R1_RFSL,  INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C00C800, OPCODE_MASK_H32, naput,  anyware_inst },
++  {"ncaput", INST_TYPE_R1_RFSL,  INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C00E800, OPCODE_MASK_H32, ncaput, anyware_inst },
+  
+-  {"taget",   INST_TYPE_RD_IMM7, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C001800, OPCODE_MASK_H32, taget,   anyware_inst },
+-  {"tcaget",  INST_TYPE_RD_IMM7, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C003800, OPCODE_MASK_H32, tcaget,  anyware_inst },
+-  {"tnaget",  INST_TYPE_RD_IMM7, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C005800, OPCODE_MASK_H32, tnaget,  anyware_inst },
+-  {"tncaget", INST_TYPE_RD_IMM7, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C007800, OPCODE_MASK_H32, tncaget, anyware_inst },
+-  {"taput",   INST_TYPE_IMM7,    INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C009800, OPCODE_MASK_H32, taput,   anyware_inst },
+-  {"tcaput",  INST_TYPE_IMM7,    INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C00B800, OPCODE_MASK_H32, tcaput,  anyware_inst },
+-  {"tnaput",  INST_TYPE_IMM7,    INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C00D800, OPCODE_MASK_H32, tnaput,  anyware_inst },
+-  {"tncaput", INST_TYPE_IMM7,    INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C00F800, OPCODE_MASK_H32, tncaput, anyware_inst },
++  {"taget",   INST_TYPE_RD_RFSL, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C001800, OPCODE_MASK_H32, taget,   anyware_inst },
++  {"tcaget",  INST_TYPE_RD_RFSL, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C003800, OPCODE_MASK_H32, tcaget,  anyware_inst },
++  {"tnaget",  INST_TYPE_RD_RFSL, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C005800, OPCODE_MASK_H32, tnaget,  anyware_inst },
++  {"tncaget", INST_TYPE_RD_RFSL, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C007800, OPCODE_MASK_H32, tncaget, anyware_inst },
++  {"taput",   INST_TYPE_RFSL,    INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C009800, OPCODE_MASK_H32, taput,   anyware_inst },
++  {"tcaput",  INST_TYPE_RFSL,    INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C00B800, OPCODE_MASK_H32, tcaput,  anyware_inst },
++  {"tnaput",  INST_TYPE_RFSL,    INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C00D800, OPCODE_MASK_H32, tnaput,  anyware_inst },
++  {"tncaput", INST_TYPE_RFSL,    INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C00F800, OPCODE_MASK_H32, tncaput, anyware_inst },
+  
+-  {"eaget",   INST_TYPE_RD_IMM7,  INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C000C00, OPCODE_MASK_H32, eget,   anyware_inst },
+-  {"ecaget",  INST_TYPE_RD_IMM7,  INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C002C00, OPCODE_MASK_H32, ecget,  anyware_inst },
+-  {"neaget",  INST_TYPE_RD_IMM7,  INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C004C00, OPCODE_MASK_H32, neget,  anyware_inst },
+-  {"necaget", INST_TYPE_RD_IMM7,  INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C006C00, OPCODE_MASK_H32, necget, anyware_inst },
+-  {"eaput",   INST_TYPE_R1_IMM7,  INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C008C00, OPCODE_MASK_H32, eput,   anyware_inst },
+-  {"ecaput",  INST_TYPE_R1_IMM7,  INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C00AC00, OPCODE_MASK_H32, ecput,  anyware_inst },
+-  {"neaput",  INST_TYPE_R1_IMM7,  INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C00CC00, OPCODE_MASK_H32, neput,  anyware_inst },
+-  {"necaput", INST_TYPE_R1_IMM7,  INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C00EC00, OPCODE_MASK_H32, necput, anyware_inst },
++  {"eaget",   INST_TYPE_RD_RFSL,  INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C000C00, OPCODE_MASK_H32, eget,   anyware_inst },
++  {"ecaget",  INST_TYPE_RD_RFSL,  INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C002C00, OPCODE_MASK_H32, ecget,  anyware_inst },
++  {"neaget",  INST_TYPE_RD_RFSL,  INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C004C00, OPCODE_MASK_H32, neget,  anyware_inst },
++  {"necaget", INST_TYPE_RD_RFSL,  INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C006C00, OPCODE_MASK_H32, necget, anyware_inst },
++  {"eaput",   INST_TYPE_R1_RFSL,  INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C008C00, OPCODE_MASK_H32, eput,   anyware_inst },
++  {"ecaput",  INST_TYPE_R1_RFSL,  INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C00AC00, OPCODE_MASK_H32, ecput,  anyware_inst },
++  {"neaput",  INST_TYPE_R1_RFSL,  INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C00CC00, OPCODE_MASK_H32, neput,  anyware_inst },
++  {"necaput", INST_TYPE_R1_RFSL,  INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C00EC00, OPCODE_MASK_H32, necput, anyware_inst },
+  
+-  {"teaget",   INST_TYPE_RD_IMM7, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C001C00, OPCODE_MASK_H32, teaget,   anyware_inst },
+-  {"tecaget",  INST_TYPE_RD_IMM7, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C003C00, OPCODE_MASK_H32, tecaget,  anyware_inst },
+-  {"tneaget",  INST_TYPE_RD_IMM7, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C005C00, OPCODE_MASK_H32, tneaget,  anyware_inst },
+-  {"tnecaget", INST_TYPE_RD_IMM7, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C007C00, OPCODE_MASK_H32, tnecaget, anyware_inst },
+-  {"teaput",   INST_TYPE_IMM7,    INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C009C00, OPCODE_MASK_H32, teaput,   anyware_inst },
+-  {"tecaput",  INST_TYPE_IMM7,    INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C00BC00, OPCODE_MASK_H32, tecaput,  anyware_inst },
+-  {"tneaput",  INST_TYPE_IMM7,    INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C00DC00, OPCODE_MASK_H32, tneaput,  anyware_inst },
+-  {"tnecaput", INST_TYPE_IMM7,    INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C00FC00, OPCODE_MASK_H32, tnecaput, anyware_inst },
++  {"teaget",   INST_TYPE_RD_RFSL, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C001C00, OPCODE_MASK_H32, teaget,   anyware_inst },
++  {"tecaget",  INST_TYPE_RD_RFSL, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C003C00, OPCODE_MASK_H32, tecaget,  anyware_inst },
++  {"tneaget",  INST_TYPE_RD_RFSL, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C005C00, OPCODE_MASK_H32, tneaget,  anyware_inst },
++  {"tnecaget", INST_TYPE_RD_RFSL, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C007C00, OPCODE_MASK_H32, tnecaget, anyware_inst },
++  {"teaput",   INST_TYPE_RFSL,    INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C009C00, OPCODE_MASK_H32, teaput,   anyware_inst },
++  {"tecaput",  INST_TYPE_RFSL,    INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C00BC00, OPCODE_MASK_H32, tecaput,  anyware_inst },
++  {"tneaput",  INST_TYPE_RFSL,    INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C00DC00, OPCODE_MASK_H32, tneaput,  anyware_inst },
++  {"tnecaput", INST_TYPE_RFSL,    INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C00FC00, OPCODE_MASK_H32, tnecaput, anyware_inst },
+  
+   {"getd",    INST_TYPE_RD_R2, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x4C000000, OPCODE_MASK_H34C, getd,    anyware_inst },
+   {"tgetd",   INST_TYPE_RD_R2, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x4C000080, OPCODE_MASK_H34C, tgetd,   anyware_inst },
+@@ -403,9 +403,6 @@ char pvr_register_prefix[] = "rpvr";
+ #define MIN_IMM  ((int) 0x80000000)
+ #define MAX_IMM  ((int) 0x7fffffff)
+ 
+-#define MIN_IMM7 ((int) 0x000)
+-#define MAX_IMM7 ((int) 0x7ff)
+-
+ #define MIN_IMM15 ((int) 0x0000)
+ #define MAX_IMM15 ((int) 0x1fff)
+ 
+diff --git a/opcodes/microblaze-opcm.h b/opcodes/microblaze-opcm.h
+index 410d857..43e5d70 100644
+--- a/opcodes/microblaze-opcm.h
++++ b/opcodes/microblaze-opcm.h
+@@ -121,8 +121,8 @@ enum microblaze_instr_type {
+ #define IMM5_MASK 0x0000001F
+ 
+ 
+-// imm mask for get, put instructions
+-#define  IMM7_MASK 0x00000FFF
++// FSL imm mask for get, put instructions
++#define  RFSL_MASK 0x000000F
+ 
+ // imm mask for msrset, msrclr instructions
+ #define  IMM15_MASK 0x00003FFF
+-- 
+1.5.3.8
+

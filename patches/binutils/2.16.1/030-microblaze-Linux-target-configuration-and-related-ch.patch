@@ -1,0 +1,99 @@
+From e612b767283692d6ed9a06197d3827e3419b43ea Mon Sep 17 00:00:00 2001
+Message-Id: <e612b767283692d6ed9a06197d3827e3419b43ea.1241484031.git.john.williams@petalogix.com>
+In-Reply-To: <4c1022f018b2f64f88e2cbd4788085f347490488.1241484030.git.john.williams@petalogix.com>
+References: <4c1022f018b2f64f88e2cbd4788085f347490488.1241484030.git.john.williams@petalogix.com>
+From: John Williams <john.williams@petalogix.com>
+Date: Mon, 27 Apr 2009 16:05:52 +1000
+Subject: [PATCH 30/40] microblaze:Linux target configuration and related changes
+
+---
+ ld/Makefile.am                 |    4 ++++
+ ld/Makefile.in                 |    4 ++++
+ ld/configure.tgt               |    2 ++
+ ld/emulparams/elf32mb_linux.sh |   17 +++++++++++++++++
+ 4 files changed, 27 insertions(+), 0 deletions(-)
+ create mode 100644 ld/emulparams/elf32mb_linux.sh
+
+diff --git a/ld/Makefile.am b/ld/Makefile.am
+index d5f1564..3848ec5 100644
+--- a/ld/Makefile.am
++++ b/ld/Makefile.am
+@@ -174,6 +174,7 @@ ALL_EMULATIONS = \
+ 	eelf32lppcnto.o \
+ 	eelf32lppcsim.o \
+ 	eelf32mcore.o \
++	eelf32mb_linux.o \
+ 	eelf32microblaze.o \
+ 	eelf32mipswindiss.o \
+ 	eelf32openrisc.o \
+@@ -640,6 +641,9 @@ eelf32frv.c: $(srcdir)/emulparams/elf32frv.sh \
+ eelf32mcore.c: $(srcdir)/emulparams/elf32mcore.sh \
+   $(srcdir)/emultempl/elf32.em $(srcdir)/scripttempl/elf.sc ${GEN_DEPENDS}
+ 	${GENSCRIPTS} elf32mcore "$(tdir_mcore)"
++eelf32mb_linux.c: $(srcdir)/emulparams/elf32mb_linux.sh \
++  $(srcdir)/emultempl/elf32.em $(srcdir)/scripttempl/elf.sc ${GEN_DEPENDS}
++	${GENSCRIPTS} elf32mb_linux "$(tdir_microblaze)"
+ eelf32microblaze.c: $(srcdir)/emulparams/elf32microblaze.sh \
+   $(srcdir)/emultempl/elf32.em $(srcdir)/scripttempl/elfmicroblaze.sc ${GEN_DEPENDS}
+ 	${GENSCRIPTS} elf32microblaze "$(tdir_microblaze)"
+diff --git a/ld/Makefile.in b/ld/Makefile.in
+index d788a96..8fc8914 100644
+--- a/ld/Makefile.in
++++ b/ld/Makefile.in
+@@ -299,6 +299,7 @@ ALL_EMULATIONS = \
+ 	eelf32lppcnto.o \
+ 	eelf32lppcsim.o \
+ 	eelf32mcore.o \
++	eelf32mb_linux.o \
+ 	eelf32microblaze.o \
+ 	eelf32mipswindiss.o \
+ 	eelf32openrisc.o \
+@@ -1377,6 +1378,9 @@ eelf32frv.c: $(srcdir)/emulparams/elf32frv.sh \
+ eelf32mcore.c: $(srcdir)/emulparams/elf32mcore.sh \
+   $(srcdir)/emultempl/elf32.em $(srcdir)/scripttempl/elf.sc ${GEN_DEPENDS}
+ 	${GENSCRIPTS} elf32mcore "$(tdir_mcore)"
++eelf32mb_linux.c: $(srcdir)/emulparams/elf32mb_linux.sh \
++  $(srcdir)/emultempl/elf32.em $(srcdir)/scripttempl/elf.sc ${GEN_DEPENDS}
++	${GENSCRIPTS} elf32mb_linux "$(tdir_microblaze)"
+ eelf32microblaze.c: $(srcdir)/emulparams/elf32microblaze.sh \
+   $(srcdir)/emultempl/elf32.em $(srcdir)/scripttempl/elfmicroblaze.sc ${GEN_DEPENDS}
+ 	${GENSCRIPTS} elf32microblaze "$(tdir_microblaze)"
+diff --git a/ld/configure.tgt b/ld/configure.tgt
+index 2c9f3bf..f8ba0a2 100644
+--- a/ld/configure.tgt
++++ b/ld/configure.tgt
+@@ -403,6 +403,8 @@ vax-*-netbsdaout* | vax-*-netbsd*)
+ 			targ_emul=vaxnbsd
+ 			targ_extra_emuls=elf32vax ;;
+ vax-*-linux-gnu*)	targ_emul=elf32vax ;;
++microblaze*-linux*)
++			targ_emul="elf32mb_linux" ;;
+ microblaze*)		targ_emul=elf32microblaze ;;
+ mips*-*-pe)		targ_emul=mipspe ;
+ 			targ_extra_ofiles="deffilep.o pe-dll.o" ;;
+diff --git a/ld/emulparams/elf32mb_linux.sh b/ld/emulparams/elf32mb_linux.sh
+new file mode 100644
+index 0000000..3503bb1
+--- /dev/null
++++ b/ld/emulparams/elf32mb_linux.sh
+@@ -0,0 +1,17 @@
++SCRIPT_NAME=elf
++OUTPUT_FORMAT="elf32-microblaze"
++TEXT_START_ADDR=0x10000000
++NONPAGED_TEXT_START_ADDR=0x28
++ALIGNMENT=4
++MAXPAGESIZE=0x1000
++COMMONPAGESIZE=0x1000
++ARCH=microblaze
++
++NOP=0x80000000
++
++TEMPLATE_NAME=elf32
++GENERATE_SHLIB_SCRIPT=yes
++GENERATE_PIE_SCRIPT=yes
++NO_SMALL_DATA=yes
++SEPARATE_GOTPLT=12
++      
+-- 
+1.5.3.8
+

@@ -1,0 +1,501 @@
+From 92722ade15570609808adba339f24a923d301806 Mon Sep 17 00:00:00 2001
+Message-Id: <92722ade15570609808adba339f24a923d301806.1241484031.git.john.williams@petalogix.com>
+In-Reply-To: <4c1022f018b2f64f88e2cbd4788085f347490488.1241484030.git.john.williams@petalogix.com>
+References: <4c1022f018b2f64f88e2cbd4788085f347490488.1241484030.git.john.williams@petalogix.com>
+From: John Williams <john.williams@petalogix.com>
+Date: Mon, 27 Apr 2009 16:06:06 +1000
+Subject: [PATCH 34/40] microblaze:Convert as_bads to as_fatal
+
+---
+ gas/config/tc-microblaze.c |  140 ++++++++++++++++++++++----------------------
+ 1 files changed, 70 insertions(+), 70 deletions(-)
+
+diff --git a/gas/config/tc-microblaze.c b/gas/config/tc-microblaze.c
+index c0df782..1910d3e 100644
+--- a/gas/config/tc-microblaze.c
++++ b/gas/config/tc-microblaze.c
+@@ -854,7 +854,7 @@ parse_exp (char * s, expressionS * e)
+    expression (e);
+   
+    if (e->X_op == O_absent)
+-      as_bad (_("missing operand"));
++      as_fatal (_("missing operand"));
+   
+    new = input_line_pointer;
+    input_line_pointer = save;
+@@ -914,10 +914,10 @@ parse_imm (char * s, expressionS * e, int min, int max)
+    */
+    else if ((e->X_op != O_constant && e->X_op != O_symbol) )
+       /*	   || (e->X_op == O_symbol   && e->X_add_number != 0 )) */
+-      as_bad(_("operand must be a constant or a label"));
++      as_fatal(_("operand must be a constant or a label"));
+    else if ((e->X_op == O_constant) && ((int) e->X_add_number < min || (int) e->X_add_number > max)) {
+-      as_bad (_("operand must be absolute in range %d..%d, not %d"),
+-              min, max, (int) e->X_add_number);
++      as_fatal(_("operand must be absolute in range %d..%d, not %d"),
++               min, max, (int) e->X_add_number);
+    }
+ 
+   if (atp) {
+@@ -1093,29 +1093,29 @@ md_assemble (char * str)
+       if (strcmp(op_end, ""))
+          op_end = parse_reg(op_end + 1, &reg1);  /* get rd */
+       else {
+-         as_bad(_("Error in statement syntax"));
++         as_fatal(_("Error in statement syntax"));
+          reg1 = 0;
+       }
+       if (strcmp(op_end, ""))
+          op_end = parse_reg(op_end + 1, &reg2);  /* get r1 */
+       else {
+-         as_bad(_("Error in statement syntax"));
++         as_fatal(_("Error in statement syntax"));
+          reg2 = 0;
+       }
+       if (strcmp(op_end, ""))
+          op_end = parse_reg(op_end + 1, &reg3);  /* get r2 */
+       else {
+-         as_bad(_("Error in statement syntax"));
++         as_fatal(_("Error in statement syntax"));
+          reg3 = 0;
+       }
+ 
+       // Check for spl registers
+       if (check_spl_reg(&reg1))
+-         as_bad(_("Cannot use special register with this instruction"));
++         as_fatal(_("Cannot use special register with this instruction"));
+       if (check_spl_reg(&reg2))
+-         as_bad(_("Cannot use special register with this instruction"));
++         as_fatal(_("Cannot use special register with this instruction"));
+       if (check_spl_reg(&reg3))
+-         as_bad(_("Cannot use special register with this instruction"));
++         as_fatal(_("Cannot use special register with this instruction"));
+       
+       if (!strcmp(name, "sub")) {
+          /* sub rd, r1, r2 becomes rsub rd, r2, r1 */
+@@ -1134,35 +1134,35 @@ md_assemble (char * str)
+       if (strcmp(op_end, ""))
+          op_end = parse_reg(op_end + 1, &reg1);  /* get rd */
+       else {
+-         as_bad(_("Error in statement syntax"));
++         as_fatal(_("Error in statement syntax"));
+          reg1 = 0;
+       }
+       if (strcmp(op_end, ""))
+          op_end = parse_reg(op_end + 1, &reg2);  /* get r1 */
+       else {
+-         as_bad(_("Error in statement syntax"));
++         as_fatal(_("Error in statement syntax"));
+          reg2 = 0;
+       }
+       if (strcmp(op_end, ""))
+          op_end = parse_imm (op_end + 1, & exp, MIN_IMM, MAX_IMM);
+       else 
+-         as_bad(_("Error in statement syntax"));
++         as_fatal(_("Error in statement syntax"));
+ 
+       // Check for spl registers
+       if (check_spl_reg(&reg1))
+-         as_bad(_("Cannot use special register with this instruction"));
++         as_fatal(_("Cannot use special register with this instruction"));
+       if (check_spl_reg(&reg2))
+-         as_bad(_("Cannot use special register with this instruction"));
++         as_fatal(_("Cannot use special register with this instruction"));
+ 
+       
+       if (exp.X_op != O_constant) {
+          char *opc;
+ 	 relax_substateT subtype;
+          if (!strcmp(name, "lmi")) {
+-            as_bad (_("lmi pseudo instruction should not use a label in imm field"));
++            as_fatal (_("lmi pseudo instruction should not use a label in imm field"));
+          }
+          else if (!strcmp(name, "smi")) {
+-            as_bad (_("smi pseudo instruction should not use a label in imm field"));
++            as_fatal (_("smi pseudo instruction should not use a label in imm field"));
+          }
+ 
+          if (reg2 == REG_ROSDP)
+@@ -1255,25 +1255,25 @@ md_assemble (char * str)
+       if (strcmp(op_end, ""))
+          op_end = parse_reg(op_end + 1, &reg1);  /* get rd */
+       else {
+-         as_bad(_("Error in statement syntax"));
++         as_fatal(_("Error in statement syntax"));
+          reg1 = 0;
+       }
+       if (strcmp(op_end, ""))
+          op_end = parse_reg(op_end + 1, &reg2);  /* get r1 */
+       else {
+-         as_bad(_("Error in statement syntax"));
++         as_fatal(_("Error in statement syntax"));
+          reg2 = 0;
+       }
+       if (strcmp(op_end, ""))
+          op_end = parse_imm (op_end + 1, & exp, MIN_IMM, MAX_IMM);
+       else 
+-         as_bad(_("Error in statement syntax"));
++         as_fatal(_("Error in statement syntax"));
+ 
+       // Check for spl registers
+       if (check_spl_reg(&reg1))
+-         as_bad(_("Cannot use special register with this instruction"));
++         as_fatal(_("Cannot use special register with this instruction"));
+       if (check_spl_reg(&reg2))
+-         as_bad(_("Cannot use special register with this instruction"));
++         as_fatal(_("Cannot use special register with this instruction"));
+       
+       if (exp.X_op != O_constant) {
+          as_warn(_("Symbol used as immediate for shift instruction"));
+@@ -1295,21 +1295,21 @@ md_assemble (char * str)
+       if (strcmp(op_end, ""))
+          op_end = parse_reg(op_end + 1, &reg1);  /* get r1 */
+       else {
+-         as_bad(_("Error in statement syntax"));
++         as_fatal(_("Error in statement syntax"));
+          reg1 = 0;
+       }
+       if (strcmp(op_end, ""))
+          op_end = parse_reg(op_end + 1, &reg2);  /* get r2 */
+       else {
+-         as_bad(_("Error in statement syntax"));
++         as_fatal(_("Error in statement syntax"));
+          reg2 = 0;
+       }
+ 
+       // Check for spl registers
+       if (check_spl_reg(&reg1))
+-         as_bad(_("Cannot use special register with this instruction"));
++         as_fatal(_("Cannot use special register with this instruction"));
+       if (check_spl_reg(&reg2))
+-         as_bad(_("Cannot use special register with this instruction"));
++         as_fatal(_("Cannot use special register with this instruction"));
+       
+       inst |= (reg1 << RA_LOW) & RA_MASK;
+       inst |= (reg2 << RB_LOW) & RB_MASK;
+@@ -1320,21 +1320,21 @@ md_assemble (char * str)
+       if (strcmp(op_end, ""))
+          op_end = parse_reg(op_end + 1, &reg1);  /* get rd */
+       else {
+-         as_bad(_("Error in statement syntax"));
++         as_fatal(_("Error in statement syntax"));
+          reg1 = 0;
+       }
+       if (strcmp(op_end, ""))
+          op_end = parse_reg(op_end + 1, &reg2);  /* get r1 */
+       else {
+-         as_bad(_("Error in statement syntax"));
++         as_fatal(_("Error in statement syntax"));
+          reg2 =0;
+       }
+ 
+       // Check for spl registers
+       if (check_spl_reg(&reg1))
+-         as_bad(_("Cannot use special register with this instruction"));
++         as_fatal(_("Cannot use special register with this instruction"));
+       if (check_spl_reg(&reg2))
+-         as_bad(_("Cannot use special register with this instruction"));
++         as_fatal(_("Cannot use special register with this instruction"));
+       
+       inst |= (reg1 << RD_LOW) & RD_MASK;
+       inst |= (reg2 << RA_LOW) & RA_MASK;
+@@ -1345,19 +1345,19 @@ md_assemble (char * str)
+       if (strcmp(op_end, ""))
+          op_end = parse_reg(op_end + 1, &reg1);  /* get rd */
+       else {
+-         as_bad(_("Error in statement syntax"));
++         as_fatal(_("Error in statement syntax"));
+          reg1 = 0;
+       }
+       if (strcmp(op_end, ""))
+          op_end = parse_reg(op_end + 1, &imm);  /* get rfslN */
+       else {
+-         as_bad(_("Error in statement syntax"));
++         as_fatal(_("Error in statement syntax"));
+          imm = 0;
+       }
+ 
+       // Check for spl registers
+       if (check_spl_reg(&reg1))
+-         as_bad(_("Cannot use special register with this instruction"));
++         as_fatal(_("Cannot use special register with this instruction"));
+       
+       inst |= (reg1 << RD_LOW) & RD_MASK;
+       inst |= (imm << IMM_LOW) & RFSL_MASK;
+@@ -1368,21 +1368,21 @@ md_assemble (char * str)
+       if (strcmp(op_end, ""))
+          op_end = parse_reg(op_end + 1, &reg1);  /* get rd */
+       else {
+-         as_bad(_("Error in statement syntax"));
++         as_fatal(_("Error in statement syntax"));
+          reg1 = 0;
+       }
+       
+       if (strcmp(op_end, ""))
+          op_end = parse_imm (op_end + 1, & exp, MIN_IMM15, MAX_IMM15);
+       else 
+-         as_bad(_("Error in statement syntax"));
++         as_fatal(_("Error in statement syntax"));
+ 
+       // Check for spl registers
+       if (check_spl_reg(&reg1))
+-         as_bad(_("Cannot use special register with this instruction"));
++         as_fatal(_("Cannot use special register with this instruction"));
+       
+       if (exp.X_op != O_constant) {
+-         as_bad(_("Symbol used as immediate value for msrset/msrclr instructions"));
++         as_fatal(_("Symbol used as immediate value for msrset/msrclr instructions"));
+       } else {
+          output = frag_more (isize);
+          imm = exp.X_add_number;
+@@ -1395,19 +1395,19 @@ md_assemble (char * str)
+       if (strcmp(op_end, ""))
+          op_end = parse_reg(op_end + 1, &reg1);  /* get r1 */
+       else {
+-         as_bad(_("Error in statement syntax"));
++         as_fatal(_("Error in statement syntax"));
+          reg1 = 0;
+       }
+       if (strcmp(op_end, ""))
+          op_end = parse_reg(op_end + 1, &imm);  /* get rfslN */
+       else {
+-         as_bad(_("Error in statement syntax"));
++         as_fatal(_("Error in statement syntax"));
+          imm = 0;
+       }
+ 
+       // Check for spl registers
+       if (check_spl_reg(&reg1))
+-         as_bad(_("Cannot use special register with this instruction"));
++         as_fatal(_("Cannot use special register with this instruction"));
+       
+       inst |= (reg1 << RA_LOW) & RA_MASK;
+       inst |= (imm << IMM_LOW) & RFSL_MASK;
+@@ -1417,12 +1417,12 @@ md_assemble (char * str)
+      if (strcmp(op_end, ""))
+          op_end = parse_reg(op_end + 1, &imm);  /* get rfslN */
+      else {
+-         as_bad(_("Error in statement syntax"));
++         as_fatal(_("Error in statement syntax"));
+          imm = 0;
+      }
+      // Check for spl registers
+      if (check_spl_reg(&reg1))
+-         as_bad(_("Cannot use special register with this instruction"));
++         as_fatal(_("Cannot use special register with this instruction"));
+      inst |= (imm << IMM_LOW) & RFSL_MASK;
+      output = frag_more (isize);
+      break;
+@@ -1430,13 +1430,13 @@ md_assemble (char * str)
+       if (strcmp(op_end, ""))
+          op_end = parse_reg(op_end + 1, &reg1);  /* get r1 */
+       else {
+-         as_bad(_("Error in statement syntax"));
++         as_fatal(_("Error in statement syntax"));
+          reg1 = 0;
+       }
+ 
+       // Check for spl registers
+       if (check_spl_reg(&reg1))
+-         as_bad(_("Cannot use special register with this instruction"));
++         as_fatal(_("Cannot use special register with this instruction"));
+       
+       inst |= (reg1 << RA_LOW) & RA_MASK;
+       output = frag_more (isize);
+@@ -1447,13 +1447,13 @@ md_assemble (char * str)
+       if (strcmp(op_end, ""))
+          op_end = parse_reg(op_end + 1, &reg1);  /* get rd */
+       else {
+-         as_bad(_("Error in statement syntax"));
++         as_fatal(_("Error in statement syntax"));
+          reg1 = 0;
+       }
+ 
+       // Check for spl registers
+       if (check_spl_reg(&reg1))
+-         as_bad(_("Cannot use special register with this instruction"));
++         as_fatal(_("Cannot use special register with this instruction"));
+       
+       inst |= (reg1 << RD_LOW) & RD_MASK;
+       output = frag_more (isize);
+@@ -1463,13 +1463,13 @@ md_assemble (char * str)
+       if (strcmp(op_end, ""))
+          op_end = parse_reg(op_end + 1, &reg1);  /* get rd */
+       else {
+-         as_bad(_("Error in statement syntax"));
++         as_fatal(_("Error in statement syntax"));
+          reg1 = 0;
+       }
+       if (strcmp(op_end, ""))
+          op_end = parse_reg(op_end + 1, &reg2);  /* get r1 */
+       else {
+-         as_bad(_("Error in statement syntax"));
++         as_fatal(_("Error in statement syntax"));
+          reg2 = 0;
+       }
+       
+@@ -1501,7 +1501,7 @@ md_assemble (char * str)
+ 	imm = opcode->immval_mask | REG_PVR_MASK | reg2; 
+       }
+       else
+-         as_bad(_("invalid value for special purpose register"));
++         as_fatal(_("invalid value for special purpose register"));
+       inst |= (reg1 << RD_LOW) & RD_MASK;
+       inst |= (imm << IMM_LOW) & IMM_MASK;
+       output = frag_more (isize);
+@@ -1511,13 +1511,13 @@ md_assemble (char * str)
+       if (strcmp(op_end, ""))
+          op_end = parse_reg(op_end + 1, &reg1);  /* get rd */
+       else {
+-         as_bad(_("Error in statement syntax"));
++         as_fatal(_("Error in statement syntax"));
+          reg1 = 0;
+       }
+       if (strcmp(op_end, ""))
+          op_end = parse_reg(op_end + 1, &reg2);  /* get r1 */
+       else {
+-         as_bad(_("Error in statement syntax"));
++         as_fatal(_("Error in statement syntax"));
+          reg2 = 0;
+       }
+ 
+@@ -1548,7 +1548,7 @@ md_assemble (char * str)
+       else if (reg1 == REG_TLBSX)
+          imm = opcode->immval_mask | REG_TLBSX_MASK;
+       else
+-         as_bad(_("invalid value for special purpose register"));
++         as_fatal(_("invalid value for special purpose register"));
+       inst |= (reg2 << RA_LOW) & RA_MASK;
+       inst |= (imm << IMM_LOW) & IMM_MASK;
+       output = frag_more (isize);
+@@ -1558,21 +1558,21 @@ md_assemble (char * str)
+       if (strcmp(op_end, ""))
+          op_end = parse_reg(op_end + 1, &reg1);  /* get rd */
+       else {
+-         as_bad(_("Error in statement syntax"));
++         as_fatal(_("Error in statement syntax"));
+          reg1 = 0;
+       }
+       if (strcmp(op_end, ""))
+          op_end = parse_reg(op_end + 1, &reg2);  /* get r1 */
+       else {
+-         as_bad(_("Error in statement syntax"));
++         as_fatal(_("Error in statement syntax"));
+          reg2 =0;
+       }
+ 
+       // Check for spl registers
+       if (check_spl_reg(&reg1))
+-         as_bad(_("Cannot use special register with this instruction"));
++         as_fatal(_("Cannot use special register with this instruction"));
+       if (check_spl_reg(&reg2))
+-         as_bad(_("Cannot use special register with this instruction"));
++         as_fatal(_("Cannot use special register with this instruction"));
+       
+       
+       /* insn wic ra, rb => wic ra, ra, rb */
+@@ -1587,21 +1587,21 @@ md_assemble (char * str)
+       if (strcmp(op_end, ""))
+          op_end = parse_reg(op_end + 1, &reg1);  /* get rd */
+       else {
+-         as_bad(_("Error in statement syntax"));
++         as_fatal(_("Error in statement syntax"));
+          reg1 = 0;
+       }
+       if (strcmp(op_end, ""))
+          op_end = parse_reg(op_end + 1, &reg2);  /* get r2 */
+       else {
+-         as_bad(_("Error in statement syntax"));
++         as_fatal(_("Error in statement syntax"));
+          reg2 = 0;
+       }
+ 
+       // Check for spl registers
+       if (check_spl_reg(&reg1))
+-         as_bad(_("Cannot use special register with this instruction"));
++         as_fatal(_("Cannot use special register with this instruction"));
+       if (check_spl_reg(&reg2))
+-         as_bad(_("Cannot use special register with this instruction"));
++         as_fatal(_("Cannot use special register with this instruction"));
+       
+       inst |= (reg1 << RD_LOW) & RD_MASK;
+       inst |= (reg2 << RB_LOW) & RB_MASK;
+@@ -1612,17 +1612,17 @@ md_assemble (char * str)
+       if (strcmp(op_end, ""))
+          op_end = parse_reg(op_end + 1, &reg1);  /* get r1 */
+       else {
+-         as_bad(_("Error in statement syntax"));
++         as_fatal(_("Error in statement syntax"));
+          reg1 = 0;
+       }
+       if (strcmp(op_end, ""))
+          op_end = parse_imm (op_end + 1, & exp, MIN_IMM, MAX_IMM);
+       else 
+-         as_bad(_("Error in statement syntax"));
++         as_fatal(_("Error in statement syntax"));
+       
+       // Check for spl registers
+       if (check_spl_reg(&reg1))
+-         as_bad(_("Cannot use special register with this instruction"));
++         as_fatal(_("Cannot use special register with this instruction"));
+       
+       if (exp.X_op != O_constant) {
+          char *opc = NULL;
+@@ -1674,17 +1674,17 @@ md_assemble (char * str)
+       if (strcmp(op_end, ""))
+          op_end = parse_reg(op_end + 1, &reg1);  /* get rd */
+       else {
+-         as_bad(_("Error in statement syntax"));
++         as_fatal(_("Error in statement syntax"));
+          reg1 = 0;
+       }
+       if (strcmp(op_end, ""))
+          op_end = parse_imm (op_end + 1, & exp, MIN_IMM, MAX_IMM);
+       else
+-         as_bad(_("Error in statement syntax"));
++         as_fatal(_("Error in statement syntax"));
+ 
+       // Check for spl registers
+       if (check_spl_reg(&reg1))
+-         as_bad(_("Cannot use special register with this instruction"));
++         as_fatal(_("Cannot use special register with this instruction"));
+       
+       if (exp.X_op != O_constant) {
+          char *opc = NULL;
+@@ -1736,13 +1736,13 @@ md_assemble (char * str)
+       if (strcmp(op_end, ""))
+          op_end = parse_reg(op_end + 1, &reg2);  /* get r2 */
+       else {
+-         as_bad(_("Error in statement syntax"));
++         as_fatal(_("Error in statement syntax"));
+          reg2 = 0;
+       }
+ 
+       // Check for spl registers
+       if (check_spl_reg(&reg2))
+-         as_bad(_("Cannot use special register with this instruction"));
++         as_fatal(_("Cannot use special register with this instruction"));
+       
+       inst |= (reg2 << RB_LOW) & RB_MASK;
+       output = frag_more (isize);
+@@ -1750,7 +1750,7 @@ md_assemble (char * str)
+ 
+    case INST_TYPE_IMM:
+       if (!strcmp(name, "imm")) {
+-         as_bad(_("An IMM instruction should not be present in the .s file"));
++         as_fatal(_("An IMM instruction should not be present in the .s file"));
+       }
+       op_end = parse_imm (op_end + 1, & exp, MIN_IMM, MAX_IMM);
+       
+@@ -1804,7 +1804,7 @@ md_assemble (char * str)
+       break;
+       
+    default:
+-      as_bad (_("unimplemented opcode \"%s\""), name);
++      as_fatal (_("unimplemented opcode \"%s\""), name);
+    }
+   
+    /* Drop whitespace after all the operands have been parsed.  */
+-- 
+1.5.3.8
+

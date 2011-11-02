@@ -1,0 +1,27 @@
+From ad51a833dc3b63f0f43a505677191c7547a77029 Mon Sep 17 00:00:00 2001
+Message-Id: <ad51a833dc3b63f0f43a505677191c7547a77029.1241484031.git.john.williams@petalogix.com>
+In-Reply-To: <4c1022f018b2f64f88e2cbd4788085f347490488.1241484030.git.john.williams@petalogix.com>
+References: <4c1022f018b2f64f88e2cbd4788085f347490488.1241484030.git.john.williams@petalogix.com>
+From: John Williams <john.williams@petalogix.com>
+Date: Mon, 27 Apr 2009 16:06:02 +1000
+Subject: [PATCH 33/40] microblaze:Add .rodata.*
+
+---
+ ld/scripttempl/elfmicroblaze.sc |    1 +
+ 1 files changed, 1 insertions(+), 0 deletions(-)
+
+diff --git a/ld/scripttempl/elfmicroblaze.sc b/ld/scripttempl/elfmicroblaze.sc
+index ed2124d..7677261 100644
+--- a/ld/scripttempl/elfmicroblaze.sc
++++ b/ld/scripttempl/elfmicroblaze.sc
+@@ -90,6 +90,7 @@ SECTIONS
+    ${RELOCATING+ _frodata = . ;}
+   .rodata : {
+     ${RELOCATING+*(.rodata)}
++    ${RELOCATING+*(.rodata.*)}
+     ${RELOCATING+*(.gnu.linkonce.r.*)}
+     ${CONSTRUCTING+CONSTRUCTORS}; /* Is this needed? */
+   }
+-- 
+1.5.3.8
+

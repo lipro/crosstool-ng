@@ -1,0 +1,28 @@
+From 558681f45e5f614abcf4c02fe964dfc6dfc60c53 Mon Sep 17 00:00:00 2001
+Message-Id: <558681f45e5f614abcf4c02fe964dfc6dfc60c53.1241484031.git.john.williams@petalogix.com>
+In-Reply-To: <4c1022f018b2f64f88e2cbd4788085f347490488.1241484030.git.john.williams@petalogix.com>
+References: <4c1022f018b2f64f88e2cbd4788085f347490488.1241484030.git.john.williams@petalogix.com>
+From: John Williams <john.williams@petalogix.com>
+Date: Mon, 27 Apr 2009 16:04:17 +1000
+Subject: [PATCH 03/40] microblaze:Add ; as instr separator
+
+---
+ gas/config/tc-microblaze.c |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/gas/config/tc-microblaze.c b/gas/config/tc-microblaze.c
+index dcc940e..3616ef8 100644
+--- a/gas/config/tc-microblaze.c
++++ b/gas/config/tc-microblaze.c
+@@ -91,7 +91,7 @@ extern char *demand_copy_string PARAMS ((int *lenP));
+    pre-processor is disabled, these aren't very useful.  */
+ const char comment_chars[] = "#";
+ 
+-const char line_separator_chars[] = "";
++const char line_separator_chars[] = ";";
+ 
+ /* This array holds the chars that only start a comment at the beginning of
+    a line.
+-- 
+1.5.3.8
+

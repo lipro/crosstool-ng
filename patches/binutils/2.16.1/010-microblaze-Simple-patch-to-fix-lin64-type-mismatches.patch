@@ -1,0 +1,57 @@
+From 8fb08324226460563fd1fdb00465435b6d0a7ac6 Mon Sep 17 00:00:00 2001
+Message-Id: <8fb08324226460563fd1fdb00465435b6d0a7ac6.1241484031.git.john.williams@petalogix.com>
+In-Reply-To: <4c1022f018b2f64f88e2cbd4788085f347490488.1241484030.git.john.williams@petalogix.com>
+References: <4c1022f018b2f64f88e2cbd4788085f347490488.1241484030.git.john.williams@petalogix.com>
+From: John Williams <john.williams@petalogix.com>
+Date: Mon, 27 Apr 2009 16:04:41 +1000
+Subject: [PATCH 10/40] microblaze:Simple patch to fix lin64 type mismatches
+
+---
+ gas/config/tc-microblaze.c |    3 ++-
+ opcodes/microblaze-opc.h   |   12 ++++++------
+ 2 files changed, 8 insertions(+), 7 deletions(-)
+
+diff --git a/gas/config/tc-microblaze.c b/gas/config/tc-microblaze.c
+index 2daff1f..3549f2d 100644
+--- a/gas/config/tc-microblaze.c
++++ b/gas/config/tc-microblaze.c
+@@ -1056,9 +1056,10 @@ parse_imm (char * s, expressionS * e, int min, int max)
+    else if ((e->X_op != O_constant && e->X_op != O_symbol) )
+       /*	   || (e->X_op == O_symbol   && e->X_add_number != 0 )) */
+       as_bad(_("operand must be a constant or a label"));
+-   else if ((e->X_op == O_constant) && (e->X_add_number < min || e->X_add_number > max))
++   else if ((e->X_op == O_constant) && ((int) e->X_add_number < min || (int) e->X_add_number > max)) {
+       as_bad (_("operand must be absolute in range %d..%d, not %d"),
+               min, max, (int) e->X_add_number);
++   }
+ 
+    return new;
+ }
+diff --git a/opcodes/microblaze-opc.h b/opcodes/microblaze-opc.h
+index e948bfa..744516b 100644
+--- a/opcodes/microblaze-opc.h
++++ b/opcodes/microblaze-opc.h
+@@ -400,14 +400,14 @@ char pvr_register_prefix[] = "rpvr";
+ 
+ 
+ /* #defines for valid immediate range */
+-#define MIN_IMM  0x80000000
+-#define MAX_IMM  0x7fffffff 
++#define MIN_IMM  ((int) 0x80000000)
++#define MAX_IMM  ((int) 0x7fffffff)
+ 
+-#define MIN_IMM7  0x000
+-#define MAX_IMM7  0x7ff
++#define MIN_IMM7 ((int) 0x000)
++#define MAX_IMM7 ((int) 0x7ff)
+ 
+-#define MIN_IMM15  0x0000
+-#define MAX_IMM15  0x1fff
++#define MIN_IMM15 ((int) 0x0000)
++#define MAX_IMM15 ((int) 0x1fff)
+ 
+ #endif /* MICROBLAZE_OPC */
+ 
+-- 
+1.5.3.8
+

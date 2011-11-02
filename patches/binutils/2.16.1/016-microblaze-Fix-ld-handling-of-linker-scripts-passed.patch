@@ -1,0 +1,73 @@
+From cf93143b311103701b69a48928520ad89000084a Mon Sep 17 00:00:00 2001
+Message-Id: <cf93143b311103701b69a48928520ad89000084a.1241484031.git.john.williams@petalogix.com>
+In-Reply-To: <4c1022f018b2f64f88e2cbd4788085f347490488.1241484030.git.john.williams@petalogix.com>
+References: <4c1022f018b2f64f88e2cbd4788085f347490488.1241484030.git.john.williams@petalogix.com>
+From: John Williams <john.williams@petalogix.com>
+Date: Mon, 27 Apr 2009 16:05:02 +1000
+Subject: [PATCH 16/40] microblaze:Fix ld handling of linker scripts passed via -T
+
+---
+ ld/ld.h     |    1 +
+ ld/ldmain.c |   11 +++++++++++
+ ld/lexsup.c |    4 +---
+ 3 files changed, 13 insertions(+), 3 deletions(-)
+
+diff --git a/ld/ld.h b/ld/ld.h
+index 616cdfa..64d6f83 100644
+--- a/ld/ld.h
++++ b/ld/ld.h
+@@ -261,6 +261,7 @@ typedef enum {
+ } lang_phase_type;
+ 
+ extern FILE * saved_script_handle;
++extern char * user_linker_script;
+ extern bfd_boolean force_make_executable;
+ 
+ /* Non-zero if we are processing a --defsym from the command line.  */
+diff --git a/ld/ldmain.c b/ld/ldmain.c
+index 165ec0e..82d88dd 100644
+--- a/ld/ldmain.c
++++ b/ld/ldmain.c
+@@ -110,6 +110,9 @@ ld_config_type config;
+ 
+ sort_type sort_section;
+ 
++/* Name of user-specified linker script. */
++char * user_linker_script;
++
+ static const char *get_sysroot
+   (int, char **);
+ static char *get_emulation
+@@ -371,6 +374,14 @@ main (int argc, char **argv)
+      the -L's in argv have been processed.  */
+   set_scripts_dir ();
+ 
++  /* If user has specified a linker script, parse it now. */
++  if (user_linker_script) 
++    {
++       ldfile_open_command_file (user_linker_script);
++       parser_input = input_script;
++       yyparse ();
++    }
++
+   /* If we have not already opened and parsed a linker script
+      read the emulation's appropriate default script.  */
+   if (saved_script_handle == NULL)
+diff --git a/ld/lexsup.c b/ld/lexsup.c
+index 459cff9..b18b1e2 100644
+--- a/ld/lexsup.c
++++ b/ld/lexsup.c
+@@ -1114,9 +1114,7 @@ parse_args (unsigned argc, char **argv)
+ 	  trace_files = TRUE;
+ 	  break;
+ 	case 'T':
+-	  ldfile_open_command_file (optarg);
+-	  parser_input = input_script;
+-	  yyparse ();
++	  user_linker_script = xstrdup (optarg);
+ 	  break;
+ 	case OPTION_SECTION_START:
+ 	  {
+-- 
+1.5.3.8
+

@@ -1,0 +1,52 @@
+From 51c8bffca7e5b86e8b97f0efc7fb9b26f69a88bb Mon Sep 17 00:00:00 2001
+Message-Id: <51c8bffca7e5b86e8b97f0efc7fb9b26f69a88bb.1241484031.git.john.williams@petalogix.com>
+In-Reply-To: <4c1022f018b2f64f88e2cbd4788085f347490488.1241484030.git.john.williams@petalogix.com>
+References: <4c1022f018b2f64f88e2cbd4788085f347490488.1241484030.git.john.williams@petalogix.com>
+From: John Williams <john.williams@petalogix.com>
+Date: Mon, 27 Apr 2009 16:06:12 +1000
+Subject: [PATCH 36/40] microblaze:Fix check for small data
+
+---
+ gas/config/tc-microblaze.c |    5 +++++
+ 1 files changed, 5 insertions(+), 0 deletions(-)
+
+diff --git a/gas/config/tc-microblaze.c b/gas/config/tc-microblaze.c
+index 1910d3e..d47b44b 100644
+--- a/gas/config/tc-microblaze.c
++++ b/gas/config/tc-microblaze.c
+@@ -140,6 +140,7 @@ static struct hash_control * opcode_hash_control;	/* Opcode mnemonics */
+ 
+ /*static int dont_use_small = 0; If 0, assume that data and comm section are small data sections */
+ static segT sbss_segment = 0; 	/* Small bss section */
++static segT sbss2_segment = 0; 	/* Section not used */
+ static segT sdata_segment = 0; 	/* Small data section */
+ static segT sdata2_segment = 0; /* Small read-only section */
+ static segT rodata_segment = 0; /* read-only section */
+@@ -2298,6 +2299,8 @@ int
+ md_estimate_size_before_relax (register fragS * fragP,
+ 			       register segT segment_type)
+ {
++   sbss_segment = bfd_get_section_by_name (stdoutput, ".sbss");
++   sbss2_segment = bfd_get_section_by_name (stdoutput, ".sbss2");
+    sdata_segment = bfd_get_section_by_name (stdoutput, ".sdata");
+    sdata2_segment = bfd_get_section_by_name (stdoutput, ".sdata2");
+ 
+@@ -2351,6 +2354,7 @@ md_estimate_size_before_relax (register fragS * fragP,
+             /* It is accessed using the small data read only anchor */
+             if ((S_GET_SEGMENT (fragP->fr_symbol) == &bfd_com_section) ||
+                 (S_GET_SEGMENT (fragP->fr_symbol) == sdata2_segment) ||
++                (S_GET_SEGMENT (fragP->fr_symbol) == sbss2_segment) ||
+                 (! S_IS_DEFINED (fragP->fr_symbol))) {
+                fragP->fr_subtype = DEFINED_RO_SEGMENT;
+                fragP->fr_var = INST_WORD_SIZE;
+@@ -2365,6 +2369,7 @@ md_estimate_size_before_relax (register fragS * fragP,
+          } else if (!strcmp(fragP->fr_opcode, str_microblaze_rw_anchor)) { 
+             if ((S_GET_SEGMENT (fragP->fr_symbol) == &bfd_com_section) ||
+                 (S_GET_SEGMENT (fragP->fr_symbol) == sdata_segment) ||
++                (S_GET_SEGMENT (fragP->fr_symbol) == sbss_segment) ||
+                 (! S_IS_DEFINED (fragP->fr_symbol))) {
+                /* It is accessed using the small data read write anchor */
+                fragP->fr_subtype = DEFINED_RW_SEGMENT;
+-- 
+1.5.3.8
+

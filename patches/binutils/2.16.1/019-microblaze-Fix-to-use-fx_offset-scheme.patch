@@ -1,0 +1,106 @@
+From 3299d844311a683c16678e6295077aebb911f38c Mon Sep 17 00:00:00 2001
+Message-Id: <3299d844311a683c16678e6295077aebb911f38c.1241484031.git.john.williams@petalogix.com>
+In-Reply-To: <4c1022f018b2f64f88e2cbd4788085f347490488.1241484030.git.john.williams@petalogix.com>
+References: <4c1022f018b2f64f88e2cbd4788085f347490488.1241484030.git.john.williams@petalogix.com>
+From: John Williams <john.williams@petalogix.com>
+Date: Mon, 27 Apr 2009 16:05:13 +1000
+Subject: [PATCH 19/40] microblaze:Fix to use fx_offset scheme
+
+---
+ bfd/elf32-microblaze.c     |    2 +-
+ gas/config/tc-microblaze.c |   31 +++++++++----------------------
+ 2 files changed, 10 insertions(+), 23 deletions(-)
+
+diff --git a/bfd/elf32-microblaze.c b/bfd/elf32-microblaze.c
+index 5e45732..8a15303 100644
+--- a/bfd/elf32-microblaze.c
++++ b/bfd/elf32-microblaze.c
+@@ -470,7 +470,7 @@ microblaze_elf_relocate_section (bfd *output_bfd,
+ #ifndef USE_REL
+          /* This can't be done for USE_REL because it doesn't mean anything
+             and elf_link_input_bfd asserts this stays zero.  */
+-         rel->r_addend = addend;
++         //rel->r_addend = addend;
+ #endif
+ 
+ #ifndef USE_REL
+diff --git a/gas/config/tc-microblaze.c b/gas/config/tc-microblaze.c
+index 90fa19e..4aaecce 100644
+--- a/gas/config/tc-microblaze.c
++++ b/gas/config/tc-microblaze.c
+@@ -2016,6 +2016,14 @@ md_apply_fix3 (fixS *   fixP,
+ 
+    symname = fixP->fx_addsy ? S_GET_NAME (fixP->fx_addsy) : _("<unknown>");
+ 
++   /* fixP->fx_offset is supposed to be set up correctly for all symbol relocations */
++   if (fixP->fx_addsy == NULL) {
++      if (!fixP->fx_pcrel)
++         fixP->fx_offset = val; /* absolute relocation */
++      else
++         fprintf(stderr, "NULL symbol PC-relative relocation? offset = %08x, val = %08x\n",
++                 fixP->fx_offset, val);
++   }
+ 
+   /* If we aren't adjusting this fixup to be against the section
+      symbol, we need to adjust the value.  */
+@@ -2113,9 +2121,6 @@ md_apply_fix3 (fixS *   fixP,
+          buf[1] |= ((val >> 8) & 0xff);
+          buf[0] |= (val & 0xff);
+       }
+-      if (!fixP->fx_pcrel) {
+-         fixP->fx_addnumber = val; 
+-      }
+       break;
+    case BFD_RELOC_MICROBLAZE_32_ROSDA:
+    case BFD_RELOC_MICROBLAZE_32_RWSDA:
+@@ -2141,9 +2146,6 @@ md_apply_fix3 (fixS *   fixP,
+             buf[1] |= ((val >> 8) & 0xff);
+             buf[0] |= (val & 0xff);
+          }
+-         if (!fixP->fx_pcrel) {
+-            fixP->fx_addnumber = val; 
+-         }
+       }
+       break;
+    case BFD_RELOC_32:
+@@ -2166,9 +2168,6 @@ md_apply_fix3 (fixS *   fixP,
+             buf[1] |= ((val >> 8) & 0xff);
+             buf[0] |= (val & 0xff);
+          }
+-         if (!fixP->fx_pcrel) {
+-            fixP->fx_addnumber = val; 
+-         }
+       }
+       break;
+ 
+@@ -2214,9 +2213,6 @@ md_apply_fix3 (fixS *   fixP,
+             buf[4] |= (val & 0xff);
+          }
+       }
+-      if (!fixP->fx_pcrel) {
+-         fixP->fx_addnumber = val; 
+-      }
+       break;
+       
+    default:
+@@ -2488,16 +2484,7 @@ tc_gen_reloc (asection * section ATTRIBUTE_UNUSED, fixS * fixp)
+    
+    rel->address = fixp->fx_frag->fr_address + fixp->fx_where;
+    /* Always pass the addend along!  */
+-   if (fixp->fx_addnumber) {
+-     rel->addend = fixp->fx_addnumber; 
+-     if (fixp->fx_offset && fixp->fx_offset != fixp->fx_addnumber) {
+-       //printf ("warning: fx_addnumber = 0x%8.8x, fx_offset = 0x%8.8x (%s, sec=%s)\n",
+-	  // (int) fixp->fx_addnumber, (int) fixp->fx_offset, fixp->fx_file, section->name);
+-     }
+-   }
+-   else {
+-     rel->addend = fixp->fx_offset;
+-   }
++   rel->addend = fixp->fx_offset;
+    rel->howto = bfd_reloc_type_lookup (stdoutput, code);
+   
+    if (rel->howto == NULL)
+-- 
+1.5.3.8
+

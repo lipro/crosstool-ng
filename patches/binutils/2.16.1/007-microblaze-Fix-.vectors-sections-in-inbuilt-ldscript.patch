@@ -1,0 +1,32 @@
+From 3a5e482d39e2a811ece35f887eb624c0f1882880 Mon Sep 17 00:00:00 2001
+Message-Id: <3a5e482d39e2a811ece35f887eb624c0f1882880.1241484031.git.john.williams@petalogix.com>
+In-Reply-To: <4c1022f018b2f64f88e2cbd4788085f347490488.1241484030.git.john.williams@petalogix.com>
+References: <4c1022f018b2f64f88e2cbd4788085f347490488.1241484030.git.john.williams@petalogix.com>
+From: John Williams <john.williams@petalogix.com>
+Date: Mon, 27 Apr 2009 16:04:31 +1000
+Subject: [PATCH 07/40] microblaze:Fix .vectors sections in inbuilt ldscript
+
+---
+ ld/scripttempl/elfmicroblaze.sc |    6 +++++-
+ 1 files changed, 5 insertions(+), 1 deletions(-)
+
+diff --git a/ld/scripttempl/elfmicroblaze.sc b/ld/scripttempl/elfmicroblaze.sc
+index 4c0649d..ed2124d 100644
+--- a/ld/scripttempl/elfmicroblaze.sc
++++ b/ld/scripttempl/elfmicroblaze.sc
+@@ -55,7 +55,11 @@ _STACK_SIZE = DEFINED(_STACK_SIZE) ? _STACK_SIZE : 0x400;
+ 
+ SECTIONS
+ {
+-  .vectors : { KEEP (*(.vectors.*)) } =0
++  .vectors.reset 0x0 : { KEEP (*(.vectors.reset)) } = 0
++  .vectors.sw_exception 0x8 : { KEEP (*(.vectors.sw_exception)) } = 0
++  .vectors.interrupt 0x10 : { KEEP (*(.vectors.interrupt)) } = 0
++  .vectors.debug_sw_break 0x18 : { KEEP (*(.vectors.debug_sw_break)) } = 0
++  .vectors.hw_exception 0x20 : { KEEP (*(.vectors.hw_exception)) } = 0
+ 
+   ${RELOCATING+. = _TEXT_START_ADDR;}
+ 
+-- 
+1.5.3.8
+

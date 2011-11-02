@@ -1,0 +1,14 @@
+--- a/gas/config/tc-microblaze.c  2010-04-26 17:50:33.000000000 +0200
++++ b/gas/config/tc-microblaze.c  2010-04-29 15:18:10.000000000 +0200
+@@ -2324,7 +2324,8 @@
+          as_bad(_("Absolute PC-relative value in relaxation code.  Assembler error....."));
+          abort();
+       }
+-      else if ((S_GET_SEGMENT (fragP->fr_symbol) == segment_type))
++      else if (S_GET_SEGMENT (fragP->fr_symbol) == segment_type && 
++               !S_IS_WEAK (fragP->fr_symbol))
+       {
+          fragP->fr_subtype = DEFINED_PC_OFFSET;
+          /* Don't know now whether we need an imm instruction */
+
+

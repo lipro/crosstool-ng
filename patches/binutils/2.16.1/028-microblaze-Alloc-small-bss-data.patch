@@ -1,0 +1,109 @@
+From 2ac8c042ad2902b7e0356f08a9baaf31f6a93117 Mon Sep 17 00:00:00 2001
+Message-Id: <2ac8c042ad2902b7e0356f08a9baaf31f6a93117.1241484031.git.john.williams@petalogix.com>
+In-Reply-To: <4c1022f018b2f64f88e2cbd4788085f347490488.1241484030.git.john.williams@petalogix.com>
+References: <4c1022f018b2f64f88e2cbd4788085f347490488.1241484030.git.john.williams@petalogix.com>
+From: John Williams <john.williams@petalogix.com>
+Date: Mon, 27 Apr 2009 16:05:44 +1000
+Subject: [PATCH 28/40] microblaze:Alloc small bss data
+
+---
+ bfd/elf32-microblaze.c     |   33 +++++++++++++++++++++++++++++++++
+ gas/config/tc-microblaze.c |   11 ++++-------
+ 2 files changed, 37 insertions(+), 7 deletions(-)
+
+diff --git a/bfd/elf32-microblaze.c b/bfd/elf32-microblaze.c
+index 8525d73..50895da 100644
+--- a/bfd/elf32-microblaze.c
++++ b/bfd/elf32-microblaze.c
+@@ -2501,6 +2501,37 @@ microblaze_elf_finish_dynamic_sections (output_bfd, info)
+   return TRUE;
+ }
+ 
++/* Hook called by the linker routine which adds symbols from an object
++   file.  We use it to put .comm items in .sbss, and not .bss.  */
++
++static bfd_boolean
++microblaze_elf_add_symbol_hook (bfd *abfd,
++			        struct bfd_link_info *info,
++			        Elf_Internal_Sym *sym,
++			        const char **namep ATTRIBUTE_UNUSED,
++			        flagword *flagsp ATTRIBUTE_UNUSED,
++			        asection **secp,
++			        bfd_vma *valp)
++{
++  if (sym->st_shndx == SHN_COMMON
++      && !info->relocatable
++      && sym->st_size <= elf_gp_size (abfd))
++    {
++      /* Common symbols less than or equal to -G nn bytes are automatically
++	 put into .sbss.  */
++
++      *secp = bfd_make_section_anyway (abfd, ".sbss");
++      if (*secp == NULL
++          || ! bfd_set_section_flags (abfd, *secp, SEC_IS_COMMON))
++        return FALSE;
++
++      *valp = sym->st_size;
++    }
++
++  return TRUE;
++}
++
++
+ #define TARGET_BIG_SYM          bfd_elf32_microblaze_vec
+ #define TARGET_BIG_NAME		"elf32-microblaze"
+ 
+@@ -2533,5 +2564,7 @@ microblaze_elf_finish_dynamic_sections (output_bfd, info)
+ #define elf_backend_finish_dynamic_sections     microblaze_elf_finish_dynamic_sections
+ #define elf_backend_finish_dynamic_symbol       microblaze_elf_finish_dynamic_symbol
+ #define elf_backend_size_dynamic_sections       microblaze_elf_size_dynamic_sections
++#define elf_backend_add_symbol_hook		microblaze_elf_add_symbol_hook
++
+ 
+ #include "elf32-target.h"
+diff --git a/gas/config/tc-microblaze.c b/gas/config/tc-microblaze.c
+index ba1891a..40a81e8 100644
+--- a/gas/config/tc-microblaze.c
++++ b/gas/config/tc-microblaze.c
+@@ -137,9 +137,8 @@ const relax_typeS md_relax_table[] =
+ static struct hash_control * opcode_hash_control;	/* Opcode mnemonics */
+ 
+ /*static int dont_use_small = 0; If 0, assume that data and comm section are small data sections */
+-static segT sbss_segment = 0; /* Small bss section */
+-static segT sbss2_segment = 0; /* Small bss section */
+-static segT sdata_segment = 0; /* Small data section */
++static segT sbss_segment = 0; 	/* Small bss section */
++static segT sdata_segment = 0; 	/* Small data section */
+ static segT sdata2_segment = 0; /* Small read-only section */
+ static segT rodata_segment = 0; /* read-only section */
+ 
+@@ -2194,8 +2193,6 @@ int
+ md_estimate_size_before_relax (register fragS * fragP,
+ 			       register segT segment_type)
+ {
+-   sbss_segment = bfd_get_section_by_name (stdoutput, ".sbss");
+-   sbss2_segment = bfd_get_section_by_name (stdoutput, ".sbss2");
+    sdata_segment = bfd_get_section_by_name (stdoutput, ".sdata");
+    sdata2_segment = bfd_get_section_by_name (stdoutput, ".sdata2");
+ 
+@@ -2247,7 +2244,7 @@ md_estimate_size_before_relax (register fragS * fragP,
+             fragP->fr_var = INST_WORD_SIZE*2;
+          } else if (!strcmp(fragP->fr_opcode, str_microblaze_ro_anchor)) {
+             /* It is accessed using the small data read only anchor */
+-            if ((S_GET_SEGMENT (fragP->fr_symbol) == sbss2_segment) ||
++            if ((S_GET_SEGMENT (fragP->fr_symbol) == &bfd_com_section) ||
+                 (S_GET_SEGMENT (fragP->fr_symbol) == sdata2_segment) ||
+                 (! S_IS_DEFINED (fragP->fr_symbol))) {
+                fragP->fr_subtype = DEFINED_RO_SEGMENT;
+@@ -2261,7 +2258,7 @@ md_estimate_size_before_relax (register fragS * fragP,
+                fragP->fr_var = INST_WORD_SIZE;
+             }
+          } else if (!strcmp(fragP->fr_opcode, str_microblaze_rw_anchor)) { 
+-            if ((S_GET_SEGMENT (fragP->fr_symbol) == sbss_segment) ||
++            if ((S_GET_SEGMENT (fragP->fr_symbol) == &bfd_com_section) ||
+                 (S_GET_SEGMENT (fragP->fr_symbol) == sdata_segment) ||
+                 (! S_IS_DEFINED (fragP->fr_symbol))) {
+                /* It is accessed using the small data read write anchor */
+-- 
+1.5.3.8
+

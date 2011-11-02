@@ -1,0 +1,45 @@
+From 2241ceb8d737f0ae7e153206fe06915c3c1094c5 Mon Sep 17 00:00:00 2001
+From: Vasanth <vasanth@xilinx.com>
+Date: Wed, 6 Aug 2008 10:26:35 -0700
+Subject: [PATCH 1/3] binutils: Add atomic load store insns
+
+Add lwx, swx opcodes.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ opcodes/microblaze-opc.h  |    2 ++
+ opcodes/microblaze-opcm.h |    2 +-
+ 2 files changed, 3 insertions(+), 1 deletions(-)
+
+diff --git a/opcodes/microblaze-opc.h b/opcodes/microblaze-opc.h
+index 6d4f7fe..f5250ea 100644
+--- a/opcodes/microblaze-opc.h
++++ b/opcodes/microblaze-opc.h
+@@ -225,9 +225,11 @@ struct op_code_struct {
+   {"lbu",   INST_TYPE_RD_R1_R2, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0xC0000000, OPCODE_MASK_H4, lbu, memory_load_inst },
+   {"lhu",   INST_TYPE_RD_R1_R2, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0xC4000000, OPCODE_MASK_H4, lhu, memory_load_inst },
+   {"lw",    INST_TYPE_RD_R1_R2, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0xC8000000, OPCODE_MASK_H4, lw, memory_load_inst },
++  {"lwx",   INST_TYPE_RD_R1_R2, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0xC8000400, OPCODE_MASK_H4, lwx, memory_load_inst },
+   {"sb",    INST_TYPE_RD_R1_R2, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0xD0000000, OPCODE_MASK_H4, sb, memory_store_inst },
+   {"sh",    INST_TYPE_RD_R1_R2, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0xD4000000, OPCODE_MASK_H4, sh, memory_store_inst },
+   {"sw",    INST_TYPE_RD_R1_R2, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0xD8000000, OPCODE_MASK_H4, sw, memory_store_inst },
++  {"swx",   INST_TYPE_RD_R1_R2, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0xD8000400, OPCODE_MASK_H4, swx, memory_store_inst },
+   {"lbui",  INST_TYPE_RD_R1_IMM, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0xE0000000, OPCODE_MASK_H, lbui, memory_load_inst },
+   {"lhui",  INST_TYPE_RD_R1_IMM, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0xE4000000, OPCODE_MASK_H, lhui, memory_load_inst },
+   {"lwi",   INST_TYPE_RD_R1_IMM, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0xE8000000, OPCODE_MASK_H, lwi, memory_load_inst },
+diff --git a/opcodes/microblaze-opcm.h b/opcodes/microblaze-opcm.h
+index 9210dec..eeb0e82 100644
+--- a/opcodes/microblaze-opcm.h
++++ b/opcodes/microblaze-opcm.h
+@@ -30,7 +30,7 @@ enum microblaze_instr {
+    bltd, ble, bled, bgt, bgtd, bge, bged, ori, andi, xori, andni,
+    imm, rtsd, rtid, rtbd, rted, bri, brid, brlid, brai, braid, bralid,
+    brki, beqi, beqid, bnei, bneid, blti, bltid, blei, bleid, bgti,
+-   bgtid, bgei, bgeid, lbu, lhu, lw, sb, sh, sw, lbui, lhui, lwi,
++   bgtid, bgei, bgeid, lbu, lhu, lw, lwx, sb, sh, sw, swx, lbui, lhui, lwi,
+    sbi, shi, swi, msrset, msrclr, tuqula, fadd, frsub, fmul, fdiv, 
+    fcmp_lt, fcmp_eq, fcmp_le, fcmp_gt, fcmp_ne, fcmp_ge, fcmp_un, flt, fint, fsqrt, 
+    tget, tcget, tnget, tncget, tput, tcput, tnput, tncput,
+-- 
+1.5.5.1
+

@@ -1,0 +1,30 @@
+From 271c0bf448bb46054218036e39cd5ecf3498c1eb Mon Sep 17 00:00:00 2001
+Message-Id: <271c0bf448bb46054218036e39cd5ecf3498c1eb.1241484031.git.john.williams@petalogix.com>
+In-Reply-To: <4c1022f018b2f64f88e2cbd4788085f347490488.1241484030.git.john.williams@petalogix.com>
+References: <4c1022f018b2f64f88e2cbd4788085f347490488.1241484030.git.john.williams@petalogix.com>
+From: John Williams <john.williams@petalogix.com>
+Date: Mon, 27 Apr 2009 16:06:09 +1000
+Subject: [PATCH 35/40] microblaze:Get correct reloc for local sym
+
+---
+ bfd/elf32-microblaze.c |    4 +---
+ 1 files changed, 1 insertions(+), 3 deletions(-)
+
+diff --git a/bfd/elf32-microblaze.c b/bfd/elf32-microblaze.c
+index 8b7e60f..0eef7e1 100644
+--- a/bfd/elf32-microblaze.c
++++ b/bfd/elf32-microblaze.c
+@@ -1331,9 +1331,7 @@ microblaze_elf_relax_section (bfd *abfd, asection *sec,
+ 	   else
+ 	    sym_sec = bfd_section_from_elf_index (abfd, isym->st_shndx);
+ 
+-	   symval = (isym->st_value
+-		     + sym_sec->output_section->vma
+-		     + sym_sec->output_offset);
++	   symval = _bfd_elf_rela_local_sym (abfd, isym, &sym_sec, irel);
+ 	 }
+        else
+ 	 {
+-- 
+1.5.3.8
+

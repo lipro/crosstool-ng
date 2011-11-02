@@ -1,0 +1,41 @@
+From 30d988f995f9706d58bb97604a095b7042bb2e36 Mon Sep 17 00:00:00 2001
+Message-Id: <30d988f995f9706d58bb97604a095b7042bb2e36.1241484031.git.john.williams@petalogix.com>
+In-Reply-To: <4c1022f018b2f64f88e2cbd4788085f347490488.1241484030.git.john.williams@petalogix.com>
+References: <4c1022f018b2f64f88e2cbd4788085f347490488.1241484030.git.john.williams@petalogix.com>
+From: John Williams <john.williams@petalogix.com>
+Date: Mon, 27 Apr 2009 16:05:30 +1000
+Subject: [PATCH 24/40] microblaze:Fix max allowed values with msrclr/set instructions
+
+---
+ opcodes/microblaze-opc.h  |    2 +-
+ opcodes/microblaze-opcm.h |    2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/opcodes/microblaze-opc.h b/opcodes/microblaze-opc.h
+index d35e9d5..6d4f7fe 100644
+--- a/opcodes/microblaze-opc.h
++++ b/opcodes/microblaze-opc.h
+@@ -404,7 +404,7 @@ char pvr_register_prefix[] = "rpvr";
+ #define MAX_IMM  ((int) 0x7fffffff)
+ 
+ #define MIN_IMM15 ((int) 0x0000)
+-#define MAX_IMM15 ((int) 0x1fff)
++#define MAX_IMM15 ((int) 0x7fff)
+ 
+ #endif /* MICROBLAZE_OPC */
+ 
+diff --git a/opcodes/microblaze-opcm.h b/opcodes/microblaze-opcm.h
+index 43e5d70..9210dec 100644
+--- a/opcodes/microblaze-opcm.h
++++ b/opcodes/microblaze-opcm.h
+@@ -125,6 +125,6 @@ enum microblaze_instr_type {
+ #define  RFSL_MASK 0x000000F
+ 
+ // imm mask for msrset, msrclr instructions
+-#define  IMM15_MASK 0x00003FFF
++#define  IMM15_MASK 0x00007FFF
+ 
+ #endif /* MICROBLAZE-OPCM */
+-- 
+1.5.3.8
+
