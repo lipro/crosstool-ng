@@ -153,6 +153,22 @@ config TOOLCHAIN_TYPE
     default "cross-native"  if CROSS_NATIVE
     default "canadian"      if CANADIAN
 
+config TOOLCHAIN_PTXDIST_APPROP
+    bool
+    prompt "PTXdist appropriability"
+    help
+      Enable the PTXdist appropriability regime to be able
+      to use the generated tool chain out of the box with
+      the Linux build system environment PTXdist.
+
+      This will generate the file ptxconfig in PREFIX_DIR/bin.
+
+config TOOLCHAIN_PTXDIST_APPROP_EXTENSION
+    string
+    depends on TOOLCHAIN_PTXDIST_APPROP
+    prompt "PTXCONF_PROJECT string extension (optional)
+    default ""
+
 comment "Build system"
 
 config BUILD 
