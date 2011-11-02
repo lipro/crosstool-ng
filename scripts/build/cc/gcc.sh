@@ -156,7 +156,7 @@ do_cc_core() {
         --target=${CT_TARGET}                       \
         --prefix="${core_prefix_dir}"               \
         --with-local-prefix="${CT_SYSROOT_DIR}"     \
-        --disable-multilib                          \
+        ${CT_MULTILIB_STRING}                       \
         ${CC_CORE_SYSROOT_ARG}                      \
         ${extra_config}                             \
         --disable-nls                               \
@@ -265,7 +265,7 @@ do_cc() {
     lang_opt=$(echo "${lang_opt},${CT_CC_LANG_OTHERS}" |sed -r -e 's/,+/,/g; s/,*$//;')
 
     extra_config="--enable-languages=${lang_opt}"
-    extra_config="${extra_config} --disable-multilib"
+    extra_config="${extra_config} ${CT_MULTILIB_STRING}"
     extra_config="${extra_config} ${CT_ARCH_WITH_ARCH}"
     extra_config="${extra_config} ${CT_ARCH_WITH_ABI}"
     extra_config="${extra_config} ${CT_ARCH_WITH_CPU}"

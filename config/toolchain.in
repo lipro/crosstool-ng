@@ -28,6 +28,21 @@ config SYSROOT_DIR_PREFIX
       In fact, the sysroot path is constructed as:
         ${CT_PREFIX_DIR}/${CT_TARGET}/${CT_SYSROOT_DIR_PREFIX}/sys-root
 
+config ENABLE_MULTILIB
+    bool
+    prompt "Enable mutliple libraries"
+    default n
+    help
+      Say 'y' here, unless you don't want multiple libraries.
+
+      This is the GCC/Newlib feature that precompiles variations of your
+      libraries using combinations of popular options for your processor.
+
+config MULTILIB_STRING
+    string
+    default "--disable-multilib" if !ENABLE_MULTILIB
+    default "--enable-multilib"  if  ENABLE_MULTILIB
+
 config SHARED_LIBS
     bool
     prompt "Build shared libraries"
