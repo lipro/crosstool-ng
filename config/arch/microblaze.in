@@ -1,0 +1,9 @@
+# MicroBlaze specific configuration file
+
+config ARCH_microblaze
+    select ARCH_SUPPORTS_BOTH_ENDIAN
+    select ARCH_DEFAULT_BE
+    select ARCH_SUPPORT_ARCH
+    help
+      The MicroBlaze architecture, as defined by:
+        http://www.xilinx.com/
