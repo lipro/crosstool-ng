@@ -166,7 +166,7 @@ config TOOLCHAIN_PTXDIST_APPROP
 config TOOLCHAIN_PTXDIST_APPROP_EXTENSION
     string
     depends on TOOLCHAIN_PTXDIST_APPROP
-    prompt "PTXCONF_PROJECT string extension (optional)
+    prompt "PTXCONF_PROJECT string extension (optional)"
     default ""
 
 comment "Build system"
