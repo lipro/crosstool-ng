@@ -433,7 +433,7 @@ if [ -z "${CT_RESTART}" ]; then
     if [ "${CT_TOOLCHAIN_PTXDIST_APPROP}" = "y" ]; then
         CT_DoLog EXTRA "Installing PTXdist appropriability"
         if [ -n "${CT_TOOLCHAIN_PTXDIST_APPROP_EXTENSION}" ]; then
-            echo "PTXCONF_PROJECT=\"crosstool-${CT_TOOLCHAIN_PTXDIST_APPROP_EXTENSION} (${CT_VERSION})\"" >>"${CT_PREFIX_DIR}/bin/ptxconfig"
+            echo "PTXCONF_PROJECT=\"${CT_TOOLCHAIN_PTXDIST_APPROP_EXTENSION} (crosstool-${CT_VERSION})\"" >>"${CT_PREFIX_DIR}/bin/ptxconfig"
         else
             echo "PTXCONF_PROJECT=\"crosstool-${CT_VERSION} (${CT_STAR_DATE_HUMAN})\"" >>"${CT_PREFIX_DIR}/bin/ptxconfig"
         fi
