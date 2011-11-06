@@ -1,0 +1,654 @@
+From 347c8bcbab59b59771573a05fa51d93ab49c4349 Mon Sep 17 00:00:00 2001
+From: Stephan Linz <linz@li-pro.net>
+Date: Sun, 6 Nov 2011 00:36:37 +0100
+Subject: [Xilinx] gdb: Add clz, mbar instructions and stack protection feature
+
+Added clz, mbar instruction support in gdb
+Added support for the two newly added stack protection register (SLR/SHR) in GDB
+
+Recreate from http://git.xilinx.com/?p=mb_gnu.git;a=history;f=src/gdb
+  - 00137ae29542dec551102bb036fcd1fc56669e26
+
+Signed-off-by Kishore <kkatna@xilinx.com>
+Signed-off-by: Stephan Linz <linz@li-pro.net>
+
+diff --git a/gdb/config/microblaze/tm-microblaze.h b/gdb/config/microblaze/tm-microblaze.h
+index 0c3d38b..ca81a04 100644
+--- a/gdb/config/microblaze/tm-microblaze.h
++++ b/gdb/config/microblaze/tm-microblaze.h
+@@ -19,15 +19,15 @@
+    Boston, MA 02111-1307, USA. */
+ 
+ /*
+- * Copyright (c) 2001 Xilinx, Inc.  All rights reserved. 
++ * Copyright (c) 2001 Xilinx, Inc.  All rights reserved.
+  *
+  * Redistribution and use in source and binary forms are permitted
+  * provided that the above copyright notice and this paragraph are
+  * duplicated in all such forms and that any documentation,
+  * advertising materials, and other materials related to such
+  * distribution and use acknowledge that the software was developed
+- * by Xilinx, Inc.  The name of the Company may not be used to endorse 
+- * or promote products derived from this software without specific prior 
++ * by Xilinx, Inc.  The name of the Company may not be used to endorse
++ * or promote products derived from this software without specific prior
+  * written permission.
+  * THIS SOFTWARE IS PROVIDED ``AS IS'' AND WITHOUT ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED
+@@ -62,9 +62,10 @@
+     6 32-bit special registers (pc, msr, ear, esr, fsr, btr)
+    12 32-bit PVR
+     5 32-bit MMU Regs
++    2 32-bit Stack registers (slr, shr)
+    ------
+-   55 registers */
+-#define NUM_REGS 55
++   57 registers */
++#define NUM_REGS 57
+ #define PC_REGNUM 32
+ #define MSR_REGNUM 33
+ #define EAR_REGNUM 34
+@@ -83,7 +84,7 @@
+ 
+ /*
+ #ifndef WIN
+-#define FP_REGNUM 35 
++#define FP_REGNUM 35
+ #endif
+ */
+ 
+@@ -169,7 +170,7 @@ extern CORE_ADDR microblaze_frame_locals_address (struct frame_info *fi);
+ extern void microblaze_pop_frame (struct frame_info *fi);
+ #define POP_FRAME microblaze_pop_frame (get_current_frame ())
+ 
+-#define USE_GENERIC_DUMMY_FRAMES 1 
++#define USE_GENERIC_DUMMY_FRAMES 1
+ #define CALL_DUMMY                   {0}
+ #define CALL_DUMMY_START_OFFSET      (0)
+ /*#define CALL_DUMMY_BREAKPOINT_OFFSET (0)*/
+diff --git a/gdb/microblaze-tdep.c b/gdb/microblaze-tdep.c
+index d308b4a..a4b21a7 100644
+--- a/gdb/microblaze-tdep.c
++++ b/gdb/microblaze-tdep.c
+@@ -87,7 +87,7 @@ static const char *microblaze_register_names[] =
+   "rpc",  "rmsr", "rear", "resr", "rfsr", "rbtr", 
+   "rpvr0", "rpvr1", "rpvr2", "rpvr3", "rpvr4", "rpvr5", "rpvr6",
+   "rpvr7", "rpvr8", "rpvr9", "rpvr10", "rpvr11",
+-  "redr", "rpid", "rzpr", "rtlbx", "rtlbsx"
++  "redr", "rpid", "rzpr", "rtlbx", "rtlbsx", "rslr", "rshr"
+ };
+ 
+ static const gdb_byte big_break_insn[] = BIG_BREAKPOINT;
+diff --git a/gdb/microblaze-tdep.h b/gdb/microblaze-tdep.h
+index 9495f23..b4cdab6 100644
+--- a/gdb/microblaze-tdep.h
++++ b/gdb/microblaze-tdep.h
+@@ -108,7 +108,9 @@ enum microblaze_regnum
+   MICROBLAZE_PVR8_REGNUM,
+   MICROBLAZE_PVR9_REGNUM,
+   MICROBLAZE_PVR10_REGNUM,
+-  MICROBLAZE_PVR11_REGNUM
++  MICROBLAZE_PVR11_REGNUM,
++  MICROBLAZE_SLR_REGNUM,
++  MICROBLAZE_SHR_REGNUM
+ };
+ 
+ /* The base of the current frame is actually in the stack pointer.
+diff --git a/opcodes/microblaze-dis.c b/opcodes/microblaze-dis.c
+index 27b0e57..faea603 100644
+--- a/opcodes/microblaze-dis.c
++++ b/opcodes/microblaze-dis.c
+@@ -16,15 +16,15 @@ along with this program; if not, write to the Free Software
+ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.  */
+ 
+ /*
+- * Copyright (c) 2001 Xilinx, Inc.  All rights reserved. 
++ * Copyright (c) 2001 Xilinx, Inc.  All rights reserved.
+  *
+  * Redistribution and use in source and binary forms are permitted
+  * provided that the above copyright notice and this paragraph are
+  * duplicated in all such forms and that any documentation,
+  * advertising materials, and other materials related to such
+  * distribution and use acknowledge that the software was developed
+- * by Xilinx, Inc.  The name of the Company may not be used to endorse 
+- * or promote products derived from this software without specific prior 
++ * by Xilinx, Inc.  The name of the Company may not be used to endorse
++ * or promote products derived from this software without specific prior
+  * written permission.
+  * THIS SOFTWARE IS PROVIDED ``AS IS'' AND WITHOUT ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED
+@@ -55,8 +55,9 @@ static char * get_field_imm (long instr);
+ static char * get_field_imm5 (long instr);
+ static char * get_field_rfsl (long instr);
+ static char * get_field_imm15 (long instr);
++static char * get_field_imm5_mbar (long instr);
+ char * get_field_special (long instr, struct op_code_struct * op);
+-unsigned long read_insn_microblaze (bfd_vma memaddr, 
++unsigned long read_insn_microblaze (bfd_vma memaddr,
+ 		      struct disassemble_info *info,
+ 		      struct op_code_struct **opr);
+ enum microblaze_instr get_insn_microblaze (long inst,
+@@ -65,9 +66,9 @@ enum microblaze_instr get_insn_microblaze (long inst,
+   		     short *delay_slots);
+ short get_delay_slots_microblaze (long inst);
+ enum microblaze_instr microblaze_decode_insn (long insn,
+-		        int *rd, 
+-			int *ra, 
+-			int *rb, 
++		        int *rd,
++			int *ra,
++			int *rb,
+ 			int *imm);
+ unsigned long
+ microblaze_get_target_address (long inst,
+@@ -104,6 +105,14 @@ get_field_imm5 (long instr)
+ }
+ 
+ static char *
++get_field_imm5_mbar (long instr)
++{
++  char tmpstr[25];
++  sprintf(tmpstr, "%d", (short)((instr & IMM5_MBAR_MASK) >> IMM_MBAR));
++  return(strdup(tmpstr));
++}
++
++static char *
+ get_field_rfsl (long instr)
+ {
+   char tmpstr[25];
+@@ -121,13 +130,13 @@ get_field_imm15 (long instr)
+ 
+ /*
+   char *
+-  get_field_special (instr) 
++  get_field_special (instr)
+   long instr;
+   {
+   char tmpstr[25];
+-  
++
+   sprintf(tmpstr, "%s%s", register_prefix, (((instr & IMM_MASK) >> IMM_LOW) & REG_MSR_MASK) == 0 ? "pc" : "msr");
+-  
++
+   return(strdup(tmpstr));
+   }
+ */
+@@ -138,7 +147,7 @@ get_field_special (long instr, struct op_code_struct * op)
+    char tmpstr[25];
+    char spr[6];
+ 
+-   switch ( (((instr & IMM_MASK) >> IMM_LOW) ^ op->immval_mask) ) {
++   switch ((((instr & IMM_MASK) >> IMM_LOW) ^ op->immval_mask) ) {
+ 
+    case REG_MSR_MASK :
+       strcpy(spr, "msr");
+@@ -157,7 +166,7 @@ get_field_special (long instr, struct op_code_struct * op)
+       break;
+    case REG_BTR_MASK :
+       strcpy(spr, "btr");
+-      break;      
++      break;
+    case REG_EDR_MASK :
+       strcpy(spr, "edr");
+       break;
+@@ -179,6 +188,12 @@ get_field_special (long instr, struct op_code_struct * op)
+    case REG_TLBSX_MASK :
+       strcpy(spr, "tlbsx");
+       break;
++   case REG_SHR_MASK :
++      strcpy(spr, "shr");
++      break;
++   case REG_SLR_MASK :
++      strcpy(spr, "slr");
++      break;
+    default :
+      {
+        if ( ((((instr & IMM_MASK) >> IMM_LOW) ^ op->immval_mask) & 0xE000) == REG_PVR_MASK) {
+@@ -190,13 +205,13 @@ get_field_special (long instr, struct op_code_struct * op)
+      }
+      break;
+    }
+-   
++
+    sprintf(tmpstr, "%s%s", register_prefix, spr);
+    return(strdup(tmpstr));
+ }
+ 
+ unsigned long
+-read_insn_microblaze (bfd_vma memaddr, 
++read_insn_microblaze (bfd_vma memaddr,
+ 		      struct disassemble_info *info,
+ 		      struct op_code_struct **opr)
+ {
+@@ -207,7 +222,7 @@ read_insn_microblaze (bfd_vma memaddr,
+ 
+   status = info->read_memory_func (memaddr, ibytes, 4, info);
+ 
+-  if (status != 0) 
++  if (status != 0)
+     {
+       info->memory_error_func (status, memaddr, info);
+       return 0;
+@@ -230,7 +245,7 @@ read_insn_microblaze (bfd_vma memaddr,
+ }
+ 
+ 
+-int 
++int
+ print_insn_microblaze (bfd_vma memaddr, struct disassemble_info * info)
+ {
+   fprintf_ftype       fprintf = info->fprintf_func;
+@@ -249,7 +264,7 @@ print_insn_microblaze (bfd_vma memaddr, struct disassemble_info * info)
+   if (inst == 0) {
+     return -1;
+   }
+-  
++
+   if (prev_insn_vma == curr_insn_vma) {
+   if (memaddr-(info->bytes_per_chunk) == prev_insn_addr) {
+     prev_inst = read_insn_microblaze (prev_insn_addr, info, &pop);
+@@ -275,7 +290,7 @@ print_insn_microblaze (bfd_vma memaddr, struct disassemble_info * info)
+   else
+     {
+       fprintf (stream, "%s", op->name);
+-      
++
+       switch (op->inst_type)
+ 	{
+   case INST_TYPE_RD_R1_R2:
+@@ -320,7 +335,7 @@ print_insn_microblaze (bfd_vma memaddr, struct disassemble_info * info)
+ 	  break;
+ 	case INST_TYPE_R1_IMM:
+ 	  fprintf(stream, "\t%s, %s", get_field_r1(inst), get_field_imm(inst));
+-	  /* The non-pc relative instructions are returns, which shouldn't 
++	  /* The non-pc relative instructions are returns, which shouldn't
+ 	     have a label printed */
+ 	  if (info->print_address_func && op->inst_offset_type == INST_PC_OFFSET && info->symbol_at_address_func) {
+ 	    if (immfound)
+@@ -355,7 +370,7 @@ print_insn_microblaze (bfd_vma memaddr, struct disassemble_info * info)
+ 	    if (info->symbol_at_address_func(immval, info)) {
+ 	      fprintf (stream, "\t// ");
+ 	      info->print_address_func (immval, info);
+-	    } 
++	    }
+ 	  }
+ 	  break;
+         case INST_TYPE_IMM:
+@@ -394,6 +409,10 @@ print_insn_microblaze (bfd_vma memaddr, struct disassemble_info * info)
+   case INST_TYPE_RD_IMM15:
+      fprintf(stream, "\t%s, %s", get_field_rd(inst), get_field_imm15(inst));
+      break;
++  /* For mbar instruction */
++  case INST_TYPE_IMM5:
++     fprintf(stream, "\t%s",get_field_imm5_mbar(inst));
++     break;
+      /* For tuqula instruction */
+   case INST_TYPE_RD:
+      fprintf(stream, "\t%s", get_field_rd(inst));
+@@ -401,13 +420,14 @@ print_insn_microblaze (bfd_vma memaddr, struct disassemble_info * info)
+   case INST_TYPE_RFSL:
+      fprintf(stream, "\t%s", get_field_rfsl(inst));
+      break;
++
+   default:
+ 	  /* if the disassembler lags the instruction set */
+-    fprintf (stream, "\tundecoded operands, inst is 0x%04x", (unsigned short)inst);
++	  fprintf (stream, "\tundecoded operands, inst is 0x%04x", (unsigned short)inst);
+ 	  break;
+ 	}
+     }
+-  
++
+   /* Say how many bytes we consumed? */
+   return 4;
+ }
+@@ -447,15 +467,15 @@ get_delay_slots_microblaze (long inst)
+   op = get_insn_microblaze( inst, &isunsignedimm, &insn_type, &delay_slots);
+   if (op == invalid_inst)
+     return 0;
+-  else 
++  else
+     return delay_slots;
+ }
+ 
+ enum microblaze_instr
+ microblaze_decode_insn (long insn,
+-		        int *rd, 
+-			int *ra, 
+-			int *rb, 
++		        int *rd,
++			int *ra,
++			int *rb,
+ 			int *imm)
+ {
+   enum microblaze_instr op;
+diff --git a/opcodes/microblaze-opc.h b/opcodes/microblaze-opc.h
+index 2e6b5dd..5347653 100644
+--- a/opcodes/microblaze-opc.h
++++ b/opcodes/microblaze-opc.h
+@@ -3,7 +3,7 @@
+ /* Assembler instructions for Xilinx's microblaze processor
+    Copyright (C) 1999, 2000 Free Software Foundation, Inc.
+ 
+-   
++
+ This program is free software; you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation; either version 2 of the License, or
+@@ -19,15 +19,15 @@ along with this program; if not, write to the Free Software
+ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.  */
+ 
+ /*
+- * Copyright (c) 2001 Xilinx, Inc.  All rights reserved. 
++ * Copyright (c) 2001 Xilinx, Inc.  All rights reserved.
+  *
+  * Redistribution and use in source and binary forms are permitted
+  * provided that the above copyright notice and this paragraph are
+  * duplicated in all such forms and that any documentation,
+  * advertising materials, and other materials related to such
+  * distribution and use acknowledge that the software was developed
+- * by Xilinx, Inc.  The name of the Company may not be used to endorse 
+- * or promote products derived from this software without specific prior 
++ * by Xilinx, Inc.  The name of the Company may not be used to endorse
++ * or promote products derived from this software without specific prior
+  * written permission.
+  * THIS SOFTWARE IS PROVIDED ``AS IS'' AND WITHOUT ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED
+@@ -68,7 +68,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.  */
+ 
+ // new insn type for t*put
+ #define INST_TYPE_RFSL  19
+-
++#define INST_TYPE_IMM5 20
+ #define INST_TYPE_NONE 25
+ 
+ 
+@@ -85,25 +85,27 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.  */
+ #define OPCODE_MASK_H2  0xFC1F0000 /* High 6 and bits 20-16 */
+ #define OPCODE_MASK_H12 0xFFFF0000 /* High 16 */
+ #define OPCODE_MASK_H4  0xFC0007FF /* High 6 and low 11 bits */
+-#define OPCODE_MASK_H13S 0xFFE0EFF0 /* High 11 and 15:1 bits and last nibble of last byte for spr */
++#define OPCODE_MASK_H13S 0xFFE0E7F0 /* High 11 16:18 21:27 bits -- 19:20 bits and last nibble of last byte for spr */
+ #define OPCODE_MASK_H23S 0xFC1FC000 /* High 6, 20-16 and 15:1 bits and last nibble of last byte for spr */
+ #define OPCODE_MASK_H34 0xFC00FFFF /* High 6 and low 16 bits */
+ #define OPCODE_MASK_H14 0xFFE007FF /* High 11 and low 11 bits */
+ #define OPCODE_MASK_H24 0xFC1F07FF /* High 6, bits 20-16 and low 11 bits */
+ #define OPCODE_MASK_H124  0xFFFF07FF /* High 16, and low 11 bits */
+ #define OPCODE_MASK_H1234 0xFFFFFFFF /* All 32 bits */
+-#define OPCODE_MASK_H3  0xFC000600 /* High 6 bits and bits 21, 22 */  
++#define OPCODE_MASK_H3  0xFC000600 /* High 6 bits and bits 21, 22 */
+ #define OPCODE_MASK_H32 0xFC00FC00 /* High 6 bits and bit 16-21 */
+ #define OPCODE_MASK_H34B   0xFC0000FF /* High 6 bits and low 8 bits */
+ #define OPCODE_MASK_H34C   0xFC0007E0 /* High 6 bits and bits 21-26 */
+ 
+ // New Mask for msrset, msrclr insns.
+ #define OPCODE_MASK_H23N  0xFC1F8000 /* High 6 and bits 11 - 16 */
++// New Mask for mbar instruction.
++#define OPCODE_MASK_HN 0xFC020004 /* High 6 bits and bits 14, 29 */
+ 
+ #define DELAY_SLOT 1
+ #define NO_DELAY_SLOT 0
+ 
+-#define MAX_OPCODES 284
++#define MAX_OPCODES 286
+ 
+ struct op_code_struct {
+   char *name;
+@@ -111,14 +113,14 @@ struct op_code_struct {
+   short inst_offset_type; /* immediate vals offset from PC? (= 1 for branches) */
+   short delay_slots; /* info about delay slots needed after this instr. */
+   short immval_mask;
+-  unsigned long bit_sequence; /* all the fixed bits for the op are set and all the variable bits (reg names, imm vals) are set to 0 */ 
++  unsigned long bit_sequence; /* all the fixed bits for the op are set and all the variable bits (reg names, imm vals) are set to 0 */
+   unsigned long opcode_mask; /* which bits define the opcode */
+   enum microblaze_instr instr;
+   enum microblaze_instr_type instr_type;
+   /* more info about output format here */
+-} opcodes[MAX_OPCODES] = 
++} opcodes[MAX_OPCODES] =
+ 
+-{ 
++{
+   {"add",   INST_TYPE_RD_R1_R2, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x00000000, OPCODE_MASK_H4, add, arithmetic_inst },
+   {"rsub",  INST_TYPE_RD_R1_R2, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x04000000, OPCODE_MASK_H4, rsub, arithmetic_inst },
+   {"addc",  INST_TYPE_RD_R1_R2, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x08000000, OPCODE_MASK_H4, addc, arithmetic_inst },
+@@ -173,7 +175,9 @@ struct op_code_struct {
+   {"sext16",INST_TYPE_RD_R1, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x90000061, OPCODE_MASK_H34, sext16, logical_inst },
+   {"wic",   INST_TYPE_R1_R2_SPECIAL, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x90000068, OPCODE_MASK_H34B, wic, special_inst },
+   {"wdc",   INST_TYPE_R1_R2_SPECIAL, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x90000064, OPCODE_MASK_H34B, wdc, special_inst },
+-  {"wdc.clear", INST_TYPE_R1_R2_SPECIAL, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x90000066, OPCODE_MASK_H34B, wdcclear, special_inst },    
++  {"mbar",  INST_TYPE_IMM5, INST_PC_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0xB8020004, OPCODE_MASK_HN, mbar,
++  special_inst },
++  {"wdc.clear", INST_TYPE_R1_R2_SPECIAL, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x90000066, OPCODE_MASK_H34B, wdcclear, special_inst },
+   {"wdc.flush", INST_TYPE_R1_R2_SPECIAL, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x90000074, OPCODE_MASK_H34B, wdcflush, special_inst },
+   {"mts",   INST_TYPE_SPECIAL_R1, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_MTS, 0x9400C000, OPCODE_MASK_H13S, mts, special_inst },
+   {"mfs",   INST_TYPE_RD_SPECIAL, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_MFS, 0x94008000, OPCODE_MASK_H23S, mfs, special_inst },
+@@ -225,18 +229,18 @@ struct op_code_struct {
+   {"bgei",  INST_TYPE_R1_IMM, INST_PC_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0xBCA00000, OPCODE_MASK_H1, bgei, branch_inst },
+   {"bgeid", INST_TYPE_R1_IMM, INST_PC_OFFSET, DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0xBEA00000, OPCODE_MASK_H1, bgeid, branch_inst },
+   {"lbu",   INST_TYPE_RD_R1_R2, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0xC0000000, OPCODE_MASK_H4, lbu, memory_load_inst },
+-  {"lbur",  INST_TYPE_RD_R1_R2, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0xC0000200, OPCODE_MASK_H4, lbur, memory_load_inst }, 
++  {"lbur",  INST_TYPE_RD_R1_R2, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0xC0000200, OPCODE_MASK_H4, lbur, memory_load_inst },
+   {"lhu",   INST_TYPE_RD_R1_R2, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0xC4000000, OPCODE_MASK_H4, lhu, memory_load_inst },
+-  {"lhur",  INST_TYPE_RD_R1_R2, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0xC4000200, OPCODE_MASK_H4, lhur, memory_load_inst }, 
++  {"lhur",  INST_TYPE_RD_R1_R2, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0xC4000200, OPCODE_MASK_H4, lhur, memory_load_inst },
+   {"lw",    INST_TYPE_RD_R1_R2, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0xC8000000, OPCODE_MASK_H4, lw, memory_load_inst },
+-  {"lwr",   INST_TYPE_RD_R1_R2, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0xC8000200, OPCODE_MASK_H4, lwr, memory_load_inst },  
++  {"lwr",   INST_TYPE_RD_R1_R2, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0xC8000200, OPCODE_MASK_H4, lwr, memory_load_inst },
+   {"lwx",   INST_TYPE_RD_R1_R2, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0xC8000400, OPCODE_MASK_H4, lwx, memory_load_inst },
+   {"sb",    INST_TYPE_RD_R1_R2, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0xD0000000, OPCODE_MASK_H4, sb, memory_store_inst },
+-  {"sbr",   INST_TYPE_RD_R1_R2, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0xD0000200, OPCODE_MASK_H4, sbr, memory_store_inst }, 
++  {"sbr",   INST_TYPE_RD_R1_R2, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0xD0000200, OPCODE_MASK_H4, sbr, memory_store_inst },
+   {"sh",    INST_TYPE_RD_R1_R2, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0xD4000000, OPCODE_MASK_H4, sh, memory_store_inst },
+-  {"shr",   INST_TYPE_RD_R1_R2, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0xD4000200, OPCODE_MASK_H4, shr, memory_store_inst }, 
++  {"shr",   INST_TYPE_RD_R1_R2, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0xD4000200, OPCODE_MASK_H4, shr, memory_store_inst },
+   {"sw",    INST_TYPE_RD_R1_R2, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0xD8000000, OPCODE_MASK_H4, sw, memory_store_inst },
+-  {"swr",   INST_TYPE_RD_R1_R2, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0xD8000200, OPCODE_MASK_H4, swr, memory_store_inst }, 
++  {"swr",   INST_TYPE_RD_R1_R2, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0xD8000200, OPCODE_MASK_H4, swr, memory_store_inst },
+   {"swx",   INST_TYPE_RD_R1_R2, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0xD8000400, OPCODE_MASK_H4, swx, memory_store_inst },
+   {"lbui",  INST_TYPE_RD_R1_IMM, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0xE0000000, OPCODE_MASK_H, lbui, memory_load_inst },
+   {"lhui",  INST_TYPE_RD_R1_IMM, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0xE4000000, OPCODE_MASK_H, lhui, memory_load_inst },
+@@ -277,7 +281,7 @@ struct op_code_struct {
+   {"tcput",  INST_TYPE_RFSL,    INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C00B000, OPCODE_MASK_H32, tcput,  anyware_inst },
+   {"tnput",  INST_TYPE_RFSL,    INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C00D000, OPCODE_MASK_H32, tnput,  anyware_inst },
+   {"tncput", INST_TYPE_RFSL,    INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C00F000, OPCODE_MASK_H32, tncput, anyware_inst },
+- 
++
+   {"eget",   INST_TYPE_RD_RFSL,  INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C000400, OPCODE_MASK_H32, eget,   anyware_inst },
+   {"ecget",  INST_TYPE_RD_RFSL,  INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C002400, OPCODE_MASK_H32, ecget,  anyware_inst },
+   {"neget",  INST_TYPE_RD_RFSL,  INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C004400, OPCODE_MASK_H32, neget,  anyware_inst },
+@@ -286,7 +290,7 @@ struct op_code_struct {
+   {"ecput",  INST_TYPE_R1_RFSL,  INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C00A400, OPCODE_MASK_H32, ecput,  anyware_inst },
+   {"neput",  INST_TYPE_R1_RFSL,  INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C00C400, OPCODE_MASK_H32, neput,  anyware_inst },
+   {"necput", INST_TYPE_R1_RFSL,  INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C00E400, OPCODE_MASK_H32, necput, anyware_inst },
+- 
++
+   {"teget",   INST_TYPE_RD_RFSL, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C001400, OPCODE_MASK_H32, teget,   anyware_inst },
+   {"tecget",  INST_TYPE_RD_RFSL, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C003400, OPCODE_MASK_H32, tecget,  anyware_inst },
+   {"tneget",  INST_TYPE_RD_RFSL, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C005400, OPCODE_MASK_H32, tneget,  anyware_inst },
+@@ -295,7 +299,7 @@ struct op_code_struct {
+   {"tecput",  INST_TYPE_RFSL,    INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C00B400, OPCODE_MASK_H32, tecput,  anyware_inst },
+   {"tneput",  INST_TYPE_RFSL,    INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C00D400, OPCODE_MASK_H32, tneput,  anyware_inst },
+   {"tnecput", INST_TYPE_RFSL,    INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C00F400, OPCODE_MASK_H32, tnecput, anyware_inst },
+- 
++
+   {"aget",   INST_TYPE_RD_RFSL,  INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C000800, OPCODE_MASK_H32, aget,   anyware_inst },
+   {"caget",  INST_TYPE_RD_RFSL,  INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C002800, OPCODE_MASK_H32, caget,  anyware_inst },
+   {"naget",  INST_TYPE_RD_RFSL,  INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C004800, OPCODE_MASK_H32, naget,  anyware_inst },
+@@ -304,7 +308,7 @@ struct op_code_struct {
+   {"caput",  INST_TYPE_R1_RFSL,  INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C00A800, OPCODE_MASK_H32, caput,  anyware_inst },
+   {"naput",  INST_TYPE_R1_RFSL,  INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C00C800, OPCODE_MASK_H32, naput,  anyware_inst },
+   {"ncaput", INST_TYPE_R1_RFSL,  INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C00E800, OPCODE_MASK_H32, ncaput, anyware_inst },
+- 
++
+   {"taget",   INST_TYPE_RD_RFSL, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C001800, OPCODE_MASK_H32, taget,   anyware_inst },
+   {"tcaget",  INST_TYPE_RD_RFSL, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C003800, OPCODE_MASK_H32, tcaget,  anyware_inst },
+   {"tnaget",  INST_TYPE_RD_RFSL, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C005800, OPCODE_MASK_H32, tnaget,  anyware_inst },
+@@ -313,7 +317,7 @@ struct op_code_struct {
+   {"tcaput",  INST_TYPE_RFSL,    INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C00B800, OPCODE_MASK_H32, tcaput,  anyware_inst },
+   {"tnaput",  INST_TYPE_RFSL,    INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C00D800, OPCODE_MASK_H32, tnaput,  anyware_inst },
+   {"tncaput", INST_TYPE_RFSL,    INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C00F800, OPCODE_MASK_H32, tncaput, anyware_inst },
+- 
++
+   {"eaget",   INST_TYPE_RD_RFSL,  INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C000C00, OPCODE_MASK_H32, eget,   anyware_inst },
+   {"ecaget",  INST_TYPE_RD_RFSL,  INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C002C00, OPCODE_MASK_H32, ecget,  anyware_inst },
+   {"neaget",  INST_TYPE_RD_RFSL,  INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C004C00, OPCODE_MASK_H32, neget,  anyware_inst },
+@@ -322,7 +326,7 @@ struct op_code_struct {
+   {"ecaput",  INST_TYPE_R1_RFSL,  INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C00AC00, OPCODE_MASK_H32, ecput,  anyware_inst },
+   {"neaput",  INST_TYPE_R1_RFSL,  INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C00CC00, OPCODE_MASK_H32, neput,  anyware_inst },
+   {"necaput", INST_TYPE_R1_RFSL,  INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C00EC00, OPCODE_MASK_H32, necput, anyware_inst },
+- 
++
+   {"teaget",   INST_TYPE_RD_RFSL, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C001C00, OPCODE_MASK_H32, teaget,   anyware_inst },
+   {"tecaget",  INST_TYPE_RD_RFSL, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C003C00, OPCODE_MASK_H32, tecaget,  anyware_inst },
+   {"tneaget",  INST_TYPE_RD_RFSL, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C005C00, OPCODE_MASK_H32, tneaget,  anyware_inst },
+@@ -331,7 +335,7 @@ struct op_code_struct {
+   {"tecaput",  INST_TYPE_RFSL,    INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C00BC00, OPCODE_MASK_H32, tecaput,  anyware_inst },
+   {"tneaput",  INST_TYPE_RFSL,    INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C00DC00, OPCODE_MASK_H32, tneaput,  anyware_inst },
+   {"tnecaput", INST_TYPE_RFSL,    INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C00FC00, OPCODE_MASK_H32, tnecaput, anyware_inst },
+- 
++
+   {"getd",    INST_TYPE_RD_R2, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x4C000000, OPCODE_MASK_H34C, getd,    anyware_inst },
+   {"tgetd",   INST_TYPE_RD_R2, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x4C000080, OPCODE_MASK_H34C, tgetd,   anyware_inst },
+   {"cgetd",   INST_TYPE_RD_R2, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x4C000100, OPCODE_MASK_H34C, cgetd,   anyware_inst },
+@@ -348,7 +352,7 @@ struct op_code_struct {
+   {"tnputd",  INST_TYPE_R2,    INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x4C000680, OPCODE_MASK_H34C, tnputd,  anyware_inst },
+   {"ncputd",  INST_TYPE_R1_R2, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x4C000700, OPCODE_MASK_H34C, ncputd,  anyware_inst },
+   {"tncputd", INST_TYPE_R2,    INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x4C000780, OPCODE_MASK_H34C, tncputd, anyware_inst },
+- 
++
+   {"egetd",    INST_TYPE_RD_R2, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x4C000020, OPCODE_MASK_H34C, egetd,    anyware_inst },
+   {"tegetd",   INST_TYPE_RD_R2, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x4C0000A0, OPCODE_MASK_H34C, tegetd,   anyware_inst },
+   {"ecgetd",   INST_TYPE_RD_R2, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x4C000120, OPCODE_MASK_H34C, ecgetd,   anyware_inst },
+@@ -365,7 +369,7 @@ struct op_code_struct {
+   {"tneputd",  INST_TYPE_R2,    INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x4C0006A0, OPCODE_MASK_H34C, tneputd,  anyware_inst },
+   {"necputd",  INST_TYPE_R1_R2, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x4C000720, OPCODE_MASK_H34C, necputd,  anyware_inst },
+   {"tnecputd", INST_TYPE_R2,    INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x4C0007A0, OPCODE_MASK_H34C, tnecputd, anyware_inst },
+- 
++
+   {"agetd",    INST_TYPE_RD_R2, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x4C000040, OPCODE_MASK_H34C, agetd,    anyware_inst },
+   {"tagetd",   INST_TYPE_RD_R2, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x4C0000C0, OPCODE_MASK_H34C, tagetd,   anyware_inst },
+   {"cagetd",   INST_TYPE_RD_R2, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x4C000140, OPCODE_MASK_H34C, cagetd,   anyware_inst },
+@@ -382,7 +386,7 @@ struct op_code_struct {
+   {"tnaputd",  INST_TYPE_R2,    INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x4C0006C0, OPCODE_MASK_H34C, tnaputd,  anyware_inst },
+   {"ncaputd",  INST_TYPE_R1_R2, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x4C000740, OPCODE_MASK_H34C, ncaputd,  anyware_inst },
+   {"tncaputd", INST_TYPE_R2,    INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x4C0007C0, OPCODE_MASK_H34C, tncaputd, anyware_inst },
+- 
++
+   {"eagetd",    INST_TYPE_RD_R2, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x4C000060, OPCODE_MASK_H34C, eagetd,    anyware_inst },
+   {"teagetd",   INST_TYPE_RD_R2, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x4C0000E0, OPCODE_MASK_H34C, teagetd,   anyware_inst },
+   {"ecagetd",   INST_TYPE_RD_R2, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x4C000160, OPCODE_MASK_H34C, ecagetd,   anyware_inst },
+@@ -399,6 +403,7 @@ struct op_code_struct {
+   {"tneaputd",  INST_TYPE_R2,    INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x4C0006E0, OPCODE_MASK_H34C, tneaputd,  anyware_inst },
+   {"necaputd",  INST_TYPE_R1_R2, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x4C000760, OPCODE_MASK_H34C, necaputd,  anyware_inst },
+   {"tnecaputd", INST_TYPE_R2,    INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x4C0007E0, OPCODE_MASK_H34C, tnecaputd, anyware_inst },
++  {"clz",	INST_TYPE_RD_R1, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x900000E0, OPCODE_MASK_H34, clz, special_inst },
+   {"", 0, 0, 0, 0, 0, 0, 0, 0},
+ };
+ 
+@@ -416,5 +421,7 @@ char pvr_register_prefix[] = "rpvr";
+ #define MIN_IMM15 ((int) 0x0000)
+ #define MAX_IMM15 ((int) 0x7fff)
+ 
++#define MIN_IMM5  ((int) 0x00000000)
++#define MAX_IMM5  ((int) 0x0000001f)
+ #endif /* MICROBLAZE_OPC */
+ 
+diff --git a/opcodes/microblaze-opcm.h b/opcodes/microblaze-opcm.h
+index 01fd435..c7a14c8 100644
+--- a/opcodes/microblaze-opcm.h
++++ b/opcodes/microblaze-opcm.h
+@@ -2,15 +2,15 @@
+ #define MICROBLAZE_OPCM
+ 
+ /*
+- * Copyright (c) 2001 Xilinx, Inc.  All rights reserved. 
++ * Copyright (c) 2001 Xilinx, Inc.  All rights reserved.
+  *
+  * Redistribution and use in source and binary forms are permitted
+  * provided that the above copyright notice and this paragraph are
+  * duplicated in all such forms and that any documentation,
+  * advertising materials, and other materials related to such
+  * distribution and use acknowledge that the software was developed
+- * by Xilinx, Inc.  The name of the Company may not be used to endorse 
+- * or promote products derived from this software without specific prior 
++ * by Xilinx, Inc.  The name of the Company may not be used to endorse
++ * or promote products derived from this software without specific prior
+  * written permission.
+  * THIS SOFTWARE IS PROVIDED ``AS IS'' AND WITHOUT ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED
+@@ -21,18 +21,18 @@
+  */
+ 
+ enum microblaze_instr {
+-   add, rsub, addc, rsubc, addk, rsubk, addkc, rsubkc, cmp, cmpu,
++   add, rsub, addc, rsubc, addk, rsubk, addkc, rsubkc, clz, cmp, cmpu,
+    addi, rsubi, addic, rsubic, addik, rsubik, addikc, rsubikc, mul, mulh, mulhu, mulhsu,
+    idiv, idivu, bsll, bsra, bsrl, get, put, nget, nput, cget, cput,
+    ncget, ncput, muli, bslli, bsrai, bsrli, mului, or, and, xor,
+-   andn, pcmpbf, pcmpbc, pcmpeq, pcmpne, sra, src, srl, sext8, sext16, wic, wdc, wdcclear, wdcflush, mts, mfs, br, brd,
++   andn, pcmpbf, pcmpbc, pcmpeq, pcmpne, sra, src, srl, sext8, sext16, wic, wdc, wdcclear, wdcflush, mts, mfs, mbar, br, brd,
+    brld, bra, brad, brald, microblaze_brk, beq, beqd, bne, bned, blt,
+    bltd, ble, bled, bgt, bgtd, bge, bged, ori, andi, xori, andni,
+    imm, rtsd, rtid, rtbd, rted, bri, brid, brlid, brai, braid, bralid,
+    brki, beqi, beqid, bnei, bneid, blti, bltid, blei, bleid, bgti,
+    bgtid, bgei, bgeid, lbu, lbur, lhu, lhur, lw, lwr, lwx, sb, sbr, sh, shr, sw, swr, swx, lbui, lhui, lwi,
+-   sbi, shi, swi, msrset, msrclr, tuqula, fadd, frsub, fmul, fdiv, 
+-   fcmp_lt, fcmp_eq, fcmp_le, fcmp_gt, fcmp_ne, fcmp_ge, fcmp_un, flt, fint, fsqrt, 
++   sbi, shi, swi, msrset, msrclr, tuqula, fadd, frsub, fmul, fdiv,
++   fcmp_lt, fcmp_eq, fcmp_le, fcmp_gt, fcmp_ne, fcmp_ge, fcmp_un, flt, fint, fsqrt,
+    tget, tcget, tnget, tncget, tput, tcput, tnput, tncput,
+    eget, ecget, neget, necget, eput, ecput, neput, necput,
+    teget, tecget, tneget, tnecget, teput, tecput, tneput, tnecput,
+@@ -68,6 +68,8 @@ enum microblaze_instr_type {
+ #define REG_BTR_MASK 0x800b
+ #define REG_EDR_MASK 0x800d
+ #define REG_PVR_MASK 0xa000
++#define REG_SLR_MASK 0x8800
++#define REG_SHR_MASK 0x8802
+ 
+ #define REG_PID_MASK   0x9000
+ #define REG_ZPR_MASK   0x9001
+@@ -75,7 +77,6 @@ enum microblaze_instr_type {
+ #define REG_TLBLO_MASK 0x9003
+ #define REG_TLBHI_MASK 0x9004
+ #define REG_TLBSX_MASK 0x9005
+-
+ #define MIN_REGNUM 0
+ #define MAX_REGNUM 31
+ 
+@@ -89,6 +90,8 @@ enum microblaze_instr_type {
+ #define REG_FSR 39 /* FPU Status reg */
+ #define REG_BTR 43 /* Branch Target reg */
+ #define REG_EDR 45 /* Exception reg */
++#define REG_SHR 50 /* Stack High reg */
++#define REG_SLR 51 /* Stack Low reg */
+ #define REG_PVR 40960 /* Program Verification reg */
+ 
+ #define REG_PID   36864 /* MMU: Process ID reg       */
+@@ -106,11 +109,12 @@ enum microblaze_instr_type {
+ /* Assembler Register - Used in Delay Slot Optimization */
+ #define REG_AS    18
+ #define REG_ZERO  0
+- 
++
+ #define RD_LOW  21 /* low bit for RD */
+ #define RA_LOW  16 /* low bit for RA */
+ #define RB_LOW  11 /* low bit for RB */
+ #define IMM_LOW  0 /* low bit for immediate */
++#define IMM_MBAR 21 /* low bit for mbar instruction*/
+ 
+ #define RD_MASK 0x03E00000
+ #define RA_MASK 0x001F0000
+@@ -120,6 +124,8 @@ enum microblaze_instr_type {
+ // imm mask for barrel shifts
+ #define IMM5_MASK 0x0000001F
+ 
++// imm  mask for mbar instruction
++#define IMM5_MBAR_MASK 0x03E00000
+ 
+ // FSL imm mask for get, put instructions
+ #define  RFSL_MASK 0x000000F
+-- 
+1.7.0.4
+

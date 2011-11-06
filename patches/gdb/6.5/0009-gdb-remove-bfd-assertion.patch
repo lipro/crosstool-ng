@@ -1,0 +1,29 @@
+From 362390b5189bb3ea2e28be556fac5583ef6198a6 Mon Sep 17 00:00:00 2001
+From: Stephan Linz <linz@li-pro.net>
+Date: Sun, 6 Nov 2011 00:36:01 +0100
+Subject: [Xilinx] gdb: remove bfd assertion
+
+Recreate from http://git.xilinx.com/?p=mb_gnu.git;a=history;f=src/gdb
+  - 54a8c5fb19899beeb6c6d7641e47304c9df3a980
+
+Signed-off-by: Stephan Linz <linz@li-pro.net>
+
+diff --git a/bfd/elf32-microblaze.c b/bfd/elf32-microblaze.c
+index ea49213..943995d 100644
+--- a/bfd/elf32-microblaze.c
++++ b/bfd/elf32-microblaze.c
+@@ -1480,11 +1480,6 @@ microblaze_elf_relax_section (bfd *abfd, asection *sec,
+ 	     break;
+ 	   case R_MICROBLAZE_64_NONE:
+ 	     {
+-
+-               /* FIXME: This reloc seems invalid. Assertion to trap
+-                * occurrences of this reloc. */
+-               BFD_ASSERT(0);
+-
+ 	       /* This was a PC-relative 64-bit instruction that was completely resolved. */
+ 	       int sfix, efix;
+ 	       bfd_vma target_address;
+-- 
+1.7.0.4
+

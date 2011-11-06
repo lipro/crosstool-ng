@@ -1,0 +1,37 @@
+From b6fb10903dc1f59bceda1f3015389fa6a6b06e43 Mon Sep 17 00:00:00 2001
+From: Stephan Linz <linz@li-pro.net>
+Date: Sun, 6 Nov 2011 00:33:51 +0100
+Subject: [Xilinx] gdb: remove unused byte order cruft
+
+Recreate from http://git.xilinx.com/?p=mb_gnu.git;a=history;f=src/gdb
+  - 4540c6c0bd2f50a11444c57d9e0d3183a5f9800a
+
+Signed-off-by: Stephan Linz <linz@li-pro.net>
+
+diff --git a/gdb/config/microblaze/tm-microblaze.h b/gdb/config/microblaze/tm-microblaze.h
+index d9e4851..b4d6077 100644
+--- a/gdb/config/microblaze/tm-microblaze.h
++++ b/gdb/config/microblaze/tm-microblaze.h
+@@ -39,9 +39,6 @@
+ #ifndef TM_MICROBLAZE_H
+ #define TM_MICROBLAZE_H
+ 
+-/* The microblaze is big endian (by default) */
+-#define TARGET_BYTE_ORDER_DEFAULT BIG_ENDIAN
+-
+ /* All registers are 32 bits */
+ #define REGISTER_SIZE 4
+ #define MAX_REGISTER_RAW_SIZE 4
+@@ -219,9 +216,6 @@ extern void microblaze_virtual_frame_pointer PARAMS ((CORE_ADDR, long *, long *)
+ 	microblaze_virtual_frame_pointer ((PC), (REGP), (OFFP))
+ #endif
+ 
+-/* microblaze cannot be bi-endian. */
+-#define TARGET_BYTE_ORDER_SELECTABLE_P 0
+-
+ /* For PE, gcc will tell us what th real type of
+    arguments are when it promotes arguments. */
+ #define BELIEVE_PCC_PROMOTION 1
+-- 
+1.7.0.4
+

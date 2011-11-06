@@ -1,0 +1,106 @@
+From b52953e4246c566e2d28353e7cc33ce17bd339c3 Mon Sep 17 00:00:00 2001
+From: Stephan Linz <linz@li-pro.net>
+Date: Sun, 6 Nov 2011 09:28:29 +0100
+Subject: [Xilinx] gdb: renaming microblazele to microblazeel
+
+Signed-off-by: Stephan Linz <linz@li-pro.net>
+
+diff --git a/bfd/config.bfd b/bfd/config.bfd
+index 82a619a..9b4b99c 100644
+--- a/bfd/config.bfd
++++ b/bfd/config.bfd
+@@ -825,11 +825,11 @@ case "${targ}" in
+     ;;
+   microblaze-*-*)
+     targ_defvec=bfd_elf32_microblaze_vec
+-    targ_selvecs="bfd_elf32_microblaze_vec bfd_elf32_microblazele_vec"
++    targ_selvecs="bfd_elf32_microblaze_vec bfd_elf32_microblazeel_vec"
+     ;;
+-  microblazele-*-*)
+-    targ_defvec=bfd_elf32_microblazele_vec
+-    targ_selvecs="bfd_elf32_microblazele_vec bfd_elf32_microblaze_vec"
++  microblazeel-*-*)
++    targ_defvec=bfd_elf32_microblazeel_vec
++    targ_selvecs="bfd_elf32_microblazeel_vec bfd_elf32_microblaze_vec"
+     ;;
+   mips*-big-*)
+     targ_defvec=ecoff_big_vec
+diff --git a/bfd/configure b/bfd/configure
+index bf5237d..2bf9882 100755
+--- a/bfd/configure
++++ b/bfd/configure
+@@ -13128,7 +13128,7 @@ do
+     bfd_elf32_mcore_big_vec)	tb="$tb elf32-mcore.lo elf32.lo $elf" ;;
+     bfd_elf32_mcore_little_vec)	tb="$tb elf32-mcore.lo elf32.lo $elf" ;;
+     bfd_elf32_microblaze_vec)	tb="$tb elf32-microblaze.lo elf32.lo $elf" ;;
+-    bfd_elf32_microblazele_vec)	tb="$tb elf32-microblaze.lo elf32.lo $elf" ;;        
++    bfd_elf32_microblazeel_vec)	tb="$tb elf32-microblaze.lo elf32.lo $elf" ;;        
+     bfd_elf32_mn10200_vec)	tb="$tb elf-m10200.lo elf32.lo $elf" ;;
+     bfd_elf32_mn10300_vec)	tb="$tb elf-m10300.lo elf32.lo $elf" ;;
+     bfd_elf32_mt_vec)           tb="$tb elf32-mt.lo elf32.lo $elf" ;;
+diff --git a/bfd/configure.in b/bfd/configure.in
+index 44fc291..caf3c81 100644
+--- a/bfd/configure.in
++++ b/bfd/configure.in
+@@ -641,7 +641,7 @@ do
+     bfd_elf32_mcore_big_vec)	tb="$tb elf32-mcore.lo elf32.lo $elf" ;;
+     bfd_elf32_mcore_little_vec)	tb="$tb elf32-mcore.lo elf32.lo $elf" ;;
+     bfd_elf32_microblaze_vec)	tb="$tb elf32-microblaze.lo elf32.lo $elf" ;;
+-    bfd_elf32_microblazele_vec)	tb="$tb elf32-microblaze.lo elf32.lo $elf" ;;    
++    bfd_elf32_microblazeel_vec)	tb="$tb elf32-microblaze.lo elf32.lo $elf" ;;    
+     bfd_elf32_mn10200_vec)	tb="$tb elf-m10200.lo elf32.lo $elf" ;;
+     bfd_elf32_mn10300_vec)	tb="$tb elf-m10300.lo elf32.lo $elf" ;;
+     bfd_elf32_mt_vec)           tb="$tb elf32-mt.lo elf32.lo $elf" ;;
+diff --git a/bfd/elf32-microblaze.c b/bfd/elf32-microblaze.c
+index 943995d..ded6f7a 100644
+--- a/bfd/elf32-microblaze.c
++++ b/bfd/elf32-microblaze.c
+@@ -3042,8 +3042,8 @@ microblaze_bfd_write_imm_value_64 (bfd *abfd, bfd_byte *bfd_addr, bfd_vma val)
+ 
+ #define TARGET_BIG_SYM          bfd_elf32_microblaze_vec
+ #define TARGET_BIG_NAME		"elf32-microblaze"
+-#define TARGET_LITTLE_SYM       bfd_elf32_microblazele_vec
+-#define TARGET_LITTLE_NAME      "elf32-microblazele"
++#define TARGET_LITTLE_SYM       bfd_elf32_microblazeel_vec
++#define TARGET_LITTLE_NAME      "elf32-microblazeel"
+ #define ELF_ARCH		bfd_arch_microblaze
+ #define ELF_MACHINE_CODE	EM_MICROBLAZE
+ #define ELF_MAXPAGESIZE		0x4   		/* 4k, if we ever have 'em */
+diff --git a/bfd/targets.c b/bfd/targets.c
+index 9b97f2e..c96cacd 100644
+--- a/bfd/targets.c
++++ b/bfd/targets.c
+@@ -605,7 +605,7 @@ extern const bfd_target bfd_elf32_m88k_vec;
+ extern const bfd_target bfd_elf32_mcore_big_vec;
+ extern const bfd_target bfd_elf32_mcore_little_vec;
+ extern const bfd_target bfd_elf32_microblaze_vec;
+-extern const bfd_target bfd_elf32_microblazele_vec;
++extern const bfd_target bfd_elf32_microblazeel_vec;
+ extern const bfd_target bfd_elf32_mn10200_vec;
+ extern const bfd_target bfd_elf32_mn10300_vec;
+ extern const bfd_target bfd_elf32_mt_vec;
+diff --git a/config.sub b/config.sub
+index 275f398..790ff94 100755
+--- a/config.sub
++++ b/config.sub
+@@ -148,7 +148,7 @@ case $os in
+ 	-convergent* | -ncr* | -news | -32* | -3600* | -3100* | -hitachi* |\
+ 	-c[123]* | -convex* | -sun | -crds | -omron* | -dg | -ultra | -tti* | \
+ 	-harris | -dolphin | -highlevel | -gould | -cbm | -ns | -masscomp | \
+-	-apple | -axis | -knuth | -cray)
++	-apple | -axis | -knuth | -cray | -microblaze*)
+ 		os=
+ 		basic_machine=$1
+ 		;;
+@@ -331,7 +331,7 @@ case $basic_machine in
+ 	| m32c-* | m32r-* | m32rle-* \
+ 	| m68000-* | m680[012346]0-* | m68360-* | m683?2-* | m68k-* \
+ 	| m88110-* | m88k-* | maxq-* | mcore-* \
+-        | microblaze-* \
++        | microblaze-* | microblazeeb-* | microblazeel-* \
+ 	| mips-* | mipsbe-* | mipseb-* | mipsel-* | mipsle-* \
+ 	| mips16-* \
+ 	| mips64-* | mips64el-* \
+-- 
+1.7.0.4
+
