@@ -34,20 +34,20 @@ do_debug_gdb_get() {
     do_debug_gdb_parts
 
     if [ "${do_gdb}" = "y" ]; then
-        CT_GetFile "gdb$(do_debug_gdb_suffix)"              \
+        CT_GetFile "gdb$(do_debug_gdb_suffix)${CT_GDB_VERSION_FNEXT}" \
                    {ftp,http}://ftp.gnu.org/pub/gnu/gdb     \
                    ftp://sources.redhat.com/pub/gdb/{{,old-}releases,snapshots/current}
     fi
 
     if [ "${do_insight}" = "y" ]; then
-        CT_GetFile "insight-${CT_GDB_VERSION}"                                              \
+        CT_GetFile "insight-${CT_GDB_VERSION}${CT_GDB_VERSION_FNEXT}"                       \
                    ftp://sourceware.org/pub/insight/releases                                \
                    {ftp,http}://ftp.twaren.net/Unix/Sourceware/insight/releases             \
                    {ftp,http}://ftp.gwdg.de/pub/linux/sources.redhat.com/insight/releases
     fi
 
     if [ "${do_ncurses}" = "y" ]; then
-        CT_GetFile "ncurses-${CT_NCURSES_VERSION}"          \
+        CT_GetFile "ncurses-${CT_NCURSES_VERSION}" \
                    {ftp,http}://ftp.gnu.org/pub/gnu/ncurses \
                    ftp://invisible-island.net/ncurses
     fi
@@ -57,12 +57,12 @@ do_debug_gdb_extract() {
     do_debug_gdb_parts
 
     if [ "${do_gdb}" = "y" ]; then
-        CT_Extract "gdb$(do_debug_gdb_suffix)"
+        CT_Extract "gdb$(do_debug_gdb_suffix)${CT_GDB_VERSION_FNEXT}"
         CT_Patch "gdb$(do_debug_gdb_suffix)"
     fi
 
     if [ "${do_insight}" = "y" ]; then
-        CT_Extract "insight-${CT_GDB_VERSION}"
+        CT_Extract "insight-${CT_GDB_VERSION}${CT_GDB_VERSION_FNEXT}"
         CT_Patch "insight-${CT_GDB_VERSION}"
     fi
 

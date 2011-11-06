@@ -148,6 +148,11 @@ config GDB_VERSION
 # CT_INSERT_VERSION_STRING_ABOVE
 # Don't remove above line!
 
+config GDB_VERSION_FNEXT
+    string
+    default "" if ! ( GDB_V_6_4 || GDB_V_6_5 || GDB_V_6_6 || GDB_V_6_7 || GDB_V_6_7_1 || GDB_V_6_8 )
+    default "a" if GDB_V_6_4 || GDB_V_6_5 || GDB_V_6_6 || GDB_V_6_7 || GDB_V_6_7_1 || GDB_V_6_8
+
 if GDB_NATIVE
 
 comment "Native gdb needs a native ncurses library"
