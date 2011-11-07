@@ -11,6 +11,7 @@ do_debug_gdb_parts() {
     do_gdb=
     do_insight=
     do_ncurses=
+    do_gdbserver_bin=
 
     if [ "${CT_GDB_CROSS}" = y ]; then
         if [ "${CT_GDB_CROSS_INSIGHT}" = "y" ]; then
@@ -22,6 +23,10 @@ do_debug_gdb_parts() {
 
     if [ "${CT_GDB_GDBSERVER}" = "y" ]; then
         do_gdb=y
+    fi
+
+    if [ "${CT_GDB_GDBSERVER_PREBUILT}" = "y" ]; then
+        do_gdbserver_bin=y
     fi
 
     if [ "${CT_GDB_NATIVE}" = "y" ]; then
@@ -46,6 +51,11 @@ do_debug_gdb_get() {
                    {ftp,http}://ftp.gwdg.de/pub/linux/sources.redhat.com/insight/releases
     fi
 
+    if [ "${do_gdbserver_bin}" = "y" ]; then
+        CT_GetFile "gdbserver-${CT_TARGET}-${CT_GDB_GDBSERVER_PREBUILT_VERSION}" \
+                   file://${CT_TOP_DIR}/contrib
+    fi
+
     if [ "${do_ncurses}" = "y" ]; then
         CT_GetFile "ncurses-${CT_NCURSES_VERSION}" \
                    {ftp,http}://ftp.gnu.org/pub/gnu/ncurses \
@@ -66,6 +76,10 @@ do_debug_gdb_extract() {
         CT_Patch "insight-${CT_GDB_VERSION}"
     fi
 
+    if [ "${do_gdbserver_bin}" = "y" ]; then
+        CT_Extract "gdbserver-${CT_TARGET}-${CT_GDB_GDBSERVER_PREBUILT_VERSION}"
+    fi
+
     if [ "${do_ncurses}" = "y" ]; then
         CT_Extract "ncurses-${CT_NCURSES_VERSION}"
         CT_Patch "ncurses-${CT_NCURSES_VERSION}"
@@ -75,6 +89,7 @@ do_debug_gdb_extract() {
 do_debug_gdb_build() {
     gdb_src_dir="${CT_SRC_DIR}/gdb$(do_debug_gdb_suffix)"
     insight_src_dir="${CT_SRC_DIR}/insight-${CT_GDB_VERSION}"
+    gdbserver_bin_src_dir="${CT_SRC_DIR}/gdbserver-${CT_TARGET}-${CT_GDB_GDBSERVER_PREBUILT_VERSION}"
 
     extra_config=
     # Version 6.3 and below behave badly with gdbmi
@@ -309,6 +324,13 @@ do_debug_gdb_build() {
         CT_DoLog EXTRA "Installing gdbserver"
         CT_DoExecLog ALL make DESTDIR="${CT_DEBUGROOT_DIR}" install
 
+        CT_EndStep
+    fi
+
+    if [ "${CT_GDB_GDBSERVER_PREBUILT}" = "y" ]; then
+        CT_DoStep INFO "Installing gdbserver binary (prebuilt)"
+        CT_DoExecLog ALL install -D -m 0755 "${gdbserver_bin_src_dir}/bin/gdbserver" "${CT_DEBUGROOT_DIR}/usr/bin/gdbserver"
+        CT_DoExecLog ALL install -D -m 0644 "${gdbserver_bin_src_dir}/man/man1/gdbserver.1" "${CT_DEBUGROOT_DIR}/usr/man/man1/gdbserver.1"
         CT_EndStep
     fi
 }

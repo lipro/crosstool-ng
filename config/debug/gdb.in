@@ -9,6 +9,7 @@ config GDB_CROSS
     prompt "Cross-gdb"
     default y
     select GDB_GDBSERVER if ! BARE_METAL && ! ARCH_microblaze
+    select GDB_GDBSERVER_PREBUILT if ARCH_microblaze
     help
       Build and install a cross-gdb for the target, to run on host.
 
@@ -74,7 +75,7 @@ config GDB_GDBSERVER
     bool
     prompt "gdbserver"
     default n
-    depends on ! BARE_METAL
+    depends on ! BARE_METAL && ! ARCH_microblaze
     help
       Build and install a gdbserver for the target, to run on the target.
 
@@ -86,6 +87,14 @@ config GDB_GDBSERVER_STATIC
     help
       In case you have trouble with dynamic loading of shared libraries,
       you will find that a static gdbserver comes in handy.
+
+config GDB_GDBSERVER_PREBUILT
+    bool
+    prompt "gdbserver binary (prebuilt)"
+    default n
+    depends on ARCH_microblaze
+    help
+      Install a prebuilt gdbserver for the target, to run on the target.
 
 if BARE_METAL
 comment "In bare-metal, you'll need to   "
@@ -177,3 +186,8 @@ config NCURSES_VERSION
     default "5.7" if NCURSES_V_5_7
 
 endif # GDB_NATIVE --> ncurses
+
+config GDB_GDBSERVER_PREBUILT_VERSION
+    string
+    default "6.5.0.20060626-cvs" if ARCH_microblaze
+    depends on ARCH_microblaze
