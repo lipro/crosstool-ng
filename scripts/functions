@@ -427,7 +427,10 @@ CT_GetFile() {
         # Try all urls in turn
         for url in ${URLS}; do
             CT_DoLog DEBUG "Trying '${url}/${file}${ext}'"
-            CT_DoGetFile "${url}/${file}${ext}"
+            case "${url}" in
+                file:\/\/*) CT_DoExecLog ALL cp -v "${url/#file:\/\//}/${file}${ext}" . ;;
+                *) CT_DoGetFile "${url}/${file}${ext}" ;;
+            esac
             if [ -f "${file}${ext}" ]; then
                 CT_DoLog DEBUG "Got '${file}' from the Internet"
                 CT_SaveLocal "${CT_TARBALLS_DIR}/${file}${ext}"
