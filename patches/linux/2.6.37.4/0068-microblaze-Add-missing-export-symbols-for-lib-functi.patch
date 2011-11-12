@@ -1,0 +1,44 @@
+From 9d766cdb3c4007c1a4358a2b513e9fbb3ee5922a Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Thu, 24 Feb 2011 15:36:49 +0100
+Subject: [PATCH] microblaze: Add missing export symbols for lib functions
+
+Adding missing export symbols for loadable modules.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ arch/microblaze/kernel/microblaze_ksyms.c |   11 +++++++++++
+ arch/microblaze/lib/muldi3.c              |    1 +
+ 2 files changed, 12 insertions(+), 0 deletions(-)
+
+diff --git a/arch/microblaze/kernel/microblaze_ksyms.c b/arch/microblaze/kernel/microblaze_ksyms.c
+index b52fc2f..49faeb4 100644
+--- a/arch/microblaze/kernel/microblaze_ksyms.c
++++ b/arch/microblaze/kernel/microblaze_ksyms.c
+@@ -46,3 +46,14 @@ EXPORT_SYMBOL(empty_zero_page);
+ #endif
+ 
+ EXPORT_SYMBOL(mbc);
++
++extern void __divsi3(void);
++EXPORT_SYMBOL(__divsi3);
++extern void __modsi3(void);
++EXPORT_SYMBOL(__modsi3);
++extern void __mulsi3(void);
++EXPORT_SYMBOL(__mulsi3);
++extern void __udivsi3(void);
++EXPORT_SYMBOL(__udivsi3);
++extern void __umodsi3(void);
++EXPORT_SYMBOL(__umodsi3);
+diff --git a/arch/microblaze/lib/muldi3.c b/arch/microblaze/lib/muldi3.c
+index 8b899a5..b80922e 100644
+--- a/arch/microblaze/lib/muldi3.c
++++ b/arch/microblaze/lib/muldi3.c
+@@ -57,3 +57,4 @@ DWtype __muldi3 (DWtype u, DWtype v)
+ 
+ 	return w.ll;
+ }
++EXPORT_SYMBOL(__muldi3);
+-- 
+1.7.0.4
+

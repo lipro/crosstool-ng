@@ -1,0 +1,34 @@
+From f6166d8ceac3af05fb6026f0ac8abd59227b098d Mon Sep 17 00:00:00 2001
+From: John Williams <john.williams@petalogix.com>
+Date: Thu, 27 May 2010 16:33:13 +1000
+Subject: [PATCH] powerpc: auto-calculate link_address of boot wrapper to fit any kernel image
+
+Fixing the link_adddress to 0x400000 fails when a large initramfs is linked.
+
+A little bit of awk-foo to set the link address to the next megabyte boundary
+is a simple, generic fix.
+
+Signed-off-by: John Williams <john.williams@petalogix.com>
+---
+ arch/powerpc/boot/wrapper |    5 ++++-
+ 1 files changed, 4 insertions(+), 1 deletions(-)
+
+diff --git a/arch/powerpc/boot/wrapper b/arch/powerpc/boot/wrapper
+index 39f93d6..830ef23 100755
+--- a/arch/powerpc/boot/wrapper
++++ b/arch/powerpc/boot/wrapper
+@@ -142,7 +142,10 @@ objflags=-S
+ tmp=$tmpdir/zImage.$$.o
+ ksection=.kernel:vmlinux.strip
+ isection=.kernel:initrd
+-link_address='0x400000'
++
++# default auto-calculate link_address to make room for the kernel
++# round up kernel image size to nearest megabyte
++link_address=`${CROSS}size -x ${kernel} | grep ${kernel} | awk '{printf("0x%08x", and($4 + 0x0fffff, 0xfffe0000))}'`
+ 
+ case "$platform" in
+ pseries)
+-- 
+1.7.0.4
+

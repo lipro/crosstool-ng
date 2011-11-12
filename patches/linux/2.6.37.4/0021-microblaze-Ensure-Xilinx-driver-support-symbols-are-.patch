@@ -1,0 +1,46 @@
+From dbc33f1f113862020385619f330b0ab833ee185c Mon Sep 17 00:00:00 2001
+From: John Williams <john.williams@petalogix.com>
+Date: Thu, 23 Jul 2009 11:47:52 +1000
+Subject: [PATCH] microblaze: Ensure Xilinx driver support symbols are exported, including low-level Xio
+
+For some reason xilinx_syms.c is never built, and even when it is, the low-
+level Xio_* are absent.
+---
+ drivers/xilinx_common/Makefile      |    2 +-
+ drivers/xilinx_common/xilinx_syms.c |    8 ++++++++
+ 2 files changed, 9 insertions(+), 1 deletions(-)
+
+diff --git a/drivers/xilinx_common/Makefile b/drivers/xilinx_common/Makefile
+index fb7067a..aeb35b4 100644
+--- a/drivers/xilinx_common/Makefile
++++ b/drivers/xilinx_common/Makefile
+@@ -1,6 +1,6 @@
+ # The Xilinx OS common code 
+ 
+-obj-$(CONFIG_XILINX_EDK) += xbasic_types.o					\
++obj-$(CONFIG_XILINX_EDK) += xbasic_types.o xilinx_syms.o					\
+ 				xversion.o	xpacket_fifo_v2_00_a.o xpacket_fifo_l_v2_00_a.o	\
+ 				xdma_channel.o xdma_channel_sg.o xio.o
+ 
+diff --git a/drivers/xilinx_common/xilinx_syms.c b/drivers/xilinx_common/xilinx_syms.c
+index 27d2079..192d702 100644
+--- a/drivers/xilinx_common/xilinx_syms.c
++++ b/drivers/xilinx_common/xilinx_syms.c
+@@ -57,6 +57,14 @@ EXPORT_SYMBOL_GPL(XPacketFifoV200a_Read);
+ EXPORT_SYMBOL_GPL(XPacketFifoV200a_SelfTest);
+ EXPORT_SYMBOL_GPL(XPacketFifoV200a_Write);
+ 
++#include "xio.h"
++EXPORT_SYMBOL_GPL(XIo_Out8);
++EXPORT_SYMBOL_GPL(XIo_In8);
++EXPORT_SYMBOL_GPL(XIo_Out16);
++EXPORT_SYMBOL_GPL(XIo_In16);
++EXPORT_SYMBOL_GPL(XIo_Out32);
++EXPORT_SYMBOL_GPL(XIo_In32);
++
+ #include "xversion.h"
+ EXPORT_SYMBOL_GPL(XVersion_Copy);
+ EXPORT_SYMBOL_GPL(XVersion_FromString);
+-- 
+1.7.0.4
+

@@ -1,0 +1,40 @@
+From b0b467aa2e36ed2945f0fa9979a83b25d5177cf1 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Fri, 8 Oct 2010 15:40:41 +1000
+Subject: [PATCH] ll_temac: Fix change MTU on PowerPC
+
+it is necessary change mtu on not working driver.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ drivers/net/xilinx_lltemac/xlltemac_main.c |    7 +++++++
+ 1 files changed, 7 insertions(+), 0 deletions(-)
+
+diff --git a/drivers/net/xilinx_lltemac/xlltemac_main.c b/drivers/net/xilinx_lltemac/xlltemac_main.c
+index 9a14bcc..2642075 100644
+--- a/drivers/net/xilinx_lltemac/xlltemac_main.c
++++ b/drivers/net/xilinx_lltemac/xlltemac_main.c
+@@ -1328,6 +1328,12 @@ static int xenet_change_mtu(struct net_device *dev, int new_mtu)
+ 	int max_frame = new_mtu + head_size + XTE_TRL_SIZE;
+ 	int min_frame = 1 + head_size + XTE_TRL_SIZE;
+ 
++#ifdef CONFIG_PPC
++        if (netif_running(dev)) {
++		printk("STOP device first!!!\n");
++                return -1;
++	}
++#endif
+ 	if (max_frame < min_frame)
+ 		return -EINVAL;
+ 
+@@ -3300,6 +3306,7 @@ static int xtenet_setup(
+ 		if (pdata->dcr_host) {
+ 			printk("XLlTemac: DCR address: 0x%0x\n", pdata->ll_dev_baseaddress);
+ 			XLlDma_Initialize(&lp->Dma, pdata->ll_dev_baseaddress);
++			lp->virt_dma_addr = pdata->ll_dev_baseaddress;
+ 		} else {
+ 		        virt_baddr = (u32) ioremap(pdata->ll_dev_baseaddress, 4096);
+ 			lp->virt_dma_addr = virt_baddr;
+-- 
+1.7.0.4
+

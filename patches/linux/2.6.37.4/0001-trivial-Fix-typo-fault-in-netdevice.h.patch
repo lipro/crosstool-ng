@@ -1,0 +1,26 @@
+From 40df267d48e10850735a62b5875af5720db5a7d2 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Tue, 7 Dec 2010 11:47:46 +0100
+Subject: [PATCH] trivial: Fix typo fault in netdevice.h
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ include/linux/netdevice.h |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/include/linux/netdevice.h b/include/linux/netdevice.h
+index d8fd2c2..c773bc8 100644
+--- a/include/linux/netdevice.h
++++ b/include/linux/netdevice.h
+@@ -683,7 +683,7 @@ struct netdev_rx_queue {
+  *	   neither operation.
+  *
+  * void (*ndo_vlan_rx_register)(struct net_device *dev, struct vlan_group *grp);
+- *	If device support VLAN receive accleration
++ *	If device support VLAN receive acceleration
+  *	(ie. dev->features & NETIF_F_HW_VLAN_RX), then this function is called
+  *	when vlan groups for the device changes.  Note: grp is NULL
+  *	if no vlan's groups are being used.
+-- 
+1.7.0.4
+

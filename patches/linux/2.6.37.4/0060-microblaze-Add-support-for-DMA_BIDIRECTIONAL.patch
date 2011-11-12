@@ -1,0 +1,27 @@
+From 8e122632795fba2b327591d462f899232626dc96 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Thu, 10 Feb 2011 08:37:49 +0100
+Subject: [PATCH] microblaze: Add support for DMA_BIDIRECTIONAL
+
+CDMA requires DMA_BIDIRECTIONAL option.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ arch/microblaze/kernel/dma.c |    1 +
+ 1 files changed, 1 insertions(+), 0 deletions(-)
+
+diff --git a/arch/microblaze/kernel/dma.c b/arch/microblaze/kernel/dma.c
+index 79c7465..393e6b2 100644
+--- a/arch/microblaze/kernel/dma.c
++++ b/arch/microblaze/kernel/dma.c
+@@ -26,6 +26,7 @@ static inline void __dma_sync_page(unsigned long paddr, unsigned long offset,
+ {
+ 	switch (direction) {
+ 	case DMA_TO_DEVICE:
++	case DMA_BIDIRECTIONAL:
+ 		flush_dcache_range(paddr + offset, paddr + offset + size);
+ 		break;
+ 	case DMA_FROM_DEVICE:
+-- 
+1.7.0.4
+

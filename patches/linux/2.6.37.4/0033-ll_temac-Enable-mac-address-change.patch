@@ -1,0 +1,29 @@
+From ae600b0203668c0a9448deaa4aa74c6f971034f7 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Mon, 10 May 2010 10:38:14 +0200
+Subject: [PATCH] ll_temac: Enable mac address change
+
+This patch was part of patch which Steven J. Magnani <steve@digidescorp.com>
+sent me.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ drivers/net/xilinx_lltemac/xlltemac_main.c |    2 ++
+ 1 files changed, 2 insertions(+), 0 deletions(-)
+
+diff --git a/drivers/net/xilinx_lltemac/xlltemac_main.c b/drivers/net/xilinx_lltemac/xlltemac_main.c
+index a8dd62b..1c3d488 100644
+--- a/drivers/net/xilinx_lltemac/xlltemac_main.c
++++ b/drivers/net/xilinx_lltemac/xlltemac_main.c
+@@ -3483,6 +3483,8 @@ static struct net_device_ops xilinx_netdev_ops = {
+ 	.ndo_change_mtu	= xenet_change_mtu,
+ 	.ndo_tx_timeout	= xenet_tx_timeout,
+ 	.ndo_get_stats	= xenet_get_stats,
++	.ndo_set_mac_address	= eth_mac_addr,
++	.ndo_validate_addr	= eth_validate_addr,
+ };
+ 
+ static struct of_device_id xtenet_fifo_of_match[] = {
+-- 
+1.7.0.4
+

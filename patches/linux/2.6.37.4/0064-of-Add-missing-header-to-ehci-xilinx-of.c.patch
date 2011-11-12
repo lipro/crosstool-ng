@@ -1,0 +1,25 @@
+From a61a6fc9bfcca778b85a9fbbfb7f1bd00510e38c Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Mon, 14 Feb 2011 11:08:06 +0100
+Subject: [PATCH] of: Add missing header to ehci-xilinx-of.c
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ drivers/usb/host/ehci-xilinx-of.c |    1 +
+ 1 files changed, 1 insertions(+), 0 deletions(-)
+
+diff --git a/drivers/usb/host/ehci-xilinx-of.c b/drivers/usb/host/ehci-xilinx-of.c
+index 6c8076a..a02fc17 100644
+--- a/drivers/usb/host/ehci-xilinx-of.c
++++ b/drivers/usb/host/ehci-xilinx-of.c
+@@ -29,6 +29,7 @@
+ 
+ #include <linux/of.h>
+ #include <linux/of_platform.h>
++#include <linux/of_address.h>
+ 
+ /**
+  * ehci_xilinx_of_setup - Initialize the device for ehci_reset()
+-- 
+1.7.0.4
+

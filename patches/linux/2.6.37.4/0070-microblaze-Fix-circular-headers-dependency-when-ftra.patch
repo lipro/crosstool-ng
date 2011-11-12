@@ -1,0 +1,61 @@
+From 8ca502a9a5ddf16cede949391d982119aed07140 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Thu, 10 Mar 2011 10:39:51 +0100
+Subject: [PATCH] microblaze: Fix circular headers dependency when ftrace is enabled.
+
+Remove compilation failure when ftrace in enabled.
+
+Error log:
+  CC      kernel/trace/power-traces.o
+In file included from arch/microblaze/include/asm/irq.h:15,
+                 from include/linux/irq.h:27,
+                 from include/asm-generic/hardirq.h:12,
+                 from arch/microblaze/include/asm/hardirq.h:15,
+                 from include/linux/hardirq.h:7,
+                 from include/linux/ftrace_event.h:7,
+                 from include/trace/ftrace.h:19,
+                 from include/trace/define_trace.h:96,
+                 from include/trace/events/power.h:240,
+                 from kernel/trace/power-traces.c:14:
+include/linux/interrupt.h: In function '__raise_softirq_irqoff':
+include/linux/interrupt.h:413: error: implicit declaration of function 'trace_softirq_raise'
+In file included from include/trace/ftrace.h:554,
+                 from include/trace/define_trace.h:96,
+                 from include/trace/events/power.h:240,
+                 from kernel/trace/power-traces.c:14:
+include/trace/events/irq.h: In function 'ftrace_test_probe_irq_handler_entry':
+include/trace/events/irq.h:37: error: implicit declaration of function 'check_trace_callback_type_irq_handler_entry'
+include/trace/events/irq.h: In function 'ftrace_test_probe_irq_handler_exit':
+include/trace/events/irq.h:67: error: implicit declaration of function 'check_trace_callback_type_irq_handler_exit'
+include/trace/events/irq.h: In function 'ftrace_test_probe_softirq_entry':
+include/trace/events/irq.h:112: error: implicit declaration of function 'check_trace_callback_type_softirq_entry'
+include/trace/events/irq.h: In function 'ftrace_test_probe_softirq_exit':
+include/trace/events/irq.h:126: error: implicit declaration of function 'check_trace_callback_type_softirq_exit'
+include/trace/events/irq.h: In function 'ftrace_test_probe_softirq_raise':
+include/trace/events/irq.h:140: error: implicit declaration of function 'check_trace_callback_type_softirq_raise'
+make[5]: *** [kernel/trace/power-traces.o] Error 1
+make[4]: *** [kernel/trace] Error 2
+make[3]: *** [kernel] Error 2
+
+Suggested-by: Steven Rostedt <rostedt@goodmis.org>
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ arch/microblaze/include/asm/irq.h |    2 --
+ 1 files changed, 0 insertions(+), 2 deletions(-)
+
+diff --git a/arch/microblaze/include/asm/irq.h b/arch/microblaze/include/asm/irq.h
+index ec5583d..cc54187 100644
+--- a/arch/microblaze/include/asm/irq.h
++++ b/arch/microblaze/include/asm/irq.h
+@@ -12,8 +12,6 @@
+ #define NR_IRQS 32
+ #include <asm-generic/irq.h>
+ 
+-#include <linux/interrupt.h>
+-
+ /* This type is the placeholder for a hardware interrupt number. It has to
+  * be big enough to enclose whatever representation is used by a given
+  * platform.
+-- 
+1.7.0.4
+

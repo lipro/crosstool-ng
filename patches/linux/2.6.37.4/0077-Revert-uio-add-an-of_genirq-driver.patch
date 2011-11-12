@@ -1,0 +1,149 @@
+From 5c8e9c0d3f26150072861da50377a9c46bd1fed2 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Thu, 31 Mar 2011 13:36:07 +0200
+Subject: [PATCH] Revert "uio: add an of_genirq driver"
+
+This reverts commit c543deda23a57eb8046120108acc05807fc49f4f.
+---
+ drivers/uio/Kconfig         |    6 ---
+ drivers/uio/Makefile        |    1 -
+ drivers/uio/uio_of_genirq.c |   98 -------------------------------------------
+ 3 files changed, 0 insertions(+), 105 deletions(-)
+ delete mode 100644 drivers/uio/uio_of_genirq.c
+
+diff --git a/drivers/uio/Kconfig b/drivers/uio/Kconfig
+index fcaa333..bb44079 100644
+--- a/drivers/uio/Kconfig
++++ b/drivers/uio/Kconfig
+@@ -44,12 +44,6 @@ config UIO_PDRV_GENIRQ
+ 
+ 	  If you don't know what to do here, say N.
+ 
+-config UIO_OF_GENIRQ
+-	tristate "Userspace I/O OF driver with generic IRQ handling"
+-	depends on UIO_PDRV_GENIRQ && OF
+-	help
+-	  OF wrapper for the above platform driver.
+-
+ config UIO_AEC
+ 	tristate "AEC video timestamp device"
+ 	depends on PCI
+diff --git a/drivers/uio/Makefile b/drivers/uio/Makefile
+index f196f1b..18fd818 100644
+--- a/drivers/uio/Makefile
++++ b/drivers/uio/Makefile
+@@ -2,7 +2,6 @@ obj-$(CONFIG_UIO)	+= uio.o
+ obj-$(CONFIG_UIO_CIF)	+= uio_cif.o
+ obj-$(CONFIG_UIO_PDRV)	+= uio_pdrv.o
+ obj-$(CONFIG_UIO_PDRV_GENIRQ)	+= uio_pdrv_genirq.o
+-obj-$(CONFIG_UIO_OF_GENIRQ)	+= uio_of_genirq.o
+ obj-$(CONFIG_UIO_AEC)	+= uio_aec.o
+ obj-$(CONFIG_UIO_SERCOS3)	+= uio_sercos3.o
+ obj-$(CONFIG_UIO_PCI_GENERIC)	+= uio_pci_generic.o
+diff --git a/drivers/uio/uio_of_genirq.c b/drivers/uio/uio_of_genirq.c
+deleted file mode 100644
+index 254ec5b..0000000
+--- a/drivers/uio/uio_of_genirq.c
++++ /dev/null
+@@ -1,98 +0,0 @@
+-/*
+- * OF wrapper to make use of the uio_pdrv_genirq-driver.
+- *
+- * Copyright (C) 2009 Wolfram Sang, Pengutronix
+- *
+- * This program is free software; you can redistribute it and/or modify it
+- * under the terms of the GNU General Public License version 2 as published by
+- * the Free Software Foundation.
+- */
+-
+-#include <linux/kernel.h>
+-#include <linux/module.h>
+-#include <linux/uio_driver.h>
+-#include <linux/of_device.h>
+-#include <linux/of_platform.h>
+-#include <linux/uio_pdrv_genirq.h>
+-
+-#define OF_DRIVER_VERSION "1"
+-
+-static __devinit int uio_of_genirq_probe(struct of_device *op,
+-		const struct of_device_id *match)
+-{
+-	struct uio_info *uioinfo;
+-	struct resource resources[MAX_UIO_MAPS];
+-	int i, ret;
+-
+-	uioinfo = kzalloc(sizeof(*uioinfo), GFP_KERNEL);
+-	if (!uioinfo)
+-		return -ENOMEM;
+-
+-	uioinfo->name = op->node->name;
+-	uioinfo->version = OF_DRIVER_VERSION;
+-	uioinfo->irq = irq_of_parse_and_map(op->node, 0);
+-	if (!uioinfo->irq)
+-		uioinfo->irq = UIO_IRQ_NONE;
+-
+-	for (i = 0; i < MAX_UIO_MAPS; ++i)
+-		if (of_address_to_resource(op->node, i, &resources[i]))
+-			break;
+-
+-	ret = __uio_pdrv_genirq_probe(&op->dev, uioinfo, &resources, i);
+-	if (ret)
+-		goto err_cleanup;
+-
+-	return 0;
+-
+-err_cleanup:
+-	if (uioinfo->irq != UIO_IRQ_NONE)
+-		irq_dispose_mapping(uioinfo->irq);
+-
+-	kfree(uioinfo);
+-	return ret;
+-}
+-
+-static __devexit int uio_of_genirq_remove(struct of_device *op)
+-{
+-	struct uio_pdrv_genirq_platdata *priv = dev_get_drvdata(&op->dev);
+-
+-	uio_unregister_device(priv->uioinfo);
+-
+-	if (priv->uioinfo->irq != UIO_IRQ_NONE)
+-		irq_dispose_mapping(priv->uioinfo->irq);
+-
+-	kfree(priv->uioinfo);
+-	kfree(priv);
+-	return 0;
+-}
+-
+-/* Match table for of_platform binding */
+-static const struct of_device_id __devinitconst uio_of_genirq_match[] = {
+-	{ .compatible = "generic-uio", },
+-	{},
+-};
+-MODULE_DEVICE_TABLE(of, uio_of_genirq_match);
+-
+-static struct of_platform_driver uio_of_genirq_driver = {
+-	.owner = THIS_MODULE,
+-	.name = "uio-of-genirq",
+-	.match_table = uio_of_genirq_match,
+-	.probe = uio_of_genirq_probe,
+-	.remove = __devexit_p(uio_of_genirq_remove),
+-};
+-
+-static inline int __init uio_of_genirq_init(void)
+-{
+-	return of_register_platform_driver(&uio_of_genirq_driver);
+-}
+-module_init(uio_of_genirq_init);
+-
+-static inline void __exit uio_of_genirq_exit(void)
+-{
+-	of_unregister_platform_driver(&uio_of_genirq_driver);
+-}
+-module_exit(uio_of_genirq_exit);
+-
+-MODULE_AUTHOR("Wolfram Sang");
+-MODULE_DESCRIPTION("Userspace I/O OF driver with generic IRQ handling");
+-MODULE_LICENSE("GPL v2");
+-- 
+1.7.0.4
+

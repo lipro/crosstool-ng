@@ -1,0 +1,44 @@
+From 96852fdbaec3cd5d3b9eba2b3dae2e1c2c0e0c6e Mon Sep 17 00:00:00 2001
+From: John Linn <john.linn@xilinx.com>
+Date: Wed, 24 Feb 2010 12:55:02 -0700
+Subject: [PATCH] Xilinx: PCI: Added more support for PCI
+
+In order to use an off the shelf nic, like the intel pro card,
+changes are needed to support pci dma interfaces and other
+small changes.
+---
+ arch/microblaze/include/asm/io.h  |    4 ++++
+ arch/microblaze/include/asm/pci.h |    2 ++
+ 2 files changed, 6 insertions(+), 0 deletions(-)
+
+diff --git a/arch/microblaze/include/asm/io.h b/arch/microblaze/include/asm/io.h
+index eae3222..239e8ed 100644
+--- a/arch/microblaze/include/asm/io.h
++++ b/arch/microblaze/include/asm/io.h
+@@ -35,6 +35,10 @@ extern resource_size_t isa_mem_base;
+ 
+ #define IO_SPACE_LIMIT (0xFFFFFFFF)
+ 
++/* the following is needed to support PCI with some drivers */
++
++#define mmiowb()
++
+ static inline unsigned char __raw_readb(const volatile void __iomem *addr)
+ {
+ 	return *(volatile unsigned char __force *)addr;
+diff --git a/arch/microblaze/include/asm/pci.h b/arch/microblaze/include/asm/pci.h
+index 2232ff9..f318f9d 100644
+--- a/arch/microblaze/include/asm/pci.h
++++ b/arch/microblaze/include/asm/pci.h
+@@ -22,6 +22,8 @@
+ #include <asm/prom.h>
+ #include <asm/pci-bridge.h>
+ 
++#include <asm-generic/pci-dma-compat.h>
++
+ #define PCIBIOS_MIN_IO		0x1000
+ #define PCIBIOS_MIN_MEM		0x10000000
+ 
+-- 
+1.7.0.4
+

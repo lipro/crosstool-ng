@@ -1,0 +1,31 @@
+From b8dafbe63d079d65095e85f64a53262b4069cf6c Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Wed, 28 Oct 2009 12:47:55 +0100
+Subject: [PATCH] ll_temac: Extend time for autonegotiation
+
+I am not sure about this change. After this change
+s3a1800dsp could work on 1Gb/s speed. Current driver supports
+only Marvel phy but on this board is different one. The best
+solution is to use proper phylib and handle phys via it.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ drivers/net/xilinx_lltemac/xlltemac_main.c |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/drivers/net/xilinx_lltemac/xlltemac_main.c b/drivers/net/xilinx_lltemac/xlltemac_main.c
+index e969e0a..67253b9 100644
+--- a/drivers/net/xilinx_lltemac/xlltemac_main.c
++++ b/drivers/net/xilinx_lltemac/xlltemac_main.c
+@@ -576,7 +576,7 @@ int renegotiate_speed(struct net_device *dev, int speed, DUPLEX duplex)
+ 		/* initiate an autonegotiation of the speed */
+ 		_XLlTemac_PhyWrite(&lp->Emac, lp->gmii_addr, MII_BMCR, phy_reg0);
+ 
+-		wait_count = 5;	/* so we don't loop forever */
++		wait_count = 10;	/* so we don't loop forever */
+ 		while (wait_count--) {
+ 			/* wait a bit for the negotiation to complete */
+ 			mdelay(500);
+-- 
+1.7.0.4
+

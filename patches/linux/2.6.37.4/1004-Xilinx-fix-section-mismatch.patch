@@ -1,0 +1,43 @@
+From 08adc2f1543fbd7af08482539c04cb4e2a929bb3 Mon Sep 17 00:00:00 2001
+From: Stephan Linz <linz@li-pro.net>
+Date: Wed, 22 Jun 2011 22:18:47 +0200
+Subject: [PATCH] Xilinx: fix section mismatch
+
+Section mismatch in reference from the variable axienet_of_driver to the function .init.text:axienet_of_probe()
+Section mismatch in reference from the variable uio_pdrv_genirq to the variable .devinit.rodata:uio_of_genirq_match
+
+Signed-off-by: Stephan Linz <linz@li-pro.net>
+---
+ drivers/net/xilinx_axienet_main.c |    2 +-
+ drivers/uio/uio_pdrv_genirq.c     |    2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/net/xilinx_axienet_main.c b/drivers/net/xilinx_axienet_main.c
+index e224ab5..5ababf1 100755
+--- a/drivers/net/xilinx_axienet_main.c
++++ b/drivers/net/xilinx_axienet_main.c
+@@ -1390,7 +1390,7 @@ static void axienet_dma_err_handler(unsigned long data)
+  * device. Parses through device tree and populates fields of
+  * axienet_local. It registers the Ethernet device.
+  **/
+-static int __init
++static int __devinit
+ axienet_of_probe(struct platform_device *op, const struct of_device_id *match)
+ {
+ 	struct device_node *np;
+diff --git a/drivers/uio/uio_pdrv_genirq.c b/drivers/uio/uio_pdrv_genirq.c
+index 715a68d..2d90b3a 100644
+--- a/drivers/uio/uio_pdrv_genirq.c
++++ b/drivers/uio/uio_pdrv_genirq.c
+@@ -267,7 +267,7 @@ MODULE_DEVICE_TABLE(of, uio_of_genirq_match);
+ # define uio_of_genirq_match NULL
+ #endif
+ 
+-static struct platform_driver uio_pdrv_genirq = {
++static struct platform_driver __refdata uio_pdrv_genirq = {
+ 	.probe = uio_pdrv_genirq_probe,
+ 	.remove = uio_pdrv_genirq_remove,
+ 	.driver = {
+-- 
+1.7.0.4
+

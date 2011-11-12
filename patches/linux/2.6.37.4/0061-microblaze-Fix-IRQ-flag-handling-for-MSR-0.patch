@@ -1,0 +1,30 @@
+From 1077dcaadbcd404d8257cd4895e896d189bea74e Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Mon, 7 Feb 2011 13:32:55 +0100
+Subject: [PATCH] microblaze: Fix IRQ flag handling for MSR=0
+
+Patch: Fix IRQ flag handling naming
+(sha1: f9ee29270c11dba7d0fe0b83ce47a4d8e8d2101)
+introduced problem on system with MSR=0.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ arch/microblaze/include/asm/irqflags.h |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/arch/microblaze/include/asm/irqflags.h b/arch/microblaze/include/asm/irqflags.h
+index 5fd3190..c4532f0 100644
+--- a/arch/microblaze/include/asm/irqflags.h
++++ b/arch/microblaze/include/asm/irqflags.h
+@@ -12,7 +12,7 @@
+ #include <linux/types.h>
+ #include <asm/registers.h>
+ 
+-#ifdef CONFIG_XILINX_MICROBLAZE0_USE_MSR_INSTR
++#if CONFIG_XILINX_MICROBLAZE0_USE_MSR_INSTR
+ 
+ static inline unsigned long arch_local_irq_save(void)
+ {
+-- 
+1.7.0.4
+

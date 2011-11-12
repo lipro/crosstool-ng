@@ -1,0 +1,41 @@
+From b8ab8b15fccd955957f7bd30b828d9d5bbbed356 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Wed, 9 Feb 2011 14:38:21 +0100
+Subject: [PATCH] ll_temac: Do not use mainline ll_temac driver
+
+The main reason is that our old driver is well tested
+and contains performance features.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ drivers/net/Kconfig |   14 +++++++-------
+ 1 files changed, 7 insertions(+), 7 deletions(-)
+
+diff --git a/drivers/net/Kconfig b/drivers/net/Kconfig
+index b92890e..544ac75 100644
+--- a/drivers/net/Kconfig
++++ b/drivers/net/Kconfig
+@@ -2462,13 +2462,13 @@ config MV643XX_ETH
+ 	  Some boards that use the Discovery chipset are the Momenco
+ 	  Ocelot C and Jaguar ATX and Pegasos II.
+ 
+-config XILINX_LL_TEMAC
+-	tristate "Xilinx LL TEMAC (LocalLink Tri-mode Ethernet MAC) driver"
+-	depends on PPC || MICROBLAZE
+-	select PHYLIB
+-	help
+-	  This driver supports the Xilinx 10/100/1000 LocalLink TEMAC
+-	  core used in Xilinx Spartan and Virtex FPGAs
++#config XILINX_LL_TEMAC
++#	tristate "Xilinx LL TEMAC (LocalLink Tri-mode Ethernet MAC) driver"
++#	depends on PPC || MICROBLAZE
++#	select PHYLIB
++#	help
++#	  This driver supports the Xilinx 10/100/1000 LocalLink TEMAC
++#	  core used in Xilinx Spartan and Virtex FPGAs
+ 
+ config QLA3XXX
+ 	tristate "QLogic QLA3XXX Network Driver Support"
+-- 
+1.7.0.4
+

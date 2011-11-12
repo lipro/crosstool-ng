@@ -1,0 +1,32 @@
+From 92f52a76f94c0ada9564144fc32dee856893fb80 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Thu, 31 Mar 2011 08:25:09 +0200
+Subject: [PATCH] net: Fix compilation warning
+
+CC      drivers/net/xilinx_lltemac/xlltemac_main.o
+drivers/net/xilinx_lltemac/xlltemac_main.c:496:7:
+warning: "CONFIG_XILINX_LLTEMAC_MARVELL_88E1111_RGMII" is not defined
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ drivers/net/xilinx_lltemac/xlltemac_main.c |    4 ++--
+ 1 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/net/xilinx_lltemac/xlltemac_main.c b/drivers/net/xilinx_lltemac/xlltemac_main.c
+index 8b73d07..e4ef75c 100644
+--- a/drivers/net/xilinx_lltemac/xlltemac_main.c
++++ b/drivers/net/xilinx_lltemac/xlltemac_main.c
+@@ -492,8 +492,8 @@ static void phy_setup(struct net_local *lp)
+ 
+ 	_XLlTemac_PhyRead(&lp->Emac, lp->gmii_addr,
+ 		NATIONAL_DP83865_STATUS, &RegValue);
+-
+-#elif CONFIG_XILINX_LLTEMAC_MARVELL_88E1111_RGMII
++#endif
++#ifdef CONFIG_XILINX_LLTEMAC_MARVELL_88E1111_RGMII
+ 	u16 Register;
+ 
+ 	/*
+-- 
+1.7.0.4
+

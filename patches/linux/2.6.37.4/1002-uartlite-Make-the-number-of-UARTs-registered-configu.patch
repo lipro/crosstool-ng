@@ -1,0 +1,113 @@
+From 28cc024424528c4a0cc607bf014067fd3327d253 Mon Sep 17 00:00:00 2001
+From: Stephan Linz <linz@li-pro.net>
+Date: Wed, 22 Jun 2011 20:56:11 +0200
+Subject: [PATCH] uartlite: Make the number of UARTs registered configurable.
+
+Based on the 8250 code also add a nr_uarts module option to
+override this, up to a maximum of SERIAL_UARTLITE_NR_UARTS
+
+This should appease people who complain about a proliferation
+of /dev/ttyUL & /sysfs nodes whilst at the same time allowing
+a single kernel image to support the rarer occasions of
+lots of devices.
+
+So you can avoid related error like:
+[    0.804000] uartlite 84000000.serial: ttyUL4 too large
+[    0.808000] uartlite: probe of 84000000.serial failed with error -22
+
+Signed-off-by: Stephan Linz <linz@li-pro.net>
+---
+ drivers/serial/Kconfig    |   10 ++++++++++
+ drivers/serial/uartlite.c |   20 ++++++++++++++++----
+ 2 files changed, 26 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/serial/Kconfig b/drivers/serial/Kconfig
+index aff9dcd..f3e5811 100644
+--- a/drivers/serial/Kconfig
++++ b/drivers/serial/Kconfig
+@@ -919,6 +919,16 @@ config SERIAL_UARTLITE_CONSOLE
+ 	  console (the system console is the device which receives all kernel
+ 	  messages and warnings and which allows logins in single user mode).
+ 
++config SERIAL_UARTLITE_NR_UARTS
++	int "Maximum number of uartlite serial ports"
++	depends on SERIAL_UARTLITE
++	default "4"
++	help
++	  Set this to the number of serial ports you want the driver
++	  to support.  This includes any ports discovered via OPB or
++	  PLB enumeration and any ports that may be added at run-time
++	  via hot-plug (if it is possible).
++
+ config SERIAL_SUNCORE
+ 	bool
+ 	depends on SPARC
+diff --git a/drivers/serial/uartlite.c b/drivers/serial/uartlite.c
+index a8a129f..4b3c1cf 100644
+--- a/drivers/serial/uartlite.c
++++ b/drivers/serial/uartlite.c
+@@ -38,7 +38,10 @@ MODULE_DEVICE_TABLE(of, ulite_of_match);
+ #define ULITE_NAME		"ttyUL"
+ #define ULITE_MAJOR		204
+ #define ULITE_MINOR		187
+-#define ULITE_NR_UARTS		4
++#define ULITE_NR_UARTS		CONFIG_SERIAL_UARTLITE_NR_UARTS
++
++/* TODO: remove this comment: ULITE_NR_UARTS */
++static unsigned int nr_uarts = CONFIG_SERIAL_UARTLITE_NR_UARTS;
+ 
+ /* ---------------------------------------------------------------------
+  * Register definitions
+@@ -427,7 +430,7 @@ static int __devinit ulite_console_setup(struct console *co, char *options)
+ 	int parity = 'n';
+ 	int flow = 'n';
+ 
+-	if (co->index < 0 || co->index >= ULITE_NR_UARTS)
++	if (co->index < 0 || co->index >= nr_uarts)
+ 		return -EINVAL;
+ 
+ 	port = &ulite_ports[co->index];
+@@ -464,6 +467,9 @@ static struct console ulite_console = {
+ 
+ static int __init ulite_console_init(void)
+ {
++	if (nr_uarts > ULITE_NR_UARTS)
++		nr_uarts = ULITE_NR_UARTS;
++
+ 	register_console(&ulite_console);
+ 	return 0;
+ }
+@@ -504,11 +510,11 @@ static int __devinit ulite_assign(struct device *dev, int id, u32 base, int irq)
+ 
+ 	/* if id = -1; then scan for a free id and use that */
+ 	if (id < 0) {
+-		for (id = 0; id < ULITE_NR_UARTS; id++)
++		for (id = 0; id < nr_uarts; id++)
+ 			if (ulite_ports[id].mapbase == 0)
+ 				break;
+ 	}
+-	if (id < 0 || id >= ULITE_NR_UARTS) {
++	if (id < 0 || id >= nr_uarts) {
+ 		dev_err(dev, "%s%i too large\n", ULITE_NAME, id);
+ 		return -EINVAL;
+ 	}
+@@ -669,6 +675,9 @@ int __init ulite_init(void)
+ {
+ 	int ret;
+ 
++	if (nr_uarts > ULITE_NR_UARTS)
++		nr_uarts = ULITE_NR_UARTS;
++
+ 	pr_debug("uartlite: calling uart_register_driver()\n");
+ 	ret = uart_register_driver(&ulite_uart_driver);
+ 	if (ret)
+@@ -707,3 +716,6 @@ module_exit(ulite_exit);
+ MODULE_AUTHOR("Peter Korsgaard <jacmet@sunsite.dk>");
+ MODULE_DESCRIPTION("Xilinx uartlite serial driver");
+ MODULE_LICENSE("GPL");
++
++module_param(nr_uarts, uint, 0644);
++MODULE_PARM_DESC(nr_uarts, "Maximum number of UARTs supported. (1-" __MODULE_STRING(CONFIG_SERIAL_UARTLITE_NR_UARTS) ")");
+-- 
+1.7.0.4
+

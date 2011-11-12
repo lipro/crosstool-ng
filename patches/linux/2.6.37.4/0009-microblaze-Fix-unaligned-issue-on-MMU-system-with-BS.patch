@@ -1,0 +1,41 @@
+From 8aa39105425e32e2e9cac7ba5a4b499454b2e458 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Fri, 28 Jan 2011 13:14:58 +0100
+Subject: [PATCH] microblaze: Fix unaligned issue on MMU system with BS=0 DIV=1
+
+Unaligned code use shift for finding register operand.
+There is used BSRLI(r8,r8,2) macro which is expand for BS=0, DIV=1
+by
+	ori rD, r0, (1 << imm);	\
+	idivu rD, rD, rA
+
+but if rD is equal rA then ori instruction rewrite value which
+should be devide.
+
+The patch remove this macro which use idivu instruction because
+idivu takes 32/34 cycles. The highest shifting is 20 which takes
+20 cycles.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ arch/microblaze/kernel/hw_exception_handler.S |    4 ----
+ 1 files changed, 0 insertions(+), 4 deletions(-)
+
+diff --git a/arch/microblaze/kernel/hw_exception_handler.S b/arch/microblaze/kernel/hw_exception_handler.S
+index 25f6e07..782680d 100644
+--- a/arch/microblaze/kernel/hw_exception_handler.S
++++ b/arch/microblaze/kernel/hw_exception_handler.S
+@@ -147,10 +147,6 @@
+ 	#if CONFIG_XILINX_MICROBLAZE0_USE_BARREL > 0
+ 	#define BSRLI(rD, rA, imm)	\
+ 		bsrli rD, rA, imm
+-	#elif CONFIG_XILINX_MICROBLAZE0_USE_DIV > 0
+-	#define BSRLI(rD, rA, imm)	\
+-		ori rD, r0, (1 << imm);	\
+-		idivu rD, rD, rA
+ 	#else
+ 	#define BSRLI(rD, rA, imm) BSRLI ## imm (rD, rA)
+ 	/* Only the used shift constants defined here - add more if needed */
+-- 
+1.7.0.4
+

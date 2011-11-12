@@ -1,0 +1,93 @@
+From 4b8d7ffcac50d8dcc8f1429ba9b54e28529908b7 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Mon, 8 Nov 2010 12:37:40 +0100
+Subject: [PATCH] microblaze: Do not copy reset vectors/manual reset vector setup
+
+Reset vector can be setup by bootloader and kernel doens't need
+to touch it. If you require to setup reset vector, please use
+CONFIG_MANUAL_RESET_VECTOR throught menuconfig.
+It is not possible to setup address 0x0 as reset address because
+make no sense to set it up at all.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+Signed-off-by: John Williams <john.williams@petalogix.com>
+---
+ arch/microblaze/Kconfig        |   11 +++++++++++
+ arch/microblaze/kernel/entry.S |    7 +++----
+ arch/microblaze/kernel/setup.c |   12 ++++++++++--
+ 3 files changed, 24 insertions(+), 6 deletions(-)
+
+diff --git a/arch/microblaze/Kconfig b/arch/microblaze/Kconfig
+index 7d53c39..602c51b 100644
+--- a/arch/microblaze/Kconfig
++++ b/arch/microblaze/Kconfig
+@@ -190,6 +190,17 @@ config LOWMEM_SIZE
+ 	hex "Maximum low memory size (in bytes)" if LOWMEM_SIZE_BOOL
+ 	default "0x30000000"
+ 
++config MANUAL_RESET_VECTOR
++	hex "Microblaze reset vector address setup"
++	default "0x0"
++	help
++	  Set this option to have the kernel override the CPU Reset vector.
++	  If zero, no change will be made to the MicroBlaze reset vector at
++	  address 0x0.
++	  If non-zero, a jump instruction to this address, will be written
++	  to the reset vector at address 0x0.
++	  If you are unsure, set it to default value 0x0.
++
+ config KERNEL_START_BOOL
+ 	bool "Set custom kernel base address"
+ 	depends on ADVANCED_OPTIONS
+diff --git a/arch/microblaze/kernel/entry.S b/arch/microblaze/kernel/entry.S
+index 35dc0a9..2c74e61 100644
+--- a/arch/microblaze/kernel/entry.S
++++ b/arch/microblaze/kernel/entry.S
+@@ -986,11 +986,10 @@ ENTRY(_reset)
+ 	/* These are compiled and loaded into high memory, then
+ 	 * copied into place in mach_early_setup */
+ 	.section	.init.ivt, "ax"
++#if CONFIG_MANUAL_RESET_VECTOR
+ 	.org	0x0
+-	/* this is very important - here is the reset vector */
+-	/* in current MMU branch you don't care what is here - it is
+-	 * used from bootloader site - but this is correct for FS-BOOT */
+-	brai	0x70
++	brai	CONFIG_MANUAL_RESET_VECTOR
++#endif
+ 	.org	0x8
+ 	brai	TOPHYS(_user_exception); /* syscall handler */
+ 	.org	0x10
+diff --git a/arch/microblaze/kernel/setup.c b/arch/microblaze/kernel/setup.c
+index af34891..15231fc 100644
+--- a/arch/microblaze/kernel/setup.c
++++ b/arch/microblaze/kernel/setup.c
+@@ -98,7 +98,8 @@ void __init machine_early_init(const char *cmdline, unsigned int ram,
+ 		unsigned int fdt, unsigned int msr, unsigned int tlb0,
+ 		unsigned int tlb1)
+ {
+-	unsigned long *src, *dst = (unsigned long *)0x0;
++	unsigned long *src, *dst;
++	unsigned int offset = 0;
+ 
+ 	/* If CONFIG_MTD_UCLINUX is defined, assume ROMFS is at the
+ 	 * end of kernel. There are two position which we want to check.
+@@ -177,7 +178,14 @@ void __init machine_early_init(const char *cmdline, unsigned int ram,
+ 				"CPU have it %x\n", msr);
+ #endif
+ 
+-	for (src = __ivt_start; src < __ivt_end; src++, dst++)
++	/* Do not copy reset vectors. offset = 0x2 means skip the first
++	 * two instructions. dst is pointer to MB vectors which are placed
++	 * in block ram. If you want to copy reset vector setup offset to 0x0 */
++#if !CONFIG_MANUAL_RESET_VECTOR
++	offset = 0x2;
++#endif
++	dst = (unsigned long *) (offset * sizeof(u32));
++	for (src = __ivt_start + offset; src < __ivt_end; src++, dst++)
+ 		*dst = *src;
+ 
+ 	/* Initialize global data */
+-- 
+1.7.0.4
+

@@ -1,0 +1,28 @@
+From d4eb2728577ab09fd33b04eccf00ecb3d7927568 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Wed, 16 Sep 2009 11:43:53 +0200
+Subject: [PATCH] ll_temac: Shorten time for renegotiation for s3a1800 board
+
+I hope that this change not break behavior on different board.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ drivers/net/xilinx_lltemac/xlltemac_main.c |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/drivers/net/xilinx_lltemac/xlltemac_main.c b/drivers/net/xilinx_lltemac/xlltemac_main.c
+index 636f18c..e969e0a 100644
+--- a/drivers/net/xilinx_lltemac/xlltemac_main.c
++++ b/drivers/net/xilinx_lltemac/xlltemac_main.c
+@@ -576,7 +576,7 @@ int renegotiate_speed(struct net_device *dev, int speed, DUPLEX duplex)
+ 		/* initiate an autonegotiation of the speed */
+ 		_XLlTemac_PhyWrite(&lp->Emac, lp->gmii_addr, MII_BMCR, phy_reg0);
+ 
+-		wait_count = 20;	/* so we don't loop forever */
++		wait_count = 5;	/* so we don't loop forever */
+ 		while (wait_count--) {
+ 			/* wait a bit for the negotiation to complete */
+ 			mdelay(500);
+-- 
+1.7.0.4
+

@@ -1,0 +1,31 @@
+From 343360b2f050b889c60b151fd9bbd82a2cf4efd8 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Tue, 15 Feb 2011 09:43:58 +0100
+Subject: [PATCH] spi: Remove archdata from MTD_PARTS
+
+Fix "Add getting Flash partition information
+from device tree to m25p80 SPI Flash driver"
+(sha1 3a4cfc97393cc04ae3e072e915c346983a8048b3)
+patch to get is work on 2.6.37 kernel.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ drivers/mtd/devices/m25p80.c |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/drivers/mtd/devices/m25p80.c b/drivers/mtd/devices/m25p80.c
+index 5577d98..32cc843 100644
+--- a/drivers/mtd/devices/m25p80.c
++++ b/drivers/mtd/devices/m25p80.c
+@@ -928,7 +928,7 @@ static int __devinit m25p_probe(struct spi_device *spi)
+ 		int			nr_parts = 0;
+ 
+ #ifdef CONFIG_MTD_OF_PARTS
+-		nr_parts = of_mtd_parse_partitions(&spi->dev, spi->dev.archdata.of_node,&parts); 
++		nr_parts = of_mtd_parse_partitions(&spi->dev, spi->dev.of_node,&parts);
+ #endif
+ 
+ 		if (nr_parts <= 0 && mtd_has_cmdlinepart()) {
+-- 
+1.7.0.4
+

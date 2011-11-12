@@ -1,0 +1,27 @@
+From 84dadd51b1c40220e4e2a8424cf2aadd4ba7d134 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Tue, 28 Dec 2010 14:44:51 +0100
+Subject: [PATCH] microblaze: Add PVR for Microblaze v8.00.b
+
+Microblaze v8.00.b have 0x13 version string.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ arch/microblaze/kernel/cpu/cpuinfo.c |    1 +
+ 1 files changed, 1 insertions(+), 0 deletions(-)
+
+diff --git a/arch/microblaze/kernel/cpu/cpuinfo.c b/arch/microblaze/kernel/cpu/cpuinfo.c
+index 87c79fa..2c309fc 100644
+--- a/arch/microblaze/kernel/cpu/cpuinfo.c
++++ b/arch/microblaze/kernel/cpu/cpuinfo.c
+@@ -32,6 +32,7 @@ const struct cpu_ver_key cpu_ver_lookup[] = {
+ 	{"7.30.a", 0x10},
+ 	{"7.30.b", 0x11},
+ 	{"8.00.a", 0x12},
++	{"8.00.b", 0x13},
+ 	{NULL, 0},
+ };
+ 
+-- 
+1.7.0.4
+

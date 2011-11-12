@@ -1,0 +1,28 @@
+From 77ef1deb83b839af0e9a5918d06e2d64f9364716 Mon Sep 17 00:00:00 2001
+From: Wendy Liang <wendy.liang@petalogix.com>
+Date: Wed, 20 Oct 2010 18:39:35 +1000
+Subject: [PATCH] Add Numonyx N25Q128 SPI Flash support
+
+Signed-off-by: Wendy Liang <wendy.liang@petalogix.com>
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ drivers/mtd/devices/m25p80.c |    3 +++
+ 1 files changed, 3 insertions(+), 0 deletions(-)
+
+diff --git a/drivers/mtd/devices/m25p80.c b/drivers/mtd/devices/m25p80.c
+index 169959f..5577d98 100644
+--- a/drivers/mtd/devices/m25p80.c
++++ b/drivers/mtd/devices/m25p80.c
+@@ -709,6 +709,9 @@ static const struct spi_device_id m25p_ids[] = {
+ 	{ "m25pe80", INFO(0x208014,  0, 64 * 1024, 16,       0) },
+ 	{ "m25pe16", INFO(0x208015,  0, 64 * 1024, 32, SECT_4K) },
+ 
++	/* Numonyx -- n25q */
++	{ "n25q128", INFO(0x20ba18,  0, 64 * 1024, 256,      0) },
++
+ 	/* Winbond -- w25x "blocks" are 64K, "sectors" are 4KiB */
+ 	{ "w25x10", INFO(0xef3011, 0, 64 * 1024,  2,  SECT_4K) },
+ 	{ "w25x20", INFO(0xef3012, 0, 64 * 1024,  4,  SECT_4K) },
+-- 
+1.7.0.4
+

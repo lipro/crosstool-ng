@@ -1,0 +1,36 @@
+From 9791148db38880a53cdf4b78fb316d6d9029e89e Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Mon, 29 Nov 2010 14:46:56 +0100
+Subject: [PATCH] spi: Clear dma_mask for xilinx spi controller
+
+mmc_spi driver tests if dma is available.
+Microblaze systems supports DMA but xilinx_spi
+controller doesn't support DMA transfers that's
+why it is necessary to do this workaround to
+clear dma_mask in spi controller.
+
+mmc_spi then checks spi->master->dev.parent->dma_mask
+which is cleared and dma mode is not used.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ drivers/spi/xilinx_spi.c |    3 +++
+ 1 files changed, 3 insertions(+), 0 deletions(-)
+
+diff --git a/drivers/spi/xilinx_spi.c b/drivers/spi/xilinx_spi.c
+index 7adaef6..6497e12 100644
+--- a/drivers/spi/xilinx_spi.c
++++ b/drivers/spi/xilinx_spi.c
+@@ -371,6 +371,9 @@ struct spi_master *xilinx_spi_init(struct device *dev, struct resource *mem,
+ 	if (!master)
+ 		return NULL;
+ 
++	/* clear the dma_mask, to try to disable use of dma */
++	master->dev.dma_mask = 0;
++
+ 	/* the spi->mode bits understood by this driver: */
+ 	master->mode_bits = SPI_CPOL | SPI_CPHA;
+ 
+-- 
+1.7.0.4
+

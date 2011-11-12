@@ -1,0 +1,58 @@
+From b8ed0c84f0283afc4721adc9c78dd8a367d9dfbc Mon Sep 17 00:00:00 2001
+From: Stephan Linz <linz@li-pro.net>
+Date: Mon, 20 Jun 2011 21:27:31 +0200
+Subject: [PATCH] uio_pdrv_genirq: extensive interrupt search
+
+In some circumstances, especially in a complex OF environment,
+the interrupt will not present as second resource entry (hard
+coded as &pdev->resource[1]). We need a more precise lookup
+algorithm to find the first valid interrupt entry.
+
+Signed-off-by: Stephan Linz <linz@li-pro.net>
+---
+ drivers/uio/uio_pdrv_genirq.c |   20 +++++++++++++++-----
+ 1 files changed, 15 insertions(+), 5 deletions(-)
+
+diff --git a/drivers/uio/uio_pdrv_genirq.c b/drivers/uio/uio_pdrv_genirq.c
+index dd94385..715a68d 100644
+--- a/drivers/uio/uio_pdrv_genirq.c
++++ b/drivers/uio/uio_pdrv_genirq.c
+@@ -112,13 +112,22 @@ static int uio_pdrv_genirq_probe(struct platform_device *pdev)
+ 		uioinfo->name = pdev->dev.of_node->name;
+ 		uioinfo->version = uioinfo->name; /* FIXME */
+ 
+-		/* Multiple IRQs are not supported */
+-		if (pdev->num_resources > 1) {
+-			struct resource *r = &pdev->resource[1];
++		/* Looking for IRQ */
++		uioinfo->irq = UIO_IRQ_NONE;
++		for (i = 0; i < pdev->num_resources; ++i) {
++			struct resource *r = &pdev->resource[i];
++
++			if (r->flags != IORESOURCE_IRQ)
++				continue;
++
+ 			uioinfo->irq = r->start;
+ 			dev_info(&pdev->dev, "irq %d\n", (u32)uioinfo->irq);
+-		} else {
+-			uioinfo->irq = UIO_IRQ_NONE;
++
++			/* Multiple IRQs are not supported */
++			break;
++		}
++
++		if (uioinfo->irq == UIO_IRQ_NONE) {
+ 			dev_info(&pdev->dev, "no IRQ found\n");
+ 		}
+ 	}
+@@ -148,6 +157,7 @@ static int uio_pdrv_genirq_probe(struct platform_device *pdev)
+ 
+ 	uiomem = &uioinfo->mem[0];
+ 
++	/* Looking for memory slots */
+ 	for (i = 0; i < pdev->num_resources; ++i) {
+ 		struct resource *r = &pdev->resource[i];
+ 
+-- 
+1.7.0.4
+
