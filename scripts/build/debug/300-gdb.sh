@@ -7,11 +7,19 @@ do_debug_gdb_suffix() {
     esac
 }
 
+do_debug_gdb_native_suffix() {
+    case "${CT_GDB_NATIVE_VERSION}" in
+        snapshot)   ;;
+        *)          echo "-${CT_GDB_NATIVE_VERSION}";;
+    esac
+}
+
 do_debug_gdb_parts() {
     do_gdb=
     do_insight=
     do_ncurses=
     do_gdbserver_bin=
+    do_gdb_native=
 
     if [ "${CT_GDB_CROSS}" = y ]; then
         if [ "${CT_GDB_CROSS_INSIGHT}" = "y" ]; then
@@ -30,7 +38,7 @@ do_debug_gdb_parts() {
     fi
 
     if [ "${CT_GDB_NATIVE}" = "y" ]; then
-        do_gdb=y
+        do_gdb_native=y
         do_ncurses=y
     fi
 }
@@ -54,6 +62,12 @@ do_debug_gdb_get() {
     if [ "${do_gdbserver_bin}" = "y" ]; then
         CT_GetFile "gdbserver-${CT_TARGET}-${CT_GDB_GDBSERVER_PREBUILT_VERSION}" \
                    file://${CT_TOP_DIR}/contrib
+    fi
+
+    if [ "${do_gdb_native}" = "y" ]; then
+        CT_GetFile "gdb$(do_debug_gdb_native_suffix)${CT_GDB_NATIVE_VERSION_FNEXT}" \
+                   {ftp,http}://ftp.gnu.org/pub/gnu/gdb     \
+                   ftp://sources.redhat.com/pub/gdb/{{,old-}releases,snapshots/current}
     fi
 
     if [ "${do_ncurses}" = "y" ]; then
@@ -80,6 +94,11 @@ do_debug_gdb_extract() {
         CT_Extract "gdbserver-${CT_TARGET}-${CT_GDB_GDBSERVER_PREBUILT_VERSION}"
     fi
 
+    if [ "${do_gdb_native}" = "y" ]; then
+        CT_Extract "gdb$(do_debug_gdb_native_suffix)${CT_GDB_NATIVE_VERSION_FNEXT}"
+        CT_Patch "gdb$(do_debug_gdb_native_suffix)"
+    fi
+
     if [ "${do_ncurses}" = "y" ]; then
         CT_Extract "ncurses-${CT_NCURSES_VERSION}"
         CT_Patch "ncurses-${CT_NCURSES_VERSION}"
@@ -90,6 +109,7 @@ do_debug_gdb_build() {
     gdb_src_dir="${CT_SRC_DIR}/gdb$(do_debug_gdb_suffix)"
     insight_src_dir="${CT_SRC_DIR}/insight-${CT_GDB_VERSION}"
     gdbserver_bin_src_dir="${CT_SRC_DIR}/gdbserver-${CT_TARGET}-${CT_GDB_GDBSERVER_PREBUILT_VERSION}"
+    gdb_native_src_dir="${CT_SRC_DIR}/gdb$(do_debug_gdb_native_suffix)"
 
     extra_config=
     # Version 6.3 and below behave badly with gdbmi
@@ -248,7 +268,7 @@ do_debug_gdb_build() {
         CC="${CC_for_gdb}"                              \
         LD="${LD_for_gdb}"                              \
         CT_DoExecLog ALL                                \
-        "${gdb_src_dir}/configure"                      \
+        "${gdb_native_src_dir}/configure"               \
             --build=${CT_BUILD}                         \
             --host=${CT_TARGET}                         \
             --target=${CT_TARGET}                       \

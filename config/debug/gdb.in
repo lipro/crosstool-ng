@@ -104,7 +104,7 @@ endif # BARE_METAL
 choice
     bool
     prompt "gdb version"
-    depends on GDB_CROSS || GDB_NATIVE || GDB_GDBSERVER
+    depends on GDB_CROSS || GDB_GDBSERVER
 
 config GDB_V_6_4
     bool
@@ -163,6 +163,31 @@ config GDB_VERSION_FNEXT
     default "a" if GDB_V_6_4 || GDB_V_6_5 || GDB_V_6_6 || GDB_V_6_7 || GDB_V_6_7_1 || GDB_V_6_8
 
 if GDB_NATIVE
+
+choice
+    bool
+    prompt "Native gdb version"
+    depends on GDB_NATIVE
+
+config GDB_NATIVE_V_sameasgdb
+    bool
+    prompt "same as gdb"
+
+config GDB_NATIVE_V_7_2
+    bool
+    prompt "7.2"
+
+endchoice
+
+config GDB_NATIVE_VERSION
+    string
+    default GDB_VERSION if GDB_NATIVE_V_sameasgdb
+    default "7.2" if GDB_NATIVE_V_7_2
+
+config GDB_NATIVE_VERSION_FNEXT
+    string
+    default GDB_VERSION_FNEXT if GDB_NATIVE_V_sameasgdb
+    default "" if GDB_NATIVE_V_7_2
 
 comment "Native gdb needs a native ncurses library"
 
