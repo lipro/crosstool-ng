@@ -1,0 +1,3111 @@
+From 1a67b036620e1501227824898f9c95e3231db924 Mon Sep 17 00:00:00 2001
+From: Stephan Linz <linz@li-pro.net>
+Date: Sat, 12 Nov 2011 23:55:09 +0100
+Subject: [PATCH] enable debugger functionality for the Microblaze
+
+This will setting up Native GDB for the Microblaze.
+
+To get Microblaze GDB working you also need kernel
+updates, which fix the 'ptrace' functionality for the
+Microblaze to enable the debugger to work properly.
+
+Original patch come from:
+  - http://fusion.phys.tue.nl/fpga/doku.php?id=microblaze_gdb
+  - http://www.ccfe.ac.uk/fpga/
+
+Intro-by: Billy Huang <billykhuang@gmail.com>
+Signed-off-by: Stephan Linz <linz@li-pro.net>
+---
+ gdb/config/microblaze/linux.mh        |   12 +
+ gdb/config/microblaze/linux.mt        |    4 +
+ gdb/config/microblaze/microblaze.mt   |    5 +
+ gdb/config/microblaze/tm-linux.h      |   41 ++
+ gdb/config/microblaze/tm-microblaze.h |  245 ++++++++
+ gdb/configure.host                    |    3 +
+ gdb/linux-fork.c                      |    2 +-
+ gdb/linux-nat.c                       |    6 +-
+ gdb/microblaze-linux-nat.c            |  389 +++++++++++++
+ gdb/microblaze-linux-nat.c.debug      |  396 +++++++++++++
+ gdb/microblaze-linux-nat.h            |   18 +
+ gdb/microblaze-linux-tdep.c           |  117 ++++-
+ gdb/microblaze-linux-tdep.c.debug     |  275 +++++++++
+ gdb/microblaze-tdep.c                 |   21 +-
+ gdb/microblaze-tdep.h                 |   44 ++-
+ gdb/observer.h                        |  242 ++++++++
+ gdb/observer.inc                      | 1030 +++++++++++++++++++++++++++++++++
+ 17 files changed, 2837 insertions(+), 13 deletions(-)
+ create mode 100644 gdb/config/microblaze/linux.mh
+ create mode 100644 gdb/config/microblaze/linux.mt
+ create mode 100644 gdb/config/microblaze/microblaze.mt
+ create mode 100644 gdb/config/microblaze/tm-linux.h
+ create mode 100644 gdb/config/microblaze/tm-microblaze.h
+ create mode 100644 gdb/microblaze-linux-nat.c
+ create mode 100644 gdb/microblaze-linux-nat.c.debug
+ create mode 100644 gdb/microblaze-linux-nat.h
+ create mode 100644 gdb/microblaze-linux-tdep.c.debug
+ create mode 100644 gdb/observer.h
+ create mode 100644 gdb/observer.inc
+
+diff --git a/gdb/config/microblaze/linux.mh b/gdb/config/microblaze/linux.mh
+new file mode 100644
+index 0000000..c953144
+--- /dev/null
++++ b/gdb/config/microblaze/linux.mh
+@@ -0,0 +1,12 @@
++# Host: Intel 386 running GNU/Linux.
++
++NAT_FILE= config/nm-linux.h
++NATDEPFILES= inf-ptrace.o fork-child.o \
++	microblaze-linux-nat.o microblaze-linux-tdep.o \
++	proc-service.o linux-thread-db.o \
++	linux-nat.o linux-fork.o
++NAT_CDEPS = $(srcdir)/proc-service.list
++
++# The dynamically loaded libthread_db needs access to symbols in the
++# gdb executable.
++LOADLIBES = -ldl $(RDYNAMIC)
+diff --git a/gdb/config/microblaze/linux.mt b/gdb/config/microblaze/linux.mt
+new file mode 100644
+index 0000000..c2892cb
+--- /dev/null
++++ b/gdb/config/microblaze/linux.mt
+@@ -0,0 +1,4 @@
++# Target: Xilinx microblaze processor on Linux
++TDEPFILES= microblaze-tdep.o microblaze-linux-tdep.o microblaze-rom.o \
++ monitor.o dsrec.o solib.o solib-svr4.o solib-legacy.o corelow.o symfile-mem.o
++DEPRECATED_TM_FILE= tm-linux.h
+diff --git a/gdb/config/microblaze/microblaze.mt b/gdb/config/microblaze/microblaze.mt
+new file mode 100644
+index 0000000..f3e4798
+--- /dev/null
++++ b/gdb/config/microblaze/microblaze.mt
+@@ -0,0 +1,5 @@
++# Target: Xilinx microblaze processor
++TDEPFILES= microblaze-tdep.o  microblaze-rom.o monitor.o dsrec.o
++DEPRECATED_TM_FILE= tm-microblaze.h
++#SIM_OBS = remote-sim.o
++#SIM = ../sim/microblaze/libsim.a
+diff --git a/gdb/config/microblaze/tm-linux.h b/gdb/config/microblaze/tm-linux.h
+new file mode 100644
+index 0000000..e74fd7e
+--- /dev/null
++++ b/gdb/config/microblaze/tm-linux.h
+@@ -0,0 +1,41 @@
++/* Definitions to target GDB to GNU/Linux on PowerPC.
++
++   Copyright 1992, 1993, 2000, 2002 Free Software Foundation, Inc.
++
++This file is part of GDB.
++
++This program is free software; you can redistribute it and/or modify
++it under the terms of the GNU General Public License as published by
++the Free Software Foundation; either version 2 of the License, or
++(at your option) any later version.
++
++This program is distributed in the hope that it will be useful,
++but WITHOUT ANY WARRANTY; without even the implied warranty of
++MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++GNU General Public License for more details.
++
++You should have received a copy of the GNU General Public License
++along with this program; if not, write to the Free Software
++Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.  */
++
++#ifndef TM_LINUX_H
++#define TM_LINUX_H
++
++#include "microblaze/tm-microblaze.h"
++/* Avoid warning from redefinition in tm-sysv4.h (included from tm-linux.h) */
++#undef SKIP_TRAMPOLINE_CODE
++#include "config/tm-linux.h"
++
++/* Enable software single-stepping for Linux. */
++#undef SOFTWARE_SINGLE_STEP_P
++#undef SOFTWARE_SINGLE_STEP
++
++/* We've multi-arched these.  (Note that this completely undoes the
++   effect of config/tm-linux.h #including config/tm-sysv4.h.)  */
++#undef SKIP_TRAMPOLINE_CODE
++
++/* N_FUN symbols in shared libaries have 0 for their values and need
++   to be relocated. */
++#define SOFUN_ADDRESS_MAYBE_MISSING
++
++#endif  /* #ifndef TM_LINUX_H */
+diff --git a/gdb/config/microblaze/tm-microblaze.h b/gdb/config/microblaze/tm-microblaze.h
+new file mode 100644
+index 0000000..0c3d38b
+--- /dev/null
++++ b/gdb/config/microblaze/tm-microblaze.h
+@@ -0,0 +1,245 @@
++/* Parameters for execution on a Xilinx microblaze.
++   Copyright (C) 1995 Free Software Foundation, Inc.
++
++   This file is part of GDB.
++
++   This program is free software; you can redistribute it and/or modify
++   it under the terms of the GNU General Public License as published by
++   the Free Software Foundation; either version 2 of the License, or
++   (at your option) any later version.
++
++   This program is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++   GNU General Public License for more details.
++
++   You should have received a copy of the GNU General Public License
++   along with this program; if not, write to the Free Software
++   Foundation, Inc., 59 Temple Place - Suite 330,
++   Boston, MA 02111-1307, USA. */
++
++/*
++ * Copyright (c) 2001 Xilinx, Inc.  All rights reserved. 
++ *
++ * Redistribution and use in source and binary forms are permitted
++ * provided that the above copyright notice and this paragraph are
++ * duplicated in all such forms and that any documentation,
++ * advertising materials, and other materials related to such
++ * distribution and use acknowledge that the software was developed
++ * by Xilinx, Inc.  The name of the Company may not be used to endorse 
++ * or promote products derived from this software without specific prior 
++ * written permission.
++ * THIS SOFTWARE IS PROVIDED ``AS IS'' AND WITHOUT ANY EXPRESS OR
++ * IMPLIED WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED
++ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
++ *
++ *	Xilinx, Inc.
++ */
++
++#ifndef TM_MICROBLAZE_H
++#define TM_MICROBLAZE_H
++
++/* All registers are 32 bits */
++#define REGISTER_SIZE 4
++#define MAX_REGISTER_RAW_SIZE 4
++
++#define REGISTER_VIRTUAL_TYPE(REG) builtin_type_int
++
++#define REGISTER_BYTE(REG) ((REG) * REGISTER_SIZE)
++#define REGISTER_VIRTUAL_SIZE(REG) 4
++#define REGISTER_RAW_SIZE(REG) 4
++
++#define MAX_REGISTER_VIRTUAL_SIZE 4
++
++#define REGISTER_BYTES (NUM_REGS * REGISTER_SIZE)
++
++/* #define REGISTER_NAME(I) microblaze_register_names[I] FIXME */
++
++
++/* Registers. The Xilinx microblaze contains:
++
++   32 32-bit general purpose registers (r0-r31)
++    6 32-bit special registers (pc, msr, ear, esr, fsr, btr)
++   12 32-bit PVR
++    5 32-bit MMU Regs
++   ------
++   55 registers */
++#define NUM_REGS 55
++#define PC_REGNUM 32
++#define MSR_REGNUM 33
++#define EAR_REGNUM 34
++#define ESR_REGNUM 35
++#define FSR_REGNUM 36
++#define ROSDP_REGNUM 2
++#define SP_REGNUM 1
++
++#ifndef TARGET_HAS_HARDWARE_WATCHPOINTS
++
++#define TARGET_HAS_HARDWARE_WATCHPOINTS
++
++#define TARGET_CAN_USE_HARDWARE_WATCHPOINT(type, count, ot) \
++	microblaze_can_use_hardware_watchpoints(type, count, ot)
++#endif
++
++/*
++#ifndef WIN
++#define FP_REGNUM 35 
++#endif
++*/
++
++#define RWSDP_REGNUM 13
++#define LINK_REGNUM 15
++#define PR_REGNUM 15
++#define FIRST_ARGREG 5
++#define LAST_ARGREG 10
++#define RETVAL_REGNUM 3
++
++/*
++#ifdef WIN
++*/
++extern CORE_ADDR microblaze_target_read_fp();
++#define TARGET_READ_FP() microblaze_target_read_fp()
++
++extern void microblaze_target_write_fp(CORE_ADDR val);
++#define TARGET_WRITE_FP(val) microblaze_target_write_fp(val)
++/*
++#endif
++*/
++
++/* Offset from address of function to start of its code.
++   Zero on most machines.  */
++#define FUNCTION_START_OFFSET 0
++
++#define DECR_PC_AFTER_BREAK 0
++
++
++/* BREAKPOINT_FROM_PC uses the program counter value to determine
++   the breakpoint that should be used. microblaze breakpoint does not depend on PC*/
++/* BIG_BREAKPOINT defines the big-endian breakpoint that should be used */
++#ifdef __MICROBLAZE_UCLINUX__
++#define BIG_BREAKPOINT {0xb9, 0xcc, 0x00, 0x60}
++#define LITTLE_BREAKPOINT {0x60, 0x00, 0xcc, 0xb9}
++#else
++#define BIG_BREAKPOINT {0x98, 0x0c, 0x00, 0x00}
++#define LITTLE_BREAKPOINT {0x00, 0x00, 0x0c, 0x98}
++#endif
++
++
++/* Stack grows downward in memory */
++#define INNER_THAN(LHS,RHS) ((LHS) < (RHS))
++
++/* usha #define SAVED_PC_AFTER_CALL(FRAME)  read_register (PR_REGNUM)*/
++extern CORE_ADDR microblaze_saved_pc_after_call(int call_pc);
++#define SAVED_PC_AFTER_CALL(FRAME)  microblaze_saved_pc_after_call (read_register(LINK_REGNUM))
++
++
++struct frame_info;
++struct type;
++struct value;
++
++extern void microblaze_init_extra_frame_info (struct frame_info *fi);
++#define INIT_EXTRA_FRAME_INFO(FROMLEAF, FI) microblaze_init_extra_frame_info ((FI))
++#define INIT_FRAME_PC		/* Not necessary */
++#define FRAME_INIT_SAVED_REGS(FI)	/* handled by init_extra_frame_info */
++
++extern CORE_ADDR microblaze_frame_chain (struct frame_info *fi);
++#define FRAME_CHAIN(FI) microblaze_frame_chain ((FI))
++#define FRAME_CHAIN_VALID(FP, FI) generic_file_frame_chain_valid ((FP), (FI))
++
++extern CORE_ADDR microblaze_frame_saved_pc (struct frame_info *);
++#define FRAME_SAVED_PC(FI) (microblaze_frame_saved_pc ((FI)))
++
++/* Extracting/storing return values. */
++#define STORE_STRUCT_RETURN(ADDR, SP)	/* handled by microblaze_push_arguments */
++
++extern CORE_ADDR microblaze_extract_struct_value_address (char *regbuf);
++#define DEPRECATED_EXTRACT_STRUCT_VALUE_ADDRESS(REGBUF) \
++    microblaze_extract_struct_value_address (REGBUF)
++
++#define SKIP_PROLOGUE(PC) (microblaze_skip_prologue (PC))
++
++#define FRAME_ARGS_SKIP 0
++extern CORE_ADDR microblaze_frame_args_address (struct frame_info *fi);
++#define FRAME_ARGS_ADDRESS(FI) microblaze_frame_args_address ((FI))
++extern CORE_ADDR microblaze_frame_locals_address (struct frame_info *fi);
++#define FRAME_LOCALS_ADDRESS(FI) microblaze_frame_locals_address ((FI))
++#define FRAME_NUM_ARGS(FI) (-1)
++
++
++extern void microblaze_pop_frame (struct frame_info *fi);
++#define POP_FRAME microblaze_pop_frame (get_current_frame ())
++
++#define USE_GENERIC_DUMMY_FRAMES 1 
++#define CALL_DUMMY                   {0}
++#define CALL_DUMMY_START_OFFSET      (0)
++/*#define CALL_DUMMY_BREAKPOINT_OFFSET (0)*/
++#define CALL_DUMMY_LOCATION          AT_ENTRY_POINT
++/* #define FIX_CALL_DUMMY(DUMMY, START, FUNADDR, NARGS, ARGS, TYPE, GCCP)*/
++#define CALL_DUMMY_ADDRESS()         entry_point_address ()
++#define SIZEOF_CALL_DUMMY_WORDS      0
++#define SAVE_DUMMY_FRAME_TOS(SP)     generic_save_dummy_frame_tos (SP)
++
++extern void microblaze_fix_call_dummy PARAMS ((char*, CORE_ADDR, CORE_ADDR, int, struct value **, struct type *, int));
++#define FIX_CALL_DUMMY(DUMMY, START, FUNADDR, NARGS, ARGS, TYPE, GCCP) \
++  microblaze_fix_call_dummy(DUMMY, START, FUNADDR, NARGS, ARGS, TYPE, GCCP)
++
++extern CORE_ADDR microblaze_push_return_address PARAMS ((CORE_ADDR, CORE_ADDR));
++#define PUSH_RETURN_ADDRESS(PC, SP)  microblaze_push_return_address (PC, SP)
++
++#define PUSH_DUMMY_FRAME	generic_push_dummy_frame ()
++
++extern CORE_ADDR microblaze_push_arguments PARAMS ((int, struct value **, CORE_ADDR,
++					       unsigned char, CORE_ADDR));
++#define PUSH_ARGUMENTS(NARGS, ARGS, SP, STRUCT_RETURN, STRUCT_ADDR) \
++  (SP) = microblaze_push_arguments (NARGS, ARGS, SP, STRUCT_RETURN, STRUCT_ADDR)
++
++/*#define PC_IN_CALL_DUMMY(PC, SP, FP) generic_pc_in_call_dummy (PC, SP, FP)*/
++#define PC_IN_CALL_DUMMY(PC, SP, FP) \
++  (PC == entry_point_address()+4 || PC == entry_point_address()+8)
++
++/* Microblaze will never pass a sturcture by reference. It will always be split
++   between registers and stack. */
++#define REG_STRUCT_HAS_ADDR(GCC_P, TYPE) 0
++
++extern use_struct_convention_fn microblaze_use_struct_convention;
++#define USE_STRUCT_CONVENTION(GCC_P, TYPE) microblaze_use_struct_convention (GCC_P, TYPE)
++
++/* override the default get_saved_register function with
++   one that takes account of generic CALL_DUMMY frames */
++#define GET_SAVED_REGISTER(raw_buffer, optimized, addrp, frame, regnum, lval) \
++    generic_get_saved_register (raw_buffer, optimized, addrp, frame, regnum, lval)
++
++#if FIXME
++/* Cons up virtual frame pointer for trace */
++extern void microblaze_virtual_frame_pointer PARAMS ((CORE_ADDR, long *, long *));
++#define TARGET_VIRTUAL_FRAME_POINTER(PC, REGP, OFFP) \
++	microblaze_virtual_frame_pointer ((PC), (REGP), (OFFP))
++#endif
++
++/* For PE, gcc will tell us what th real type of
++   arguments are when it promotes arguments. */
++#define BELIEVE_PCC_PROMOTION 1
++
++/* All .stabs information is absolute */
++#define BLOCK_ADDRESS_ABSOLUTE 1
++
++/* Hook which will be called after $HOME/.gdbinit and $(PWD)/.gdbinit */
++#define BEFORE_MAIN_LOOP_HOOK microblaze_before_main_loop();
++
++/* Hook which will be called after $HOME/.gdbinit and $(PWD)/.gdbinit */
++extern void microblaze_before_main_loop(); /* in microblaze-tdep.c */
++
++/* Disable software single stepping for native debugging */
++#define SOFTWARE_SINGLE_STEP_P()    (0)
++
++/* siva/9/16/05: default_coerce_float_to_double does not work for us  */
++#define COERCE_FLOAT_TO_DOUBLE(formal, actual) (1)
++
++/* Instruction word size */
++#define INST_WORD_SIZE 4
++
++/* FIXME:  Not yet multiarched FRAME_NUM_ARGS */
++#define FRAME_NUM_ARGS_P microblaze_frame_num_args_p
++
++#endif
++
+diff --git a/gdb/configure.host b/gdb/configure.host
+index 794eeee..5c1780d 100644
+--- a/gdb/configure.host
++++ b/gdb/configure.host
+@@ -45,6 +45,7 @@ hppa*)			gdb_host_cpu=pa ;;
+ i[34567]86*)		gdb_host_cpu=i386 ;;
+ m68*)			gdb_host_cpu=m68k ;;
+ m88*)			gdb_host_cpu=m88k ;;
++microblaze*)		gdb_host_cpu=microblaze ;;
+ mips*)			gdb_host_cpu=mips ;;
+ powerpc* | rs6000)	gdb_host_cpu=powerpc ;;
+ sparcv9 | sparc64)	gdb_host_cpu=sparc ;;
+@@ -115,6 +116,8 @@ m68*-*-openbsd*)	gdb_host=obsd ;;
+ 
+ m88*-*-openbsd*)	gdb_host=obsd ;;
+ 
++microblaze*-*-linux*)		gdb_host=linux ;;
++
+ mips-sgi-irix5*)	gdb_host=irix5 ;;
+ mips-sgi-irix6*)	gdb_host=irix6 ;;
+ mips*-*-linux*)		gdb_host=linux ;;
+diff --git a/gdb/linux-fork.c b/gdb/linux-fork.c
+index d9463bd..aaf6894 100644
+--- a/gdb/linux-fork.c
++++ b/gdb/linux-fork.c
+@@ -31,7 +31,7 @@
+ #include "linux-nat.h"
+ #include "gdbthread.h"
+ 
+-#include <sys/ptrace.h>
++#include <linux/ptrace.h>
+ #include "gdb_wait.h"
+ #include <sys/param.h>
+ #include "gdb_dirent.h"
+diff --git a/gdb/linux-nat.c b/gdb/linux-nat.c
+index 93adfcd..88fb354 100644
+--- a/gdb/linux-nat.c
++++ b/gdb/linux-nat.c
+@@ -18,6 +18,8 @@
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
+ 
++#include <sys/ptrace.h>
++
+ #include "defs.h"
+ #include "inferior.h"
+ #include "target.h"
+@@ -28,7 +30,7 @@
+ #include <unistd.h>
+ #include <sys/syscall.h>
+ #endif
+-#include <sys/ptrace.h>
++#include <linux/ptrace.h>
+ #include "linux-nat.h"
+ #include "linux-fork.h"
+ #include "gdbthread.h"
+@@ -3803,7 +3805,7 @@ linux_nat_kill (struct target_ops *ops)
+   if (last.kind == TARGET_WAITKIND_FORKED
+       || last.kind == TARGET_WAITKIND_VFORKED)
+     {
+-      ptrace (PT_KILL, PIDGET (last.value.related_pid), 0, 0);
++      ptrace (PTRACE_KILL, PIDGET (last.value.related_pid), 0, 0);
+       wait (&status);
+     }
+ 
+diff --git a/gdb/microblaze-linux-nat.c b/gdb/microblaze-linux-nat.c
+new file mode 100644
+index 0000000..79cfa9e
+--- /dev/null
++++ b/gdb/microblaze-linux-nat.c
+@@ -0,0 +1,389 @@
++/* GNU/Linux on ARM native support.
++   Copyright (C) 1999, 2000, 2001, 2002, 2004, 2005, 2006, 2007, 2008, 2009,
++   2010 Free Software Foundation, Inc.
++
++   This file is part of GDB.
++
++   This program is free software; you can redistribute it and/or modify
++   it under the terms of the GNU General Public License as published by
++   the Free Software Foundation; either version 3 of the License, or
++   (at your option) any later version.
++
++   This program is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++   GNU General Public License for more details.
++
++   You should have received a copy of the GNU General Public License
++   along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
++
++#include <elf/common.h>
++#include <sys/user.h>
++#include <sys/ptrace.h>
++#include <sys/utsname.h>
++#include <sys/procfs.h>
++
++#include "defs.h"
++#include "arch-utils.h"
++#include "dis-asm.h"
++#include "frame.h"
++#include "trad-frame.h"
++#include "symtab.h"
++#include "value.h"
++#include "gdbcmd.h"
++#include "breakpoint.h"
++#include "inferior.h"
++#include "regcache.h"
++#include "target.h"
++#include "frame.h"
++#include "frame-base.h"
++#include "frame-unwind.h"
++#include "dwarf2-frame.h"
++#include "osabi.h"
++
++#include "gdb_assert.h"
++#include "gdb_string.h"
++#include "target-descriptions.h"
++#include "opcodes/microblaze-opcm.h"
++#include "opcodes/microblaze-dis.h"
++#include "microblaze-tdep.h"
++
++#include "linux-nat.h"
++#include "microblaze-linux-nat.h"
++#include "target-descriptions.h"
++#include "auxv.h"
++
++#include "microblaze-tdep.h"
++
++/* Prototypes for supply_gregset etc. */
++#include "gregset.h"
++
++/* Defines ps_err_e, struct ps_prochandle.  */
++#include "gdb_proc_service.h"
++
++#ifndef PTRACE_GET_THREAD_AREA
++#define PTRACE_GET_THREAD_AREA 22
++#endif
++
++/* The following variables are used to determine the version of the
++   underlying GNU/Linux operating system.  Examples:
++
++   GNU/Linux 2.0.35             GNU/Linux 2.2.12
++   os_version = 0x00020023      os_version = 0x0002020c
++   os_major = 2                 os_major = 2
++   os_minor = 0                 os_minor = 2
++   os_release = 35              os_release = 12
++
++   Note: os_version = (os_major << 16) | (os_minor << 8) | os_release
++
++   These are initialized using get_linux_version() from
++   _initialize_microblaze_linux_nat().  */
++
++static unsigned int os_version, os_major, os_minor, os_release;
++
++/* On GNU/Linux, threads are implemented as pseudo-processes, in which
++   case we may be tracing more than one process at a time.  In that
++   case, inferior_ptid will contain the main process ID and the
++   individual thread (process) ID.  get_thread_id () is used to get
++   the thread id if it's available, and the process id otherwise.  */
++
++int
++get_thread_id (ptid_t ptid)
++{
++  int tid = TIDGET (ptid);
++  if (0 == tid)
++    tid = PIDGET (ptid);
++  return tid;
++}
++
++#define GET_THREAD_ID(PTID)	get_thread_id (PTID)
++
++/* Fetch a general register of the process and store into
++   regcache.  */
++
++static void
++fetch_register (struct regcache *regcache, int regno)
++{
++
++  int ret, tid;
++  elf_gregset_t regs;
++
++  /* Get the thread id for the ptrace call.  */
++  tid = GET_THREAD_ID (inferior_ptid);
++  
++  ret = ptrace (PTRACE_GETREGS, tid, 0, &regs);
++  if (ret < 0)
++    {
++      warning (_("Unable to fetch general register."));
++      return;
++    } else {
++//      warning (_("GOT general registers."));
++    }
++
++  /* Retrieve the general purpose registers */
++  if (regno >= MICROBLAZE_R0_REGNUM && regno <= MICROBLAZE_FSR_REGNUM) {
++    regs[regno] = gdbarch_addr_bits_remove
++                              (get_regcache_arch (regcache),
++                               regs[regno]);
++    regcache_raw_supply (regcache, regno, (char *) &regs[regno]);
++  }
++
++  /* Processor status register */
++     /* Not yet implemented */
++ 
++  /* Processor counter register */ 
++/* PC should be grabbed above. PC is reg 32, FSR is reg 37 relative to index 0
++  if (MICROBLAZE_FSR_REGNUM == regno)
++    { 
++      regs[MICROBLAZE_PC_REGNUM] = gdbarch_addr_bits_remove
++			      (get_regcache_arch (regcache),
++			       regs[MICROBLAZE_PC_REGNUM]);
++      regcache_raw_supply (regcache, MICROBLAZE_PC_REGNUM,
++			   (char *) &regs[MICROBLAZE_PC_REGNUM]);
++    }
++*/
++}
++
++/* Fetch all general registers of the process and store into
++   regcache.  */
++
++static void
++fetch_regs (struct regcache *regcache)
++{
++
++  int ret, regno, tid;
++  elf_gregset_t regs;
++
++  /* Get the thread id for the ptrace call.  */
++  tid = GET_THREAD_ID (inferior_ptid);
++  
++  ret = ptrace (PTRACE_GETREGS, tid, 0, &regs);
++  if (ret < 0)
++    {
++      warning (_("Unable to fetch general registers."));
++      return;
++    } else {
++//      warning (_("GOT general registers."));
++    }
++
++  for (regno = MICROBLAZE_R0_REGNUM; regno <= MICROBLAZE_FSR_REGNUM; regno++)
++    regcache_raw_supply (regcache, regno, (char *) &regs[regno]);
++
++  regs[MICROBLAZE_FSR_REGNUM] = gdbarch_addr_bits_remove
++			  (get_regcache_arch (regcache), regs[MICROBLAZE_FSR_REGNUM]);
++  regcache_raw_supply (regcache, MICROBLAZE_FSR_REGNUM,
++		       (char *) &regs[MICROBLAZE_FSR_REGNUM]);
++}
++
++/* Store all general registers of the process from the values in
++   regcache.  */
++
++static void
++store_register (const struct regcache *regcache, int regno)
++{
++
++  int ret, tid;
++  elf_gregset_t regs;
++  
++  if (!regcache_valid_p (regcache, regno))
++    return;
++
++  /* Get the thread id for the ptrace call.  */
++  tid = GET_THREAD_ID (inferior_ptid);
++  
++  /* Get the general registers from the process.  */
++  ret = ptrace (PTRACE_GETREGS, tid, 0, &regs);
++  if (ret < 0)
++    {
++      warning (_("Unable to fetch general registers."));
++      return;
++    }
++
++  if (regno >= MICROBLAZE_R0_REGNUM && regno <= MICROBLAZE_FSR_REGNUM)
++    regcache_raw_collect (regcache, regno, (char *) &regs[regno]);
++
++  ret = ptrace (PTRACE_SETREGS, tid, 0, &regs);
++  if (ret < 0)
++    {
++      warning (_("Unable to store general register."));
++      return;
++    }
++}
++
++static void
++store_regs (const struct regcache *regcache)
++{
++
++  int ret, regno, tid;
++  elf_gregset_t regs;
++
++  /* Get the thread id for the ptrace call.  */
++  tid = GET_THREAD_ID (inferior_ptid);
++  
++  /* Fetch the general registers.  */
++  ret = ptrace (PTRACE_GETREGS, tid, 0, &regs);
++  if (ret < 0)
++    {
++      warning (_("Unable to fetch general registers."));
++      return;
++    }
++
++  for (regno = MICROBLAZE_R0_REGNUM; regno <= MICROBLAZE_FSR_REGNUM; regno++)
++    {
++      if (regcache_valid_p (regcache, regno))
++	regcache_raw_collect (regcache, regno, (char *) &regs[regno]);
++    }
++
++  ret = ptrace (PTRACE_SETREGS, tid, 0, &regs);
++
++  if (ret < 0)
++    {
++      warning (_("Unable to store general registers."));
++      return;
++    }
++}
++
++/* Fetch registers from the child process.  Fetch all registers if
++   regno == -1, otherwise fetch all general registers or all floating
++   point registers depending upon the value of regno.  */
++
++static void
++microblaze_linux_fetch_inferior_registers (struct target_ops *ops,
++				    struct regcache *regcache, int regno)
++{
++  if (-1 == regno)
++    {
++      fetch_regs (regcache);
++    }
++  else 
++    {
++      if ((regno >= MICROBLAZE_R0_REGNUM && regno <= MICROBLAZE_PC_REGNUM))
++        fetch_register (regcache, regno);
++    }
++}
++
++/* Store registers back into the inferior.  Store all registers if
++   regno == -1, otherwise store all general registers or all floating
++   point registers depending upon the value of regno.  */
++
++static void
++microblaze_linux_store_inferior_registers (struct target_ops *ops,
++				    struct regcache *regcache, int regno)
++{
++  if (-1 == regno)
++    {
++      store_regs (regcache);
++    }
++  else
++    {
++      if ((regno >= MICROBLAZE_R0_REGNUM && regno <= MICROBLAZE_PC_REGNUM))
++        store_register (regcache, regno);
++    }
++}
++
++/* Wrapper functions for the standard regset handling, used by
++   thread debugging.  */
++
++void
++fill_gregset (const struct regcache *regcache,	
++	      gdb_gregset_t *gregsetp, int regno)
++{
++  microblaze_linux_collect_gregset (NULL, regcache, regno, gregsetp, 0);
++}
++
++void
++supply_gregset (struct regcache *regcache, const gdb_gregset_t *gregsetp)
++{
++  microblaze_linux_supply_gregset (NULL, regcache, -1, gregsetp, 0);
++}
++
++void
++fill_fpregset (const struct regcache *regcache,	
++	      gdb_fpregset_t *fpregsetp, int regno)
++{
++  microblaze_linux_collect_fpregset (NULL, regcache, regno, fpregsetp, 0);
++}
++
++void
++supply_fpregset (struct regcache *regcache, const gdb_fpregset_t *fpregsetp)
++{
++  microblaze_linux_supply_fpregset (NULL, regcache, -1, fpregsetp, 0);
++}
++
++
++/* Fetch the thread-local storage pointer for libthread_db.  */
++
++ps_err_e
++ps_get_thread_area (const struct ps_prochandle *ph,
++                    lwpid_t lwpid, int idx, void **base)
++{
++  if (ptrace (PTRACE_GET_THREAD_AREA, lwpid, NULL, base) != 0)
++    return PS_ERR;
++
++  /* IDX is the bias from the thread pointer to the beginning of the
++     thread descriptor.  It has to be subtracted due to implementation
++     quirks in libthread_db.  */
++  *base = (void *) ((char *)*base - idx);
++
++  return PS_OK;
++}
++
++static unsigned int
++get_linux_version (unsigned int *vmajor,
++		   unsigned int *vminor,
++		   unsigned int *vrelease)
++{
++  struct utsname info;
++  char *pmajor, *pminor, *prelease, *tail;
++
++  if (-1 == uname (&info))
++    {
++      warning (_("Unable to determine GNU/Linux version."));
++      return -1;
++    }
++
++  pmajor = strtok (info.release, ".");
++  pminor = strtok (NULL, ".");
++  prelease = strtok (NULL, ".");
++
++  *vmajor = (unsigned int) strtoul (pmajor, &tail, 0);
++  *vminor = (unsigned int) strtoul (pminor, &tail, 0);
++  *vrelease = (unsigned int) strtoul (prelease, &tail, 0);
++
++  return ((*vmajor << 16) | (*vminor << 8) | *vrelease);
++}
++
++static const struct target_desc *
++microblaze_linux_read_description (struct target_ops *ops)
++{
++  CORE_ADDR microblaze_hwcap = 0;
++
++  if (target_auxv_search (ops, AT_HWCAP, &microblaze_hwcap) != 1)
++    {
++      return NULL;
++    }
++
++  return NULL;
++}
++
++void _initialize_microblaze_linux_nat (void);
++
++void
++_initialize_microblaze_linux_nat (void)
++{
++  struct target_ops *t;
++
++  os_version = get_linux_version (&os_major, &os_minor, &os_release);
++
++  /* Fill in the generic GNU/Linux methods.  */
++  t = linux_target ();
++
++  /* Add our register access methods.  */
++  t->to_fetch_registers = microblaze_linux_fetch_inferior_registers;
++  t->to_store_registers = microblaze_linux_store_inferior_registers;
++
++  t->to_read_description = microblaze_linux_read_description;
++
++  /* Register the target.  */
++  linux_nat_add_target (t);
++}
+diff --git a/gdb/microblaze-linux-nat.c.debug b/gdb/microblaze-linux-nat.c.debug
+new file mode 100644
+index 0000000..c18a766
+--- /dev/null
++++ b/gdb/microblaze-linux-nat.c.debug
+@@ -0,0 +1,396 @@
++/* GNU/Linux on ARM native support.
++   Copyright (C) 1999, 2000, 2001, 2002, 2004, 2005, 2006, 2007, 2008, 2009,
++   2010 Free Software Foundation, Inc.
++
++   This file is part of GDB.
++
++   This program is free software; you can redistribute it and/or modify
++   it under the terms of the GNU General Public License as published by
++   the Free Software Foundation; either version 3 of the License, or
++   (at your option) any later version.
++
++   This program is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++   GNU General Public License for more details.
++
++   You should have received a copy of the GNU General Public License
++   along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
++
++#include <elf/common.h>
++#include <sys/user.h>
++#include <sys/ptrace.h>
++#include <sys/utsname.h>
++#include <sys/procfs.h>
++
++#include "defs.h"
++#include "arch-utils.h"
++#include "dis-asm.h"
++#include "frame.h"
++#include "trad-frame.h"
++#include "symtab.h"
++#include "value.h"
++#include "gdbcmd.h"
++#include "breakpoint.h"
++#include "inferior.h"
++#include "regcache.h"
++#include "target.h"
++#include "frame.h"
++#include "frame-base.h"
++#include "frame-unwind.h"
++#include "dwarf2-frame.h"
++#include "osabi.h"
++
++#include "gdb_assert.h"
++#include "gdb_string.h"
++#include "target-descriptions.h"
++#include "opcodes/microblaze-opcm.h"
++#include "opcodes/microblaze-dis.h"
++#include "microblaze-tdep.h"
++
++#include "linux-nat.h"
++#include "microblaze-linux-nat.h"
++#include "target-descriptions.h"
++#include "auxv.h"
++
++#include "microblaze-tdep.h"
++
++/* Prototypes for supply_gregset etc. */
++#include "gregset.h"
++
++/* Defines ps_err_e, struct ps_prochandle.  */
++#include "gdb_proc_service.h"
++
++#ifndef PTRACE_GET_THREAD_AREA
++#define PTRACE_GET_THREAD_AREA 22
++#endif
++
++/* The following variables are used to determine the version of the
++   underlying GNU/Linux operating system.  Examples:
++
++   GNU/Linux 2.0.35             GNU/Linux 2.2.12
++   os_version = 0x00020023      os_version = 0x0002020c
++   os_major = 2                 os_major = 2
++   os_minor = 0                 os_minor = 2
++   os_release = 35              os_release = 12
++
++   Note: os_version = (os_major << 16) | (os_minor << 8) | os_release
++
++   These are initialized using get_linux_version() from
++   _initialize_microblaze_linux_nat().  */
++
++static unsigned int os_version, os_major, os_minor, os_release;
++
++/* On GNU/Linux, threads are implemented as pseudo-processes, in which
++   case we may be tracing more than one process at a time.  In that
++   case, inferior_ptid will contain the main process ID and the
++   individual thread (process) ID.  get_thread_id () is used to get
++   the thread id if it's available, and the process id otherwise.  */
++
++int
++get_thread_id (ptid_t ptid)
++{
++  int tid = TIDGET (ptid);
++  if (0 == tid)
++    tid = PIDGET (ptid);
++  return tid;
++}
++
++#define GET_THREAD_ID(PTID)	get_thread_id (PTID)
++
++/* Fetch a general register of the process and store into
++   regcache.  */
++
++static void
++fetch_register (struct regcache *regcache, int regno)
++{
++//printf("GDB: fetch_register: regno (%d)\n", regno);
++
++  int ret, tid;
++  elf_gregset_t regs;
++
++  /* Get the thread id for the ptrace call.  */
++  tid = GET_THREAD_ID (inferior_ptid);
++  
++  ret = ptrace (PTRACE_GETREGS, tid, 0, &regs);
++  if (ret < 0)
++    {
++      warning (_("Unable to fetch general register."));
++      return;
++    } else {
++//      warning (_("GOT general registers."));
++    }
++
++  /* Retrieve the general purpose registers */
++  if (regno >= MICROBLAZE_R0_REGNUM && regno <= MICROBLAZE_FSR_REGNUM) {
++    regs[regno] = gdbarch_addr_bits_remove
++                              (get_regcache_arch (regcache),
++                               regs[regno]);
++    regcache_raw_supply (regcache, regno, (char *) &regs[regno]);
++  }
++
++  /* Processor status register */
++     /* Not yet implemented */
++ 
++  /* Processor counter register */ 
++/* PC should be grabbed above. PC is reg 32, FSR is reg 37 relative to index 0
++  if (MICROBLAZE_FSR_REGNUM == regno)
++    { 
++      regs[MICROBLAZE_PC_REGNUM] = gdbarch_addr_bits_remove
++			      (get_regcache_arch (regcache),
++			       regs[MICROBLAZE_PC_REGNUM]);
++      regcache_raw_supply (regcache, MICROBLAZE_PC_REGNUM,
++			   (char *) &regs[MICROBLAZE_PC_REGNUM]);
++    }
++*/
++}
++
++/* Fetch all general registers of the process and store into
++   regcache.  */
++
++static void
++fetch_regs (struct regcache *regcache)
++{
++//puts("GDB: fetch_registers\n");
++
++  int ret, regno, tid;
++  elf_gregset_t regs;
++
++  /* Get the thread id for the ptrace call.  */
++  tid = GET_THREAD_ID (inferior_ptid);
++  
++  ret = ptrace (PTRACE_GETREGS, tid, 0, &regs);
++  if (ret < 0)
++    {
++      warning (_("Unable to fetch general registers."));
++      return;
++    } else {
++//      warning (_("GOT general registers."));
++    }
++
++  for (regno = MICROBLAZE_R0_REGNUM; regno <= MICROBLAZE_FSR_REGNUM; regno++)
++    regcache_raw_supply (regcache, regno, (char *) &regs[regno]);
++
++  regs[MICROBLAZE_FSR_REGNUM] = gdbarch_addr_bits_remove
++			  (get_regcache_arch (regcache), regs[MICROBLAZE_FSR_REGNUM]);
++  regcache_raw_supply (regcache, MICROBLAZE_FSR_REGNUM,
++		       (char *) &regs[MICROBLAZE_FSR_REGNUM]);
++}
++
++/* Store all general registers of the process from the values in
++   regcache.  */
++
++static void
++store_register (const struct regcache *regcache, int regno)
++{
++puts("GDB: store_registers\n");
++
++  int ret, tid;
++  elf_gregset_t regs;
++  
++  if (!regcache_valid_p (regcache, regno))
++    return;
++
++  /* Get the thread id for the ptrace call.  */
++  tid = GET_THREAD_ID (inferior_ptid);
++  
++  /* Get the general registers from the process.  */
++  ret = ptrace (PTRACE_GETREGS, tid, 0, &regs);
++  if (ret < 0)
++    {
++      warning (_("Unable to fetch general registers."));
++      return;
++    }
++
++  if (regno >= MICROBLAZE_R0_REGNUM && regno <= MICROBLAZE_FSR_REGNUM)
++    regcache_raw_collect (regcache, regno, (char *) &regs[regno]);
++
++  ret = ptrace (PTRACE_SETREGS, tid, 0, &regs);
++  if (ret < 0)
++    {
++      warning (_("Unable to store general register."));
++      return;
++    }
++}
++
++static void
++store_regs (const struct regcache *regcache)
++{
++puts("GDB: store_registers\n");
++
++  int ret, regno, tid;
++  elf_gregset_t regs;
++
++  /* Get the thread id for the ptrace call.  */
++  tid = GET_THREAD_ID (inferior_ptid);
++  
++  /* Fetch the general registers.  */
++  ret = ptrace (PTRACE_GETREGS, tid, 0, &regs);
++  if (ret < 0)
++    {
++      warning (_("Unable to fetch general registers."));
++      return;
++    }
++
++  for (regno = MICROBLAZE_R0_REGNUM; regno <= MICROBLAZE_FSR_REGNUM; regno++)
++    {
++      if (regcache_valid_p (regcache, regno))
++	regcache_raw_collect (regcache, regno, (char *) &regs[regno]);
++    }
++
++  ret = ptrace (PTRACE_SETREGS, tid, 0, &regs);
++
++  if (ret < 0)
++    {
++      warning (_("Unable to store general registers."));
++      return;
++    }
++}
++
++/* Fetch registers from the child process.  Fetch all registers if
++   regno == -1, otherwise fetch all general registers or all floating
++   point registers depending upon the value of regno.  */
++
++static void
++microblaze_linux_fetch_inferior_registers (struct target_ops *ops,
++				    struct regcache *regcache, int regno)
++{
++  if (-1 == regno)
++    {
++      fetch_regs (regcache);
++    }
++  else 
++    {
++      if ((regno >= MICROBLAZE_R0_REGNUM && regno <= MICROBLAZE_PC_REGNUM))
++        fetch_register (regcache, regno);
++    }
++}
++
++/* Store registers back into the inferior.  Store all registers if
++   regno == -1, otherwise store all general registers or all floating
++   point registers depending upon the value of regno.  */
++
++static void
++microblaze_linux_store_inferior_registers (struct target_ops *ops,
++				    struct regcache *regcache, int regno)
++{
++  if (-1 == regno)
++    {
++      store_regs (regcache);
++    }
++  else
++    {
++      if ((regno >= MICROBLAZE_R0_REGNUM && regno <= MICROBLAZE_PC_REGNUM))
++        store_register (regcache, regno);
++    }
++}
++
++/* Wrapper functions for the standard regset handling, used by
++   thread debugging.  */
++
++void
++fill_gregset (const struct regcache *regcache,	
++	      gdb_gregset_t *gregsetp, int regno)
++{
++  microblaze_linux_collect_gregset (NULL, regcache, regno, gregsetp, 0);
++}
++
++void
++supply_gregset (struct regcache *regcache, const gdb_gregset_t *gregsetp)
++{
++  microblaze_linux_supply_gregset (NULL, regcache, -1, gregsetp, 0);
++}
++
++void
++fill_fpregset (const struct regcache *regcache,	
++	      gdb_fpregset_t *fpregsetp, int regno)
++{
++  microblaze_linux_collect_fpregset (NULL, regcache, regno, fpregsetp, 0);
++}
++
++void
++supply_fpregset (struct regcache *regcache, const gdb_fpregset_t *fpregsetp)
++{
++  microblaze_linux_supply_fpregset (NULL, regcache, -1, fpregsetp, 0);
++}
++
++
++/* Fetch the thread-local storage pointer for libthread_db.  */
++
++ps_err_e
++ps_get_thread_area (const struct ps_prochandle *ph,
++                    lwpid_t lwpid, int idx, void **base)
++{
++  if (ptrace (PTRACE_GET_THREAD_AREA, lwpid, NULL, base) != 0)
++    return PS_ERR;
++
++  /* IDX is the bias from the thread pointer to the beginning of the
++     thread descriptor.  It has to be subtracted due to implementation
++     quirks in libthread_db.  */
++  *base = (void *) ((char *)*base - idx);
++
++  return PS_OK;
++}
++
++static unsigned int
++get_linux_version (unsigned int *vmajor,
++		   unsigned int *vminor,
++		   unsigned int *vrelease)
++{
++  struct utsname info;
++  char *pmajor, *pminor, *prelease, *tail;
++
++  if (-1 == uname (&info))
++    {
++      warning (_("Unable to determine GNU/Linux version."));
++      return -1;
++    }
++
++  pmajor = strtok (info.release, ".");
++  pminor = strtok (NULL, ".");
++  prelease = strtok (NULL, ".");
++
++  *vmajor = (unsigned int) strtoul (pmajor, &tail, 0);
++  *vminor = (unsigned int) strtoul (pminor, &tail, 0);
++  *vrelease = (unsigned int) strtoul (prelease, &tail, 0);
++
++  return ((*vmajor << 16) | (*vminor << 8) | *vrelease);
++}
++
++static const struct target_desc *
++microblaze_linux_read_description (struct target_ops *ops)
++{
++  CORE_ADDR microblaze_hwcap = 0;
++
++  if (target_auxv_search (ops, AT_HWCAP, &microblaze_hwcap) != 1)
++    {
++      return NULL;
++    }
++
++  return NULL;
++}
++
++void _initialize_microblaze_linux_nat (void);
++
++void
++_initialize_microblaze_linux_nat (void)
++{
++  struct target_ops *t;
++
++  os_version = get_linux_version (&os_major, &os_minor, &os_release);
++
++  /* Fill in the generic GNU/Linux methods.  */
++  t = linux_target ();
++
++  /* Add our register access methods.  */
++printf("GDB: microblaze_linux_fetch_inferior_registers\n");
++  t->to_fetch_registers = microblaze_linux_fetch_inferior_registers;
++printf("GDB: microblaze_linux_store_inferior_registers\n");
++  t->to_store_registers = microblaze_linux_store_inferior_registers;
++
++printf("GDB: microblaze_linux_read_description\n");
++  t->to_read_description = microblaze_linux_read_description;
++
++  /* Register the target.  */
++  linux_nat_add_target (t);
++}
+diff --git a/gdb/microblaze-linux-nat.h b/gdb/microblaze-linux-nat.h
+new file mode 100644
+index 0000000..ce375d0
+--- /dev/null
++++ b/gdb/microblaze-linux-nat.h
+@@ -0,0 +1,18 @@
++
++void microblaze_linux_supply_gregset (const struct regset *regset,
++				struct regcache *regcache,
++				int regnum, const void *gregs_buf, size_t len);
++
++void microblaze_linux_collect_gregset (const struct regset *regset,
++				const struct regcache *regcache,
++				int regnum, void *gregs_buf, size_t len);
++
++
++void microblaze_linux_supply_fpregset (const struct regset *regset,
++				struct regcache *regcache,
++				int regnum, const void *fpregs_buf, size_t len);
++
++void microblaze_linux_collect_fpregset (const struct regset *regset,
++				const struct regcache *regcache,
++				int regnum, void *fpregs_buf, size_t len);
++
+diff --git a/gdb/microblaze-linux-tdep.c b/gdb/microblaze-linux-tdep.c
+index a691b62..044c11c 100644
+--- a/gdb/microblaze-linux-tdep.c
++++ b/gdb/microblaze-linux-tdep.c
+@@ -36,6 +36,47 @@
+ #include "frame-unwind.h"
+ #include "tramp-frame.h"
+ 
++#include "microblaze-linux-nat.h"
++
++static int
++microblaze_linux_memory_insert_breakpoint (struct gdbarch *gdbarch, 
++					   struct bp_target_info *bp_tgt)
++{
++
++
++  /* adapted from mem-break.c */
++ /* The microblaze allows software breaks, but only with 0x8 or 0x18 as the
++ * imm address.  Any other address whilst in usermode will cause a SIGILL
++ * exception, thus stopping our ability to debug the program. */
++  int val;
++  const unsigned char *bp;
++
++  /* Determine appropriate breakpoint contents and size for this address.  */
++  //bp = gdbarch_breakpoint_from_pc
++  //     (gdbarch, &bp_tgt->placed_address, &bp_tgt->placed_size);
++  //
++  bp = gdbarch_breakpoint_from_pc
++       (gdbarch, &bp_tgt->placed_address, &bp_tgt->placed_size);
++  if (bp == NULL)
++    error (_("Software breakpoints not implemented for this target."));
++
++  /* Save the memory contents.  */
++  bp_tgt->shadow_len = bp_tgt->placed_size;
++  val = target_read_memory (bp_tgt->placed_address, bp_tgt->shadow_contents,
++                            bp_tgt->placed_size);
++
++  /* Write the breakpoint.  */
++  if (val == 0)
++    val = target_write_memory (bp_tgt->placed_address, bp,
++                               bp_tgt->placed_size);
++
++  //if (val == 0)
++    //val = target_write_memory (bp_tgt->placed_address, bp,
++    //                           bp_tgt->placed_size);
++
++  return val;
++
++}
+ 
+ static int
+ microblaze_linux_memory_remove_breakpoint (struct gdbarch *gdbarch, 
+@@ -54,11 +95,7 @@ microblaze_linux_memory_remove_breakpoint (struct gdbarch *gdbarch,
+ 
+   val = target_read_memory (addr, old_contents, bplen);
+ 
+-  /* If our breakpoint is no longer at the address, this means that the
+-     program modified the code on us, so it is wrong to put back the
+-     old value.  */
+-  if (val == 0 && memcmp (bp, old_contents, bplen) == 0)
+-    val = target_write_memory (addr, bp_tgt->shadow_contents, bplen);
++  val = target_write_memory (addr, bp_tgt->shadow_contents, bplen);
+ 
+   return val;
+ }
+@@ -110,7 +147,7 @@ static struct tramp_frame microblaze_linux_sighandler_tramp_frame =
+   4,
+   {
+     { 0x31800077, -1 }, /* addik R12,R0,119.  */
+-    { 0xb9cc0008, -1 }, /* brki R14,8.  */
++    { 0xb9cc0008, -1 }, /* /rki R14,8.  */
+     { TRAMP_SENTINEL_INSN },
+   },
+   microblaze_linux_sighandler_cache_init
+@@ -126,6 +163,9 @@ microblaze_linux_init_abi (struct gdbarch_info info,
+   set_gdbarch_memory_remove_breakpoint (gdbarch,
+ 					microblaze_linux_memory_remove_breakpoint);
+ 
++  set_gdbarch_memory_insert_breakpoint (gdbarch,
++					microblaze_linux_memory_insert_breakpoint);
++
+   /* Shared library handling.  */
+   set_solib_svr4_fetch_link_map_offsets (gdbarch,
+ 					 svr4_ilp32_fetch_link_map_offsets);
+@@ -136,6 +176,71 @@ microblaze_linux_init_abi (struct gdbarch_info info,
+ }
+ 
+ void
++microblaze_linux_supply_gregset (const struct regset *regset,
++                          struct regcache *regcache,
++                          int regnum, const void *gregs_buf, size_t len)
++{
++
++  struct gdbarch *gdbarch = get_regcache_arch (regcache);
++  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
++  const gdb_byte *gregs = gregs_buf;
++  int regno;
++  CORE_ADDR reg_pc;
++  gdb_byte pc_buf[MICROBLAZE_REGISTER_SIZE];
++
++  for (regno = MICROBLAZE_R0_REGNUM; regno < MICROBLAZE_PC_REGNUM; regno++)
++    if (regnum == -1 || regnum == regno)
++      regcache_raw_supply (regcache, regno,
++                           gregs + MICROBLAZE_REGISTER_SIZE * regno);
++
++  if (regnum == MICROBLAZE_PC_REGNUM || regnum == -1)
++    {
++      reg_pc = extract_unsigned_integer (gregs
++                                         + MICROBLAZE_REGISTER_SIZE * MICROBLAZE_PC_REGNUM,
++                                         MICROBLAZE_REGISTER_SIZE, byte_order);
++      reg_pc = gdbarch_addr_bits_remove (gdbarch, reg_pc);
++      store_unsigned_integer (pc_buf, MICROBLAZE_REGISTER_SIZE, byte_order, reg_pc);
++      regcache_raw_supply (regcache, MICROBLAZE_PC_REGNUM, pc_buf);
++    }
++}
++
++
++void
++microblaze_linux_collect_gregset (const struct regset *regset,
++                           const struct regcache *regcache,
++                           int regnum, void *gregs_buf, size_t len)
++{
++
++  gdb_byte *gregs = gregs_buf;
++  int regno;
++
++  for (regno = MICROBLAZE_R0_REGNUM; regno < MICROBLAZE_PC_REGNUM; regno++)
++    if (regnum == -1 || regnum == regno)
++      regcache_raw_collect (regcache, regno,
++                            gregs + MICROBLAZE_REGISTER_SIZE * regno);
++
++  if (regnum == MICROBLAZE_PC_REGNUM || regnum == -1)
++    regcache_raw_collect (regcache, MICROBLAZE_PC_REGNUM,
++                          gregs + MICROBLAZE_REGISTER_SIZE * MICROBLAZE_PC_REGNUM);
++}
++
++void
++microblaze_linux_supply_fpregset (const struct regset *regset,
++                          struct regcache *regcache,
++                          int regnum, const void *fpregs_buf, size_t len)
++{
++  /* Not implemented yet */
++}
++
++void
++microblaze_linux_collect_fpregset (const struct regset *regset,
++                           const struct regcache *regcache,
++                           int regnum, void *fpregs_buf, size_t len)
++{
++  /* Not implemented yet */
++}
++
++void
+ _initialize_microblaze_linux_tdep (void)
+ {
+   gdbarch_register_osabi (bfd_arch_microblaze, 0, GDB_OSABI_LINUX, 
+diff --git a/gdb/microblaze-linux-tdep.c.debug b/gdb/microblaze-linux-tdep.c.debug
+new file mode 100644
+index 0000000..ac21026
+--- /dev/null
++++ b/gdb/microblaze-linux-tdep.c.debug
+@@ -0,0 +1,275 @@
++/* Target-dependent code for Xilinx MicroBlaze.
++
++   Copyright 2009, 2010 Free Software Foundation, Inc.
++
++   This file is part of GDB.
++
++   This program is free software; you can redistribute it and/or modify
++   it under the terms of the GNU General Public License as published by
++   the Free Software Foundation; either version 3 of the License, or
++   (at your option) any later version.
++
++   This program is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++   GNU General Public License for more details.
++
++   You should have received a copy of the GNU General Public License
++   along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
++
++#include "defs.h"
++#include "frame.h"
++#include "inferior.h"
++#include "symtab.h"
++#include "target.h"
++#include "gdbcore.h"
++#include "gdbcmd.h"
++#include "symfile.h"
++#include "objfiles.h"
++#include "regcache.h"
++#include "value.h"
++#include "osabi.h"
++#include "regset.h"
++#include "solib-svr4.h"
++#include "microblaze-tdep.h"
++#include "trad-frame.h"
++#include "frame-unwind.h"
++#include "tramp-frame.h"
++
++#include "microblaze-linux-nat.h"
++
++static int
++microblaze_linux_memory_insert_breakpoint (struct gdbarch *gdbarch, 
++					   struct bp_target_info *bp_tgt)
++{
++
++  puts("GDB: microblaze_linux_memory_insert_breakpoint\n");
++
++  /* adapted from mem-break.c */
++ /* The microblaze allows software breaks, but only with 0x8 or 0x18 as the
++ * imm address.  Any other address whilst in usermode will cause a SIGILL
++ * exception, thus stopping our ability to debug the program. */
++  int val;
++  const unsigned char *bp;
++
++  /* Determine appropriate breakpoint contents and size for this address.  */
++  //bp = gdbarch_breakpoint_from_pc
++  //     (gdbarch, &bp_tgt->placed_address, &bp_tgt->placed_size);
++  //
++  bp = gdbarch_breakpoint_from_pc
++       (gdbarch, &bp_tgt->placed_address, &bp_tgt->placed_size);
++  if (bp == NULL)
++    error (_("Software breakpoints not implemented for this target."));
++
++  /* Save the memory contents.  */
++  bp_tgt->shadow_len = bp_tgt->placed_size;
++  val = target_read_memory (bp_tgt->placed_address, bp_tgt->shadow_contents,
++                            bp_tgt->placed_size);
++
++  printf("GDB: microblaze_linux_memory_insert_breakpoint: bp_tgt->shadow_contents: 0x%08x\n", bp_tgt->shadow_contents);
++  printf("GDB: microblaze_linux_memory_insert_breakpoint: bp_tgt->placed_size: %d\n", bp_tgt->placed_size);
++  printf("GDB: microblaze_linux_memory_insert_breakpoint: bp_tgt->placed_address: %p\n", bp_tgt->placed_address);
++  printf("GDB: microblaze_linux_memory_insert_breakpoint: bp: %d\n", *bp);
++  printf("GDB: microblaze_linux_memory_insert_breakpoint: bp address: %p\n", bp);
++
++  /* Write the breakpoint.  */
++  if (val == 0)
++    val = target_write_memory (bp_tgt->placed_address, bp,
++                               bp_tgt->placed_size);
++
++  //if (val == 0)
++    //val = target_write_memory (bp_tgt->placed_address, bp,
++    //                           bp_tgt->placed_size);
++
++  return val;
++
++}
++
++static int
++microblaze_linux_memory_remove_breakpoint (struct gdbarch *gdbarch, 
++					   struct bp_target_info *bp_tgt)
++{
++  puts("GDB: microblaze_linux_memory_remove_breakpoint\n");
++
++  CORE_ADDR addr = bp_tgt->placed_address;
++  const gdb_byte *bp;
++  int val;
++  int bplen;
++  gdb_byte old_contents[BREAKPOINT_MAX];
++
++  /* Determine appropriate breakpoint contents and size for this address.  */
++  bp = gdbarch_breakpoint_from_pc (gdbarch, &addr, &bplen);
++  if (bp == NULL)
++    error (_("Software breakpoints not implemented for this target."));
++
++  val = target_read_memory (addr, old_contents, bplen);
++
++  /* If our breakpoint is no longer at the address, this means that the
++     program modified the code on us, so it is wrong to put back the
++     old value.  */
++//  if (val == 0 && memcmp (bp, old_contents, bplen) == 0) {
++    val = target_write_memory (addr, bp_tgt->shadow_contents, bplen);
++    printf("GDB: microblaze_linux_memory_remove_breakpoint: restored contents: 0x%08x\n", (unsigned int) *bp_tgt->shadow_contents);
++//  } else {
++//    puts("GDB: microblaze_linux_memory_remove_breakpoint: didn't restore contents\n");
++//  }
++
++  return val;
++}
++
++static void
++microblaze_linux_sigtramp_cache (struct frame_info *next_frame,
++				 struct trad_frame_cache *this_cache,
++				 CORE_ADDR func, LONGEST offset,
++				 int bias)
++{
++  puts("GDB: microblaze_linux_sigtramp_cache\n");
++  CORE_ADDR base;
++  CORE_ADDR gpregs;
++  int regnum;
++  struct gdbarch *gdbarch = get_frame_arch (next_frame);
++  struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
++
++  base = frame_unwind_register_unsigned (next_frame, MICROBLAZE_SP_REGNUM);
++  if (bias > 0 && get_frame_address_in_block (next_frame) != func)
++    /* See below, some signal trampolines increment the stack as their
++       first instruction, need to compensate for that.  */
++    base -= bias;
++
++  /* Find the address of the register buffer.  */
++  gpregs = base + offset;
++
++  /* Registers saved on stack.  */
++  for (regnum = 0; regnum < MICROBLAZE_BTR_REGNUM; regnum++)
++    trad_frame_set_reg_addr (this_cache, regnum, 
++			     gpregs + regnum * MICROBLAZE_REGISTER_SIZE);
++  trad_frame_set_id (this_cache, frame_id_build (base, func));
++}
++
++
++static void
++microblaze_linux_sighandler_cache_init (const struct tramp_frame *self,
++					struct frame_info *next_frame,
++					struct trad_frame_cache *this_cache,
++					CORE_ADDR func)
++{
++  microblaze_linux_sigtramp_cache (next_frame, this_cache, func,
++				   0 /* Offset to ucontext_t.  */
++				   + 24 /* Offset to .reg.  */,
++				   0);
++}
++
++static struct tramp_frame microblaze_linux_sighandler_tramp_frame = 
++{
++  SIGTRAMP_FRAME,
++  4,
++  {
++    { 0x31800077, -1 }, /* addik R12,R0,119.  */
++    { 0xb9cc0008, -1 }, /* /rki R14,8.  */
++    { TRAMP_SENTINEL_INSN },
++  },
++  microblaze_linux_sighandler_cache_init
++};
++
++
++static void
++microblaze_linux_init_abi (struct gdbarch_info info,
++			   struct gdbarch *gdbarch)
++{
++  puts("GDB: microblaze_linux_init_abi\n");
++
++  struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
++
++  puts("GDB: set_gdbarch_memory_remove_breakpoint\n");
++  set_gdbarch_memory_remove_breakpoint (gdbarch,
++					microblaze_linux_memory_remove_breakpoint);
++
++  puts("GDB: set_gdbarch_memory_insert_breakpoint\n");
++  set_gdbarch_memory_insert_breakpoint (gdbarch,
++					microblaze_linux_memory_insert_breakpoint);
++
++  /* Shared library handling.  */
++  set_solib_svr4_fetch_link_map_offsets (gdbarch,
++					 svr4_ilp32_fetch_link_map_offsets);
++
++  /* Trampolines.  */
++  tramp_frame_prepend_unwinder (gdbarch,
++				&microblaze_linux_sighandler_tramp_frame);
++}
++
++void
++microblaze_linux_supply_gregset (const struct regset *regset,
++                          struct regcache *regcache,
++                          int regnum, const void *gregs_buf, size_t len)
++{
++  puts("GDB: microblaze_linux_supply_gregset\n");
++
++  struct gdbarch *gdbarch = get_regcache_arch (regcache);
++  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
++  const gdb_byte *gregs = gregs_buf;
++  int regno;
++  CORE_ADDR reg_pc;
++  gdb_byte pc_buf[MICROBLAZE_REGISTER_SIZE];
++
++  for (regno = MICROBLAZE_R0_REGNUM; regno < MICROBLAZE_PC_REGNUM; regno++)
++    if (regnum == -1 || regnum == regno)
++      regcache_raw_supply (regcache, regno,
++                           gregs + MICROBLAZE_REGISTER_SIZE * regno);
++
++  if (regnum == MICROBLAZE_PC_REGNUM || regnum == -1)
++    {
++      reg_pc = extract_unsigned_integer (gregs
++                                         + MICROBLAZE_REGISTER_SIZE * MICROBLAZE_PC_REGNUM,
++                                         MICROBLAZE_REGISTER_SIZE, byte_order);
++      reg_pc = gdbarch_addr_bits_remove (gdbarch, reg_pc);
++      store_unsigned_integer (pc_buf, MICROBLAZE_REGISTER_SIZE, byte_order, reg_pc);
++      regcache_raw_supply (regcache, MICROBLAZE_PC_REGNUM, pc_buf);
++    }
++}
++
++
++void
++microblaze_linux_collect_gregset (const struct regset *regset,
++                           const struct regcache *regcache,
++                           int regnum, void *gregs_buf, size_t len)
++{
++  puts("GDB: microblaze_linux_collect_gregset\n");
++
++  gdb_byte *gregs = gregs_buf;
++  int regno;
++
++  for (regno = MICROBLAZE_R0_REGNUM; regno < MICROBLAZE_PC_REGNUM; regno++)
++    if (regnum == -1 || regnum == regno)
++      regcache_raw_collect (regcache, regno,
++                            gregs + MICROBLAZE_REGISTER_SIZE * regno);
++
++  if (regnum == MICROBLAZE_PC_REGNUM || regnum == -1)
++    regcache_raw_collect (regcache, MICROBLAZE_PC_REGNUM,
++                          gregs + MICROBLAZE_REGISTER_SIZE * MICROBLAZE_PC_REGNUM);
++}
++
++void
++microblaze_linux_supply_fpregset (const struct regset *regset,
++                          struct regcache *regcache,
++                          int regnum, const void *fpregs_buf, size_t len)
++{
++  puts("GDB: microblaze_linux_supply_fpregset\n");
++  /* Not implemented yet */
++}
++
++void
++microblaze_linux_collect_fpregset (const struct regset *regset,
++                           const struct regcache *regcache,
++                           int regnum, void *fpregs_buf, size_t len)
++{
++  puts("GDB: microblaze_linux_collect_fpregset\n");
++  /* Not implemented yet */
++}
++
++void
++_initialize_microblaze_linux_tdep (void)
++{
++  puts("_initialize_microblaze_linux_tdep\n");
++  gdbarch_register_osabi (bfd_arch_microblaze, 0, GDB_OSABI_LINUX, 
++			  microblaze_linux_init_abi);
++}
+diff --git a/gdb/microblaze-tdep.c b/gdb/microblaze-tdep.c
+index fe2c021..24a8832 100644
+--- a/gdb/microblaze-tdep.c
++++ b/gdb/microblaze-tdep.c
+@@ -127,8 +127,11 @@ microblaze_fetch_instruction (CORE_ADDR pc)
+   gdb_byte buf[4];
+ 
+   /* If we can't read the instruction at PC, return zero.  */
+-  if (target_read_memory (pc, buf, sizeof (buf)))
++  if (target_read_memory (pc, buf, sizeof (buf))) {
++    /* */
++    error (_("could not read instruction at PC"));
+     return 0;
++  }
+ 
+   return extract_unsigned_integer (buf, 4, byte_order);
+ }
+@@ -264,8 +267,10 @@ microblaze_analyze_prologue (struct gdbarch *gdbarch, CORE_ADDR pc,
+   insn = microblaze_fetch_instruction (pc);
+   op = microblaze_decode_insn (insn, &rd, &ra, &rb, &imm);
+ 
+-  if (IS_RETURN(op))
++  if (IS_RETURN(op)) {
++    microblaze_debug("Found Return OP.\n");
+     return pc;
++  }
+ 
+   /* Start at beginning of function and analyze until we get to the
+      current pc, or the end of the function, whichever is first.  */
+@@ -286,7 +291,7 @@ microblaze_analyze_prologue (struct gdbarch *gdbarch, CORE_ADDR pc,
+ 	 only instructions in the prologue.  */
+       if (IS_UPDATE_SP(op, rd, ra))
+ 	{
+-	  microblaze_debug ("got addi r1,r1,%d; contnuing\n", imm);
++	  microblaze_debug ("got addi r1,r1,%d; continuing\n", imm);
+ 	  if (cache->framesize)
+ 	    break;	/* break if framesize already computed.  */
+ 	  cache->framesize = -imm; /* stack grows towards low memory.  */
+@@ -684,6 +689,16 @@ microblaze_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
+   set_gdbarch_register_name (gdbarch, microblaze_register_name);
+   set_gdbarch_register_type (gdbarch, microblaze_register_type);
+ 
++  /* Pseudo registers used in regcache_cooked_read/regcache_cooked_write  */
++  /* FIXME:  Not implemented. This may not be needed...
++  set_gdbarch_pseudo_register_read (gdbarch, microblaze_pseudo_register_read);
++  set_gdbarch_pseudo_register_write (gdbarch, microblaze_pseudo_register_write);
++
++  * set_tdesc_pseudo_register_type (gdbarch, microblaze_pseudo_register_type);
++  * set_tdesc_pseudo_register_name (gdbarch, microblaze_pseudo_register_name);
++  */
++
++
+   /* Register numbers of various important registers.  */
+   set_gdbarch_sp_regnum (gdbarch, MICROBLAZE_SP_REGNUM); 
+   set_gdbarch_pc_regnum (gdbarch, MICROBLAZE_PC_REGNUM); 
+diff --git a/gdb/microblaze-tdep.h b/gdb/microblaze-tdep.h
+index ae4d86a..f19fbd9 100644
+--- a/gdb/microblaze-tdep.h
++++ b/gdb/microblaze-tdep.h
+@@ -1,5 +1,7 @@
+ /* Target-dependent code for Xilinx MicroBlaze.
+ 
++   Modified by Billy Huang.
++
+    Copyright 2009, 2010 Free Software Foundation, Inc.
+ 
+    This file is part of GDB.
+@@ -114,7 +116,47 @@ enum microblaze_regnum
+ #define MICROBLAZE_REGISTER_SIZE 4
+ 
+ /* MICROBLAZE_BREAKPOINT defines the breakpoint that should be used.
+-   Only used for native debugging.  */
++   Only used for native debugging.
++   Kernel handling is done in:
++   linux-2.6.35-microblaze/arch/microblaze/kernel/entry.S
++*/
++
++/* These are permanent software breakpoint, the kernel can't handle
++ * this and crashes
++ * brki rD, 0x08
++ * brki rD, 0x18
++ * */
++//#define MICROBLAZE_BREAKPOINT {0xb9, 0xcc, 0x00, 0x08}
++//#define MICROBLAZE_BREAKPOINT {0xb9, 0xcc, 0x00, 0x18}
++
++
++
++/* This is a permanent software breakpoint, the kernel can handle this
++ * thanks to the following in entry.S
++ *
++ *        .org    0x60
++ *                brai    TOPHYS(_debug_exception);       // debug trap handler
++ *
++ * However this produces a SIGTRAP code now.
++ *
++ * This is equivalent to
++ * brki rD, 0x60
++ * */
+ #define MICROBLAZE_BREAKPOINT {0xb9, 0xcc, 0x00, 0x60}
+ 
++
++/* Thanks to exceptions.c the kernel has a SIG trap, recognised by
++ *  if (get_user(code, (unsigned long *)regs->pc) == 0
++ *    && code == 0x980c0000) {
++ *    _exception(SIGTRAP, regs, TRAP_BRKPT, addr);
++ *    ...
++ *
++ * So we use brk r0, r0. 
++ *
++ * It would be possible to include 0xb9CC0060 to exceptions.c
++ * and use that as the breakpoint - I haven't bothered...
++ * perhaps you want to use/try doing that. In the meantime I'm
++ * sticking with 0x980C0000 (brk r0, r0).
++*/
++//#define MICROBLAZE_BREAKPOINT {0x98, 0x0C, 0x00, 0x00}
+ #endif /* microblaze-tdep.h */
+diff --git a/gdb/observer.h b/gdb/observer.h
+new file mode 100644
+index 0000000..2869e6f
+--- /dev/null
++++ b/gdb/observer.h
+@@ -0,0 +1,242 @@
++/* GDB Notifications to Observers.
++
++   Copyright (C) 2004, 2005, 2007, 2008, 2009, 2010
++   Free Software Foundation, Inc.
++
++   This file is part of GDB.
++
++   This program is free software; you can redistribute it and/or modify
++   it under the terms of the GNU General Public License as published by
++   the Free Software Foundation; either version 3 of the License, or
++   (at your option) any later version.
++  
++   This program is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++   GNU General Public License for more details.
++  
++   You should have received a copy of the GNU General Public License
++   along with this program.  If not, see <http://www.gnu.org/licenses/>.
++
++   --
++
++   This file was generated using observer.sh and observer.texi.  */
++
++#ifndef OBSERVER_H
++#define OBSERVER_H
++
++struct observer;
++struct bpstats;
++struct so_list;
++struct objfile;
++struct thread_info;
++
++/* normal_stop notifications.  */
++
++typedef void (observer_normal_stop_ftype) (struct bpstats *bs, int print_frame);
++
++extern struct observer *observer_attach_normal_stop (observer_normal_stop_ftype *f);
++extern void observer_detach_normal_stop (struct observer *observer);
++extern void observer_notify_normal_stop (struct bpstats *bs, int print_frame);
++
++/* target_changed notifications.  */
++
++typedef void (observer_target_changed_ftype) (struct target_ops *target);
++
++extern struct observer *observer_attach_target_changed (observer_target_changed_ftype *f);
++extern void observer_detach_target_changed (struct observer *observer);
++extern void observer_notify_target_changed (struct target_ops *target);
++
++/* executable_changed notifications.  */
++
++typedef void (observer_executable_changed_ftype) (void);
++
++extern struct observer *observer_attach_executable_changed (observer_executable_changed_ftype *f);
++extern void observer_detach_executable_changed (struct observer *observer);
++extern void observer_notify_executable_changed (void);
++
++/* inferior_created notifications.  */
++
++typedef void (observer_inferior_created_ftype) (struct target_ops *objfile, int from_tty);
++
++extern struct observer *observer_attach_inferior_created (observer_inferior_created_ftype *f);
++extern void observer_detach_inferior_created (struct observer *observer);
++extern void observer_notify_inferior_created (struct target_ops *objfile, int from_tty);
++
++/* solib_loaded notifications.  */
++
++typedef void (observer_solib_loaded_ftype) (struct so_list *solib);
++
++extern struct observer *observer_attach_solib_loaded (observer_solib_loaded_ftype *f);
++extern void observer_detach_solib_loaded (struct observer *observer);
++extern void observer_notify_solib_loaded (struct so_list *solib);
++
++/* solib_unloaded notifications.  */
++
++typedef void (observer_solib_unloaded_ftype) (struct so_list *solib);
++
++extern struct observer *observer_attach_solib_unloaded (observer_solib_unloaded_ftype *f);
++extern void observer_detach_solib_unloaded (struct observer *observer);
++extern void observer_notify_solib_unloaded (struct so_list *solib);
++
++/* new_objfile notifications.  */
++
++typedef void (observer_new_objfile_ftype) (struct objfile *objfile);
++
++extern struct observer *observer_attach_new_objfile (observer_new_objfile_ftype *f);
++extern void observer_detach_new_objfile (struct observer *observer);
++extern void observer_notify_new_objfile (struct objfile *objfile);
++
++/* new_thread notifications.  */
++
++typedef void (observer_new_thread_ftype) (struct thread_info *t);
++
++extern struct observer *observer_attach_new_thread (observer_new_thread_ftype *f);
++extern void observer_detach_new_thread (struct observer *observer);
++extern void observer_notify_new_thread (struct thread_info *t);
++
++/* thread_exit notifications.  */
++
++typedef void (observer_thread_exit_ftype) (struct thread_info *t, int silent);
++
++extern struct observer *observer_attach_thread_exit (observer_thread_exit_ftype *f);
++extern void observer_detach_thread_exit (struct observer *observer);
++extern void observer_notify_thread_exit (struct thread_info *t, int silent);
++
++/* thread_stop_requested notifications.  */
++
++typedef void (observer_thread_stop_requested_ftype) (ptid_t ptid);
++
++extern struct observer *observer_attach_thread_stop_requested (observer_thread_stop_requested_ftype *f);
++extern void observer_detach_thread_stop_requested (struct observer *observer);
++extern void observer_notify_thread_stop_requested (ptid_t ptid);
++
++/* target_resumed notifications.  */
++
++typedef void (observer_target_resumed_ftype) (ptid_t ptid);
++
++extern struct observer *observer_attach_target_resumed (observer_target_resumed_ftype *f);
++extern void observer_detach_target_resumed (struct observer *observer);
++extern void observer_notify_target_resumed (ptid_t ptid);
++
++/* about_to_proceed notifications.  */
++
++typedef void (observer_about_to_proceed_ftype) (void);
++
++extern struct observer *observer_attach_about_to_proceed (observer_about_to_proceed_ftype *f);
++extern void observer_detach_about_to_proceed (struct observer *observer);
++extern void observer_notify_about_to_proceed (void);
++
++/* breakpoint_created notifications.  */
++
++typedef void (observer_breakpoint_created_ftype) (int bpnum);
++
++extern struct observer *observer_attach_breakpoint_created (observer_breakpoint_created_ftype *f);
++extern void observer_detach_breakpoint_created (struct observer *observer);
++extern void observer_notify_breakpoint_created (int bpnum);
++
++/* breakpoint_deleted notifications.  */
++
++typedef void (observer_breakpoint_deleted_ftype) (int bpnum);
++
++extern struct observer *observer_attach_breakpoint_deleted (observer_breakpoint_deleted_ftype *f);
++extern void observer_detach_breakpoint_deleted (struct observer *observer);
++extern void observer_notify_breakpoint_deleted (int bpnum);
++
++/* breakpoint_modified notifications.  */
++
++typedef void (observer_breakpoint_modified_ftype) (int bpnum);
++
++extern struct observer *observer_attach_breakpoint_modified (observer_breakpoint_modified_ftype *f);
++extern void observer_detach_breakpoint_modified (struct observer *observer);
++extern void observer_notify_breakpoint_modified (int bpnum);
++
++/* tracepoint_created notifications.  */
++
++typedef void (observer_tracepoint_created_ftype) (int tpnum);
++
++extern struct observer *observer_attach_tracepoint_created (observer_tracepoint_created_ftype *f);
++extern void observer_detach_tracepoint_created (struct observer *observer);
++extern void observer_notify_tracepoint_created (int tpnum);
++
++/* tracepoint_deleted notifications.  */
++
++typedef void (observer_tracepoint_deleted_ftype) (int tpnum);
++
++extern struct observer *observer_attach_tracepoint_deleted (observer_tracepoint_deleted_ftype *f);
++extern void observer_detach_tracepoint_deleted (struct observer *observer);
++extern void observer_notify_tracepoint_deleted (int tpnum);
++
++/* tracepoint_modified notifications.  */
++
++typedef void (observer_tracepoint_modified_ftype) (int tpnum);
++
++extern struct observer *observer_attach_tracepoint_modified (observer_tracepoint_modified_ftype *f);
++extern void observer_detach_tracepoint_modified (struct observer *observer);
++extern void observer_notify_tracepoint_modified (int tpnum);
++
++/* architecture_changed notifications.  */
++
++typedef void (observer_architecture_changed_ftype) (struct gdbarch *newarch);
++
++extern struct observer *observer_attach_architecture_changed (observer_architecture_changed_ftype *f);
++extern void observer_detach_architecture_changed (struct observer *observer);
++extern void observer_notify_architecture_changed (struct gdbarch *newarch);
++
++/* thread_ptid_changed notifications.  */
++
++typedef void (observer_thread_ptid_changed_ftype) (ptid_t old_ptid, ptid_t new_ptid);
++
++extern struct observer *observer_attach_thread_ptid_changed (observer_thread_ptid_changed_ftype *f);
++extern void observer_detach_thread_ptid_changed (struct observer *observer);
++extern void observer_notify_thread_ptid_changed (ptid_t old_ptid, ptid_t new_ptid);
++
++/* inferior_added notifications.  */
++
++typedef void (observer_inferior_added_ftype) (struct inferior *inf);
++
++extern struct observer *observer_attach_inferior_added (observer_inferior_added_ftype *f);
++extern void observer_detach_inferior_added (struct observer *observer);
++extern void observer_notify_inferior_added (struct inferior *inf);
++
++/* inferior_appeared notifications.  */
++
++typedef void (observer_inferior_appeared_ftype) (struct inferior *inf);
++
++extern struct observer *observer_attach_inferior_appeared (observer_inferior_appeared_ftype *f);
++extern void observer_detach_inferior_appeared (struct observer *observer);
++extern void observer_notify_inferior_appeared (struct inferior *inf);
++
++/* inferior_exit notifications.  */
++
++typedef void (observer_inferior_exit_ftype) (struct inferior *inf);
++
++extern struct observer *observer_attach_inferior_exit (observer_inferior_exit_ftype *f);
++extern void observer_detach_inferior_exit (struct observer *observer);
++extern void observer_notify_inferior_exit (struct inferior *inf);
++
++/* inferior_removed notifications.  */
++
++typedef void (observer_inferior_removed_ftype) (struct inferior *inf);
++
++extern struct observer *observer_attach_inferior_removed (observer_inferior_removed_ftype *f);
++extern void observer_detach_inferior_removed (struct observer *observer);
++extern void observer_notify_inferior_removed (struct inferior *inf);
++
++/* memory_changed notifications.  */
++
++typedef void (observer_memory_changed_ftype) (CORE_ADDR addr, int len, const bfd_byte *data);
++
++extern struct observer *observer_attach_memory_changed (observer_memory_changed_ftype *f);
++extern void observer_detach_memory_changed (struct observer *observer);
++extern void observer_notify_memory_changed (CORE_ADDR addr, int len, const bfd_byte *data);
++
++/* test_notification notifications.  */
++
++typedef void (observer_test_notification_ftype) (int somearg);
++
++extern struct observer *observer_attach_test_notification (observer_test_notification_ftype *f);
++extern void observer_detach_test_notification (struct observer *observer);
++extern void observer_notify_test_notification (int somearg);
++
++#endif /* OBSERVER_H */
+diff --git a/gdb/observer.inc b/gdb/observer.inc
+new file mode 100644
+index 0000000..e93fdfc
+--- /dev/null
++++ b/gdb/observer.inc
+@@ -0,0 +1,1030 @@
++/* GDB Notifications to Observers.
++
++   Copyright (C) 2004, 2005, 2007, 2008, 2009, 2010
++   Free Software Foundation, Inc.
++
++   This file is part of GDB.
++
++   This program is free software; you can redistribute it and/or modify
++   it under the terms of the GNU General Public License as published by
++   the Free Software Foundation; either version 3 of the License, or
++   (at your option) any later version.
++  
++   This program is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++   GNU General Public License for more details.
++  
++   You should have received a copy of the GNU General Public License
++   along with this program.  If not, see <http://www.gnu.org/licenses/>.
++
++   --
++
++   This file was generated using observer.sh and observer.texi.  */
++
++
++/* normal_stop notifications.  */
++
++static struct observer_list *normal_stop_subject = NULL;
++
++struct normal_stop_args { struct bpstats *bs; int print_frame; };
++
++static void
++observer_normal_stop_notification_stub (const void *data, const void *args_data)
++{
++  observer_normal_stop_ftype *notify = (observer_normal_stop_ftype *) data;
++  const struct normal_stop_args *args = args_data;
++  notify (args->bs, args->print_frame);
++}
++
++struct observer *
++observer_attach_normal_stop (observer_normal_stop_ftype *f)
++{
++  return generic_observer_attach (&normal_stop_subject,
++				  &observer_normal_stop_notification_stub,
++				  (void *) f);
++}
++
++void
++observer_detach_normal_stop (struct observer *observer)
++{
++  generic_observer_detach (&normal_stop_subject, observer);
++}
++
++void
++observer_notify_normal_stop (struct bpstats *bs, int print_frame)
++{
++  struct normal_stop_args args;
++  args.bs = bs, args.print_frame = print_frame;
++
++  if (observer_debug)
++    fprintf_unfiltered (gdb_stdlog, "observer_notify_normal_stop() called\n");
++  generic_observer_notify (normal_stop_subject, &args);
++}
++
++/* target_changed notifications.  */
++
++static struct observer_list *target_changed_subject = NULL;
++
++struct target_changed_args { struct target_ops *target; };
++
++static void
++observer_target_changed_notification_stub (const void *data, const void *args_data)
++{
++  observer_target_changed_ftype *notify = (observer_target_changed_ftype *) data;
++  const struct target_changed_args *args = args_data;
++  notify (args->target);
++}
++
++struct observer *
++observer_attach_target_changed (observer_target_changed_ftype *f)
++{
++  return generic_observer_attach (&target_changed_subject,
++				  &observer_target_changed_notification_stub,
++				  (void *) f);
++}
++
++void
++observer_detach_target_changed (struct observer *observer)
++{
++  generic_observer_detach (&target_changed_subject, observer);
++}
++
++void
++observer_notify_target_changed (struct target_ops *target)
++{
++  struct target_changed_args args;
++  args.target = target;
++
++  if (observer_debug)
++    fprintf_unfiltered (gdb_stdlog, "observer_notify_target_changed() called\n");
++  generic_observer_notify (target_changed_subject, &args);
++}
++
++/* executable_changed notifications.  */
++
++static struct observer_list *executable_changed_subject = NULL;
++
++static void
++observer_executable_changed_notification_stub (const void *data, const void *args_data)
++{
++  observer_executable_changed_ftype *notify = (observer_executable_changed_ftype *) data;
++  const struct executable_changed_args *args = args_data;
++  notify ();
++}
++
++struct observer *
++observer_attach_executable_changed (observer_executable_changed_ftype *f)
++{
++  return generic_observer_attach (&executable_changed_subject,
++				  &observer_executable_changed_notification_stub,
++				  (void *) f);
++}
++
++void
++observer_detach_executable_changed (struct observer *observer)
++{
++  generic_observer_detach (&executable_changed_subject, observer);
++}
++
++void
++observer_notify_executable_changed (void)
++{
++char *args = NULL;
++  if (observer_debug)
++    fprintf_unfiltered (gdb_stdlog, "observer_notify_executable_changed() called\n");
++  generic_observer_notify (executable_changed_subject, &args);
++}
++
++/* inferior_created notifications.  */
++
++static struct observer_list *inferior_created_subject = NULL;
++
++struct inferior_created_args { struct target_ops *objfile; int from_tty; };
++
++static void
++observer_inferior_created_notification_stub (const void *data, const void *args_data)
++{
++  observer_inferior_created_ftype *notify = (observer_inferior_created_ftype *) data;
++  const struct inferior_created_args *args = args_data;
++  notify (args->objfile, args->from_tty);
++}
++
++struct observer *
++observer_attach_inferior_created (observer_inferior_created_ftype *f)
++{
++  return generic_observer_attach (&inferior_created_subject,
++				  &observer_inferior_created_notification_stub,
++				  (void *) f);
++}
++
++void
++observer_detach_inferior_created (struct observer *observer)
++{
++  generic_observer_detach (&inferior_created_subject, observer);
++}
++
++void
++observer_notify_inferior_created (struct target_ops *objfile, int from_tty)
++{
++  struct inferior_created_args args;
++  args.objfile = objfile, args.from_tty = from_tty;
++
++  if (observer_debug)
++    fprintf_unfiltered (gdb_stdlog, "observer_notify_inferior_created() called\n");
++  generic_observer_notify (inferior_created_subject, &args);
++}
++
++/* solib_loaded notifications.  */
++
++static struct observer_list *solib_loaded_subject = NULL;
++
++struct solib_loaded_args { struct so_list *solib; };
++
++static void
++observer_solib_loaded_notification_stub (const void *data, const void *args_data)
++{
++  observer_solib_loaded_ftype *notify = (observer_solib_loaded_ftype *) data;
++  const struct solib_loaded_args *args = args_data;
++  notify (args->solib);
++}
++
++struct observer *
++observer_attach_solib_loaded (observer_solib_loaded_ftype *f)
++{
++  return generic_observer_attach (&solib_loaded_subject,
++				  &observer_solib_loaded_notification_stub,
++				  (void *) f);
++}
++
++void
++observer_detach_solib_loaded (struct observer *observer)
++{
++  generic_observer_detach (&solib_loaded_subject, observer);
++}
++
++void
++observer_notify_solib_loaded (struct so_list *solib)
++{
++  struct solib_loaded_args args;
++  args.solib = solib;
++
++  if (observer_debug)
++    fprintf_unfiltered (gdb_stdlog, "observer_notify_solib_loaded() called\n");
++  generic_observer_notify (solib_loaded_subject, &args);
++}
++
++/* solib_unloaded notifications.  */
++
++static struct observer_list *solib_unloaded_subject = NULL;
++
++struct solib_unloaded_args { struct so_list *solib; };
++
++static void
++observer_solib_unloaded_notification_stub (const void *data, const void *args_data)
++{
++  observer_solib_unloaded_ftype *notify = (observer_solib_unloaded_ftype *) data;
++  const struct solib_unloaded_args *args = args_data;
++  notify (args->solib);
++}
++
++struct observer *
++observer_attach_solib_unloaded (observer_solib_unloaded_ftype *f)
++{
++  return generic_observer_attach (&solib_unloaded_subject,
++				  &observer_solib_unloaded_notification_stub,
++				  (void *) f);
++}
++
++void
++observer_detach_solib_unloaded (struct observer *observer)
++{
++  generic_observer_detach (&solib_unloaded_subject, observer);
++}
++
++void
++observer_notify_solib_unloaded (struct so_list *solib)
++{
++  struct solib_unloaded_args args;
++  args.solib = solib;
++
++  if (observer_debug)
++    fprintf_unfiltered (gdb_stdlog, "observer_notify_solib_unloaded() called\n");
++  generic_observer_notify (solib_unloaded_subject, &args);
++}
++
++/* new_objfile notifications.  */
++
++static struct observer_list *new_objfile_subject = NULL;
++
++struct new_objfile_args { struct objfile *objfile; };
++
++static void
++observer_new_objfile_notification_stub (const void *data, const void *args_data)
++{
++  observer_new_objfile_ftype *notify = (observer_new_objfile_ftype *) data;
++  const struct new_objfile_args *args = args_data;
++  notify (args->objfile);
++}
++
++struct observer *
++observer_attach_new_objfile (observer_new_objfile_ftype *f)
++{
++  return generic_observer_attach (&new_objfile_subject,
++				  &observer_new_objfile_notification_stub,
++				  (void *) f);
++}
++
++void
++observer_detach_new_objfile (struct observer *observer)
++{
++  generic_observer_detach (&new_objfile_subject, observer);
++}
++
++void
++observer_notify_new_objfile (struct objfile *objfile)
++{
++  struct new_objfile_args args;
++  args.objfile = objfile;
++
++  if (observer_debug)
++    fprintf_unfiltered (gdb_stdlog, "observer_notify_new_objfile() called\n");
++  generic_observer_notify (new_objfile_subject, &args);
++}
++
++/* new_thread notifications.  */
++
++static struct observer_list *new_thread_subject = NULL;
++
++struct new_thread_args { struct thread_info *t; };
++
++static void
++observer_new_thread_notification_stub (const void *data, const void *args_data)
++{
++  observer_new_thread_ftype *notify = (observer_new_thread_ftype *) data;
++  const struct new_thread_args *args = args_data;
++  notify (args->t);
++}
++
++struct observer *
++observer_attach_new_thread (observer_new_thread_ftype *f)
++{
++  return generic_observer_attach (&new_thread_subject,
++				  &observer_new_thread_notification_stub,
++				  (void *) f);
++}
++
++void
++observer_detach_new_thread (struct observer *observer)
++{
++  generic_observer_detach (&new_thread_subject, observer);
++}
++
++void
++observer_notify_new_thread (struct thread_info *t)
++{
++  struct new_thread_args args;
++  args.t = t;
++
++  if (observer_debug)
++    fprintf_unfiltered (gdb_stdlog, "observer_notify_new_thread() called\n");
++  generic_observer_notify (new_thread_subject, &args);
++}
++
++/* thread_exit notifications.  */
++
++static struct observer_list *thread_exit_subject = NULL;
++
++struct thread_exit_args { struct thread_info *t; int silent; };
++
++static void
++observer_thread_exit_notification_stub (const void *data, const void *args_data)
++{
++  observer_thread_exit_ftype *notify = (observer_thread_exit_ftype *) data;
++  const struct thread_exit_args *args = args_data;
++  notify (args->t, args->silent);
++}
++
++struct observer *
++observer_attach_thread_exit (observer_thread_exit_ftype *f)
++{
++  return generic_observer_attach (&thread_exit_subject,
++				  &observer_thread_exit_notification_stub,
++				  (void *) f);
++}
++
++void
++observer_detach_thread_exit (struct observer *observer)
++{
++  generic_observer_detach (&thread_exit_subject, observer);
++}
++
++void
++observer_notify_thread_exit (struct thread_info *t, int silent)
++{
++  struct thread_exit_args args;
++  args.t = t, args.silent = silent;
++
++  if (observer_debug)
++    fprintf_unfiltered (gdb_stdlog, "observer_notify_thread_exit() called\n");
++  generic_observer_notify (thread_exit_subject, &args);
++}
++
++/* thread_stop_requested notifications.  */
++
++static struct observer_list *thread_stop_requested_subject = NULL;
++
++struct thread_stop_requested_args { ptid_t ptid; };
++
++static void
++observer_thread_stop_requested_notification_stub (const void *data, const void *args_data)
++{
++  observer_thread_stop_requested_ftype *notify = (observer_thread_stop_requested_ftype *) data;
++  const struct thread_stop_requested_args *args = args_data;
++  notify (args->ptid);
++}
++
++struct observer *
++observer_attach_thread_stop_requested (observer_thread_stop_requested_ftype *f)
++{
++  return generic_observer_attach (&thread_stop_requested_subject,
++				  &observer_thread_stop_requested_notification_stub,
++				  (void *) f);
++}
++
++void
++observer_detach_thread_stop_requested (struct observer *observer)
++{
++  generic_observer_detach (&thread_stop_requested_subject, observer);
++}
++
++void
++observer_notify_thread_stop_requested (ptid_t ptid)
++{
++  struct thread_stop_requested_args args;
++  args.ptid = ptid;
++
++  if (observer_debug)
++    fprintf_unfiltered (gdb_stdlog, "observer_notify_thread_stop_requested() called\n");
++  generic_observer_notify (thread_stop_requested_subject, &args);
++}
++
++/* target_resumed notifications.  */
++
++static struct observer_list *target_resumed_subject = NULL;
++
++struct target_resumed_args { ptid_t ptid; };
++
++static void
++observer_target_resumed_notification_stub (const void *data, const void *args_data)
++{
++  observer_target_resumed_ftype *notify = (observer_target_resumed_ftype *) data;
++  const struct target_resumed_args *args = args_data;
++  notify (args->ptid);
++}
++
++struct observer *
++observer_attach_target_resumed (observer_target_resumed_ftype *f)
++{
++  return generic_observer_attach (&target_resumed_subject,
++				  &observer_target_resumed_notification_stub,
++				  (void *) f);
++}
++
++void
++observer_detach_target_resumed (struct observer *observer)
++{
++  generic_observer_detach (&target_resumed_subject, observer);
++}
++
++void
++observer_notify_target_resumed (ptid_t ptid)
++{
++  struct target_resumed_args args;
++  args.ptid = ptid;
++
++  if (observer_debug)
++    fprintf_unfiltered (gdb_stdlog, "observer_notify_target_resumed() called\n");
++  generic_observer_notify (target_resumed_subject, &args);
++}
++
++/* about_to_proceed notifications.  */
++
++static struct observer_list *about_to_proceed_subject = NULL;
++
++static void
++observer_about_to_proceed_notification_stub (const void *data, const void *args_data)
++{
++  observer_about_to_proceed_ftype *notify = (observer_about_to_proceed_ftype *) data;
++  const struct about_to_proceed_args *args = args_data;
++  notify ();
++}
++
++struct observer *
++observer_attach_about_to_proceed (observer_about_to_proceed_ftype *f)
++{
++  return generic_observer_attach (&about_to_proceed_subject,
++				  &observer_about_to_proceed_notification_stub,
++				  (void *) f);
++}
++
++void
++observer_detach_about_to_proceed (struct observer *observer)
++{
++  generic_observer_detach (&about_to_proceed_subject, observer);
++}
++
++void
++observer_notify_about_to_proceed (void)
++{
++char *args = NULL;
++  if (observer_debug)
++    fprintf_unfiltered (gdb_stdlog, "observer_notify_about_to_proceed() called\n");
++  generic_observer_notify (about_to_proceed_subject, &args);
++}
++
++/* breakpoint_created notifications.  */
++
++static struct observer_list *breakpoint_created_subject = NULL;
++
++struct breakpoint_created_args { int bpnum; };
++
++static void
++observer_breakpoint_created_notification_stub (const void *data, const void *args_data)
++{
++  observer_breakpoint_created_ftype *notify = (observer_breakpoint_created_ftype *) data;
++  const struct breakpoint_created_args *args = args_data;
++  notify (args->bpnum);
++}
++
++struct observer *
++observer_attach_breakpoint_created (observer_breakpoint_created_ftype *f)
++{
++  return generic_observer_attach (&breakpoint_created_subject,
++				  &observer_breakpoint_created_notification_stub,
++				  (void *) f);
++}
++
++void
++observer_detach_breakpoint_created (struct observer *observer)
++{
++  generic_observer_detach (&breakpoint_created_subject, observer);
++}
++
++void
++observer_notify_breakpoint_created (int bpnum)
++{
++  struct breakpoint_created_args args;
++  args.bpnum = bpnum;
++
++  if (observer_debug)
++    fprintf_unfiltered (gdb_stdlog, "observer_notify_breakpoint_created() called\n");
++  generic_observer_notify (breakpoint_created_subject, &args);
++}
++
++/* breakpoint_deleted notifications.  */
++
++static struct observer_list *breakpoint_deleted_subject = NULL;
++
++struct breakpoint_deleted_args { int bpnum; };
++
++static void
++observer_breakpoint_deleted_notification_stub (const void *data, const void *args_data)
++{
++  observer_breakpoint_deleted_ftype *notify = (observer_breakpoint_deleted_ftype *) data;
++  const struct breakpoint_deleted_args *args = args_data;
++  notify (args->bpnum);
++}
++
++struct observer *
++observer_attach_breakpoint_deleted (observer_breakpoint_deleted_ftype *f)
++{
++  return generic_observer_attach (&breakpoint_deleted_subject,
++				  &observer_breakpoint_deleted_notification_stub,
++				  (void *) f);
++}
++
++void
++observer_detach_breakpoint_deleted (struct observer *observer)
++{
++  generic_observer_detach (&breakpoint_deleted_subject, observer);
++}
++
++void
++observer_notify_breakpoint_deleted (int bpnum)
++{
++  struct breakpoint_deleted_args args;
++  args.bpnum = bpnum;
++
++  if (observer_debug)
++    fprintf_unfiltered (gdb_stdlog, "observer_notify_breakpoint_deleted() called\n");
++  generic_observer_notify (breakpoint_deleted_subject, &args);
++}
++
++/* breakpoint_modified notifications.  */
++
++static struct observer_list *breakpoint_modified_subject = NULL;
++
++struct breakpoint_modified_args { int bpnum; };
++
++static void
++observer_breakpoint_modified_notification_stub (const void *data, const void *args_data)
++{
++  observer_breakpoint_modified_ftype *notify = (observer_breakpoint_modified_ftype *) data;
++  const struct breakpoint_modified_args *args = args_data;
++  notify (args->bpnum);
++}
++
++struct observer *
++observer_attach_breakpoint_modified (observer_breakpoint_modified_ftype *f)
++{
++  return generic_observer_attach (&breakpoint_modified_subject,
++				  &observer_breakpoint_modified_notification_stub,
++				  (void *) f);
++}
++
++void
++observer_detach_breakpoint_modified (struct observer *observer)
++{
++  generic_observer_detach (&breakpoint_modified_subject, observer);
++}
++
++void
++observer_notify_breakpoint_modified (int bpnum)
++{
++  struct breakpoint_modified_args args;
++  args.bpnum = bpnum;
++
++  if (observer_debug)
++    fprintf_unfiltered (gdb_stdlog, "observer_notify_breakpoint_modified() called\n");
++  generic_observer_notify (breakpoint_modified_subject, &args);
++}
++
++/* tracepoint_created notifications.  */
++
++static struct observer_list *tracepoint_created_subject = NULL;
++
++struct tracepoint_created_args { int tpnum; };
++
++static void
++observer_tracepoint_created_notification_stub (const void *data, const void *args_data)
++{
++  observer_tracepoint_created_ftype *notify = (observer_tracepoint_created_ftype *) data;
++  const struct tracepoint_created_args *args = args_data;
++  notify (args->tpnum);
++}
++
++struct observer *
++observer_attach_tracepoint_created (observer_tracepoint_created_ftype *f)
++{
++  return generic_observer_attach (&tracepoint_created_subject,
++				  &observer_tracepoint_created_notification_stub,
++				  (void *) f);
++}
++
++void
++observer_detach_tracepoint_created (struct observer *observer)
++{
++  generic_observer_detach (&tracepoint_created_subject, observer);
++}
++
++void
++observer_notify_tracepoint_created (int tpnum)
++{
++  struct tracepoint_created_args args;
++  args.tpnum = tpnum;
++
++  if (observer_debug)
++    fprintf_unfiltered (gdb_stdlog, "observer_notify_tracepoint_created() called\n");
++  generic_observer_notify (tracepoint_created_subject, &args);
++}
++
++/* tracepoint_deleted notifications.  */
++
++static struct observer_list *tracepoint_deleted_subject = NULL;
++
++struct tracepoint_deleted_args { int tpnum; };
++
++static void
++observer_tracepoint_deleted_notification_stub (const void *data, const void *args_data)
++{
++  observer_tracepoint_deleted_ftype *notify = (observer_tracepoint_deleted_ftype *) data;
++  const struct tracepoint_deleted_args *args = args_data;
++  notify (args->tpnum);
++}
++
++struct observer *
++observer_attach_tracepoint_deleted (observer_tracepoint_deleted_ftype *f)
++{
++  return generic_observer_attach (&tracepoint_deleted_subject,
++				  &observer_tracepoint_deleted_notification_stub,
++				  (void *) f);
++}
++
++void
++observer_detach_tracepoint_deleted (struct observer *observer)
++{
++  generic_observer_detach (&tracepoint_deleted_subject, observer);
++}
++
++void
++observer_notify_tracepoint_deleted (int tpnum)
++{
++  struct tracepoint_deleted_args args;
++  args.tpnum = tpnum;
++
++  if (observer_debug)
++    fprintf_unfiltered (gdb_stdlog, "observer_notify_tracepoint_deleted() called\n");
++  generic_observer_notify (tracepoint_deleted_subject, &args);
++}
++
++/* tracepoint_modified notifications.  */
++
++static struct observer_list *tracepoint_modified_subject = NULL;
++
++struct tracepoint_modified_args { int tpnum; };
++
++static void
++observer_tracepoint_modified_notification_stub (const void *data, const void *args_data)
++{
++  observer_tracepoint_modified_ftype *notify = (observer_tracepoint_modified_ftype *) data;
++  const struct tracepoint_modified_args *args = args_data;
++  notify (args->tpnum);
++}
++
++struct observer *
++observer_attach_tracepoint_modified (observer_tracepoint_modified_ftype *f)
++{
++  return generic_observer_attach (&tracepoint_modified_subject,
++				  &observer_tracepoint_modified_notification_stub,
++				  (void *) f);
++}
++
++void
++observer_detach_tracepoint_modified (struct observer *observer)
++{
++  generic_observer_detach (&tracepoint_modified_subject, observer);
++}
++
++void
++observer_notify_tracepoint_modified (int tpnum)
++{
++  struct tracepoint_modified_args args;
++  args.tpnum = tpnum;
++
++  if (observer_debug)
++    fprintf_unfiltered (gdb_stdlog, "observer_notify_tracepoint_modified() called\n");
++  generic_observer_notify (tracepoint_modified_subject, &args);
++}
++
++/* architecture_changed notifications.  */
++
++static struct observer_list *architecture_changed_subject = NULL;
++
++struct architecture_changed_args { struct gdbarch *newarch; };
++
++static void
++observer_architecture_changed_notification_stub (const void *data, const void *args_data)
++{
++  observer_architecture_changed_ftype *notify = (observer_architecture_changed_ftype *) data;
++  const struct architecture_changed_args *args = args_data;
++  notify (args->newarch);
++}
++
++struct observer *
++observer_attach_architecture_changed (observer_architecture_changed_ftype *f)
++{
++  return generic_observer_attach (&architecture_changed_subject,
++				  &observer_architecture_changed_notification_stub,
++				  (void *) f);
++}
++
++void
++observer_detach_architecture_changed (struct observer *observer)
++{
++  generic_observer_detach (&architecture_changed_subject, observer);
++}
++
++void
++observer_notify_architecture_changed (struct gdbarch *newarch)
++{
++  struct architecture_changed_args args;
++  args.newarch = newarch;
++
++  if (observer_debug)
++    fprintf_unfiltered (gdb_stdlog, "observer_notify_architecture_changed() called\n");
++  generic_observer_notify (architecture_changed_subject, &args);
++}
++
++/* thread_ptid_changed notifications.  */
++
++static struct observer_list *thread_ptid_changed_subject = NULL;
++
++struct thread_ptid_changed_args { ptid_t old_ptid; ptid_t new_ptid; };
++
++static void
++observer_thread_ptid_changed_notification_stub (const void *data, const void *args_data)
++{
++  observer_thread_ptid_changed_ftype *notify = (observer_thread_ptid_changed_ftype *) data;
++  const struct thread_ptid_changed_args *args = args_data;
++  notify (args->old_ptid, args->new_ptid);
++}
++
++struct observer *
++observer_attach_thread_ptid_changed (observer_thread_ptid_changed_ftype *f)
++{
++  return generic_observer_attach (&thread_ptid_changed_subject,
++				  &observer_thread_ptid_changed_notification_stub,
++				  (void *) f);
++}
++
++void
++observer_detach_thread_ptid_changed (struct observer *observer)
++{
++  generic_observer_detach (&thread_ptid_changed_subject, observer);
++}
++
++void
++observer_notify_thread_ptid_changed (ptid_t old_ptid, ptid_t new_ptid)
++{
++  struct thread_ptid_changed_args args;
++  args.old_ptid = old_ptid, args.new_ptid = new_ptid;
++
++  if (observer_debug)
++    fprintf_unfiltered (gdb_stdlog, "observer_notify_thread_ptid_changed() called\n");
++  generic_observer_notify (thread_ptid_changed_subject, &args);
++}
++
++/* inferior_added notifications.  */
++
++static struct observer_list *inferior_added_subject = NULL;
++
++struct inferior_added_args { struct inferior *inf; };
++
++static void
++observer_inferior_added_notification_stub (const void *data, const void *args_data)
++{
++  observer_inferior_added_ftype *notify = (observer_inferior_added_ftype *) data;
++  const struct inferior_added_args *args = args_data;
++  notify (args->inf);
++}
++
++struct observer *
++observer_attach_inferior_added (observer_inferior_added_ftype *f)
++{
++  return generic_observer_attach (&inferior_added_subject,
++				  &observer_inferior_added_notification_stub,
++				  (void *) f);
++}
++
++void
++observer_detach_inferior_added (struct observer *observer)
++{
++  generic_observer_detach (&inferior_added_subject, observer);
++}
++
++void
++observer_notify_inferior_added (struct inferior *inf)
++{
++  struct inferior_added_args args;
++  args.inf = inf;
++
++  if (observer_debug)
++    fprintf_unfiltered (gdb_stdlog, "observer_notify_inferior_added() called\n");
++  generic_observer_notify (inferior_added_subject, &args);
++}
++
++/* inferior_appeared notifications.  */
++
++static struct observer_list *inferior_appeared_subject = NULL;
++
++struct inferior_appeared_args { struct inferior *inf; };
++
++static void
++observer_inferior_appeared_notification_stub (const void *data, const void *args_data)
++{
++  observer_inferior_appeared_ftype *notify = (observer_inferior_appeared_ftype *) data;
++  const struct inferior_appeared_args *args = args_data;
++  notify (args->inf);
++}
++
++struct observer *
++observer_attach_inferior_appeared (observer_inferior_appeared_ftype *f)
++{
++  return generic_observer_attach (&inferior_appeared_subject,
++				  &observer_inferior_appeared_notification_stub,
++				  (void *) f);
++}
++
++void
++observer_detach_inferior_appeared (struct observer *observer)
++{
++  generic_observer_detach (&inferior_appeared_subject, observer);
++}
++
++void
++observer_notify_inferior_appeared (struct inferior *inf)
++{
++  struct inferior_appeared_args args;
++  args.inf = inf;
++
++  if (observer_debug)
++    fprintf_unfiltered (gdb_stdlog, "observer_notify_inferior_appeared() called\n");
++  generic_observer_notify (inferior_appeared_subject, &args);
++}
++
++/* inferior_exit notifications.  */
++
++static struct observer_list *inferior_exit_subject = NULL;
++
++struct inferior_exit_args { struct inferior *inf; };
++
++static void
++observer_inferior_exit_notification_stub (const void *data, const void *args_data)
++{
++  observer_inferior_exit_ftype *notify = (observer_inferior_exit_ftype *) data;
++  const struct inferior_exit_args *args = args_data;
++  notify (args->inf);
++}
++
++struct observer *
++observer_attach_inferior_exit (observer_inferior_exit_ftype *f)
++{
++  return generic_observer_attach (&inferior_exit_subject,
++				  &observer_inferior_exit_notification_stub,
++				  (void *) f);
++}
++
++void
++observer_detach_inferior_exit (struct observer *observer)
++{
++  generic_observer_detach (&inferior_exit_subject, observer);
++}
++
++void
++observer_notify_inferior_exit (struct inferior *inf)
++{
++  struct inferior_exit_args args;
++  args.inf = inf;
++
++  if (observer_debug)
++    fprintf_unfiltered (gdb_stdlog, "observer_notify_inferior_exit() called\n");
++  generic_observer_notify (inferior_exit_subject, &args);
++}
++
++/* inferior_removed notifications.  */
++
++static struct observer_list *inferior_removed_subject = NULL;
++
++struct inferior_removed_args { struct inferior *inf; };
++
++static void
++observer_inferior_removed_notification_stub (const void *data, const void *args_data)
++{
++  observer_inferior_removed_ftype *notify = (observer_inferior_removed_ftype *) data;
++  const struct inferior_removed_args *args = args_data;
++  notify (args->inf);
++}
++
++struct observer *
++observer_attach_inferior_removed (observer_inferior_removed_ftype *f)
++{
++  return generic_observer_attach (&inferior_removed_subject,
++				  &observer_inferior_removed_notification_stub,
++				  (void *) f);
++}
++
++void
++observer_detach_inferior_removed (struct observer *observer)
++{
++  generic_observer_detach (&inferior_removed_subject, observer);
++}
++
++void
++observer_notify_inferior_removed (struct inferior *inf)
++{
++  struct inferior_removed_args args;
++  args.inf = inf;
++
++  if (observer_debug)
++    fprintf_unfiltered (gdb_stdlog, "observer_notify_inferior_removed() called\n");
++  generic_observer_notify (inferior_removed_subject, &args);
++}
++
++/* memory_changed notifications.  */
++
++static struct observer_list *memory_changed_subject = NULL;
++
++struct memory_changed_args { CORE_ADDR addr; int len; const bfd_byte *data; };
++
++static void
++observer_memory_changed_notification_stub (const void *data, const void *args_data)
++{
++  observer_memory_changed_ftype *notify = (observer_memory_changed_ftype *) data;
++  const struct memory_changed_args *args = args_data;
++  notify (args->addr, args->len, args->data);
++}
++
++struct observer *
++observer_attach_memory_changed (observer_memory_changed_ftype *f)
++{
++  return generic_observer_attach (&memory_changed_subject,
++				  &observer_memory_changed_notification_stub,
++				  (void *) f);
++}
++
++void
++observer_detach_memory_changed (struct observer *observer)
++{
++  generic_observer_detach (&memory_changed_subject, observer);
++}
++
++void
++observer_notify_memory_changed (CORE_ADDR addr, int len, const bfd_byte *data)
++{
++  struct memory_changed_args args;
++  args.addr = addr, args.len = len, args.data = data;
++
++  if (observer_debug)
++    fprintf_unfiltered (gdb_stdlog, "observer_notify_memory_changed() called\n");
++  generic_observer_notify (memory_changed_subject, &args);
++}
++
++/* test_notification notifications.  */
++
++static struct observer_list *test_notification_subject = NULL;
++
++struct test_notification_args { int somearg; };
++
++static void
++observer_test_notification_notification_stub (const void *data, const void *args_data)
++{
++  observer_test_notification_ftype *notify = (observer_test_notification_ftype *) data;
++  const struct test_notification_args *args = args_data;
++  notify (args->somearg);
++}
++
++struct observer *
++observer_attach_test_notification (observer_test_notification_ftype *f)
++{
++  return generic_observer_attach (&test_notification_subject,
++				  &observer_test_notification_notification_stub,
++				  (void *) f);
++}
++
++void
++observer_detach_test_notification (struct observer *observer)
++{
++  generic_observer_detach (&test_notification_subject, observer);
++}
++
++void
++observer_notify_test_notification (int somearg)
++{
++  struct test_notification_args args;
++  args.somearg = somearg;
++
++  if (observer_debug)
++    fprintf_unfiltered (gdb_stdlog, "observer_notify_test_notification() called\n");
++  generic_observer_notify (test_notification_subject, &args);
++}
+-- 
+1.7.0.4
+
