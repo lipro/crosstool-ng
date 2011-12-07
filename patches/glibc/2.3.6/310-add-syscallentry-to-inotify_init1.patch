@@ -1,0 +1,39 @@
+From 7d1ba96165d127480232431c66adfe0fc9310957 Mon Sep 17 00:00:00 2001
+From: Stephan Linz <linz@li-pro.net>
+Date: Sun, 4 Dec 2011 15:38:56 +0100
+Subject: [PATCH 1/1] add syscallentry to inotify_init1
+
+Signed-off-by: Stephan Linz <linz@li-pro.net>
+---
+ sysdeps/unix/sysv/linux/sys/inotify.h |    2 ++
+ sysdeps/unix/sysv/linux/syscalls.list |    1 +
+ 2 files changed, 3 insertions(+), 0 deletions(-)
+
+diff --git a/sysdeps/unix/sysv/linux/sys/inotify.h b/sysdeps/unix/sysv/linux/sys/inotify.h
+index 8b3a852..91ffaea 100644
+--- a/sysdeps/unix/sysv/linux/sys/inotify.h
++++ b/sysdeps/unix/sysv/linux/sys/inotify.h
+@@ -72,6 +72,8 @@ struct inotify_event
+ #define IN_ONLYDIR	 0x01000000	/* Only watch the path if it is a
+ 					   directory.  */
+ #define IN_DONT_FOLLOW	 0x02000000	/* Do not follow a sym link.  */
++#define IN_EXCL_UNLINK   0x04000000     /* Exclude events on unlinked
++					   objects.  */
+ #define IN_MASK_ADD	 0x20000000	/* Add to the mask of an already
+ 					   existing watch.  */
+ #define IN_ISDIR	 0x40000000	/* Event occurred against dir.  */
+diff --git a/sysdeps/unix/sysv/linux/syscalls.list b/sysdeps/unix/sysv/linux/syscalls.list
+index 3dc8c5e..ac1a637 100644
+--- a/sysdeps/unix/sysv/linux/syscalls.list
++++ b/sysdeps/unix/sysv/linux/syscalls.list
+@@ -27,6 +27,7 @@ getsid		-	getsid		i:i	getsid
+ init_module	EXTRA	init_module	5	init_module
+ inotify_add_watch	EXTRA	inotify_add_watch	i:isi	inotify_add_watch
+ inotify_init	EXTRA	inotify_init	i:	inotify_init
++inotify_init1	EXTRA	inotify_init1	i:I	inotify_init1
+ inotify_rm_watch	EXTRA	inotify_rm_watch	i:ii	inotify_rm_watch
+ ioperm		-	ioperm		i:iii	ioperm
+ iopl		-	iopl		i:i	iopl
+-- 
+1.7.0.4
+

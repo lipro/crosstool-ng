@@ -1,0 +1,41 @@
+From a8d2ed105075cda6450f277056cb503665dc0f98 Mon Sep 17 00:00:00 2001
+From: Stephan Linz <linz@li-pro.net>
+Date: Sun, 4 Dec 2011 20:39:50 +0100
+Subject: [PATCH] export all syscallentry to inotify
+
+Signed-off-by: Stephan Linz <linz@li-pro.net>
+---
+ Versions.def                     |    1 +
+ sysdeps/unix/sysv/linux/Versions |    4 ++++
+ 2 files changed, 5 insertions(+), 0 deletions(-)
+
+diff --git a/Versions.def b/Versions.def
+index 33409f1..3624cec 100644
+--- a/Versions.def
++++ b/Versions.def
+@@ -20,6 +20,7 @@ libc {
+   GLIBC_2.3.2
+   GLIBC_2.3.3
+   GLIBC_2.3.4
++  GLIBC_2.3.6
+ %ifdef USE_IN_LIBIO
+   HURD_CTHREADS_0.3
+ %endif
+diff --git a/sysdeps/unix/sysv/linux/Versions b/sysdeps/unix/sysv/linux/Versions
+index 980724e..b7409f7 100644
+--- a/sysdeps/unix/sysv/linux/Versions
++++ b/sysdeps/unix/sysv/linux/Versions
+@@ -115,6 +115,10 @@ libc {
+   GLIBC_2.3.4 {
+     sched_getaffinity; sched_setaffinity;
+   }
++  GLIBC_2.3.6 {
++    # New kernel interfaces.
++    inotify_init; inotify_init1; inotify_add_watch; inotify_rm_watch;
++  }
+   GLIBC_PRIVATE {
+     # functions used in other libraries
+     __syscall_rt_sigqueueinfo;
+-- 
+1.7.0.4
+
