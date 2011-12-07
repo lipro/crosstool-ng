@@ -1,0 +1,48 @@
+From f14d6c51d3c9f9c8bc7576ded13166c31b0f2261 Mon Sep 17 00:00:00 2001
+From: Stephan Linz <linz@li-pro.net>
+Date: Mon, 5 Dec 2011 20:27:28 +0100
+Subject: [PATCH] microblaze: no sysroot concatenation for c++ includes
+
+Signed-off-by: Stephan Linz <linz@li-pro.net>
+---
+ gcc/config/microblaze/linux.h   |    6 +++---
+ gcc/config/microblaze/uclinux.h |    6 +++---
+ 2 files changed, 6 insertions(+), 6 deletions(-)
+
+diff --git a/gcc/config/microblaze/linux.h b/gcc/config/microblaze/linux.h
+index a49e22a..93233fa 100644
+--- a/gcc/config/microblaze/linux.h
++++ b/gcc/config/microblaze/linux.h
+@@ -26,9 +26,9 @@
+ #undef INCLUDE_DEFAULTS
+ #define INCLUDE_DEFAULTS                                       \
+   {                                                            \
+-    { GPLUSPLUS_INCLUDE_DIR, "G++", 1, 1, 1 },                 \
+-    { GPLUSPLUS_TOOL_INCLUDE_DIR, "G++", 1, 1, 1 },            \
+-    { GPLUSPLUS_BACKWARD_INCLUDE_DIR, "G++", 1, 1, 1 },        \
++    { GPLUSPLUS_INCLUDE_DIR, "G++", 1, 1, 0 },                 \
++    { GPLUSPLUS_TOOL_INCLUDE_DIR, "G++", 1, 1, 0 },            \
++    { GPLUSPLUS_BACKWARD_INCLUDE_DIR, "G++", 1, 1, 0 },        \
+     { GCC_INCLUDE_DIR, "GCC", 0, 0, 0 },                       \
+     { TOOL_INCLUDE_DIR, "BINUTILS", 0, 0, 0 },                 \
+     { "/usr/include", 0, 0, 1, 1 },                            \
+diff --git a/gcc/config/microblaze/uclinux.h b/gcc/config/microblaze/uclinux.h
+index bfbabf0..95614c0 100644
+--- a/gcc/config/microblaze/uclinux.h
++++ b/gcc/config/microblaze/uclinux.h
+@@ -8,9 +8,9 @@
+ #undef INCLUDE_DEFAULTS
+ #define INCLUDE_DEFAULTS                                       \
+   {                                                            \
+-    { GPLUSPLUS_INCLUDE_DIR, "G++", 1, 1, 1 },                 \
+-    { GPLUSPLUS_TOOL_INCLUDE_DIR, "G++", 1, 1, 1 },            \
+-    { GPLUSPLUS_BACKWARD_INCLUDE_DIR, "G++", 1, 1, 1 },        \
++    { GPLUSPLUS_INCLUDE_DIR, "G++", 1, 1, 0 },                 \
++    { GPLUSPLUS_TOOL_INCLUDE_DIR, "G++", 1, 1, 0 },            \
++    { GPLUSPLUS_BACKWARD_INCLUDE_DIR, "G++", 1, 1, 0 },        \
+     { GCC_INCLUDE_DIR, "GCC", 0, 0, 0 },                       \
+     { TOOL_INCLUDE_DIR, "BINUTILS", 0, 0, 0 },                 \
+     { "/usr/include", 0, 0, 1, 1 },                            \
+-- 
+1.7.0.4
+
