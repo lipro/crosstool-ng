@@ -478,6 +478,16 @@ do_cc_core_backend() {
         CT_DoExecLog ALL make install-{pdf,html}-gcc
     fi
 
+    if [ "${CT_CC_REMOVE_USELESS_LA}" = "y" ]; then
+        CT_DoLog EXTRA "Remove some useless .la files"
+        for lib in libssp libssp_nonshared libstdc++ libsupc++; do
+            libfiles=`(find ${CT_SYSROOT_DIR} -name ${lib}.la) 2>/dev/null`
+            for libfile in ${libfiles}; do
+                CT_DoExecLog ALL rm -f ${libfile}
+            done
+        done
+    fi
+
     # Create a symlink ${CT_TARGET}-cc to ${CT_TARGET}-gcc to always be able
     # to call the C compiler with the same, somewhat canonical name.
     # check whether compiler has an extension
@@ -854,6 +864,16 @@ do_cc_backend() {
         CT_DoExecLog ALL make pdf html
         CT_DoLog EXTRA "Installing the GCC manuals"
         CT_DoExecLog ALL make install-{pdf,html}-gcc
+    fi
+
+    if [ "${CT_CC_REMOVE_USELESS_LA}" = "y" ]; then
+        CT_DoLog EXTRA "Remove some useless .la files"
+        for lib in libssp libssp_nonshared libstdc++ libsupc++; do
+            libfiles=`(find ${CT_SYSROOT_DIR} -name ${lib}.la) 2>/dev/null`
+            for libfile in ${libfiles}; do
+                CT_DoExecLog ALL rm -f ${libfile}
+            done
+        done
     fi
 
     # Create a symlink ${CT_TARGET}-cc to ${CT_TARGET}-gcc to always be able

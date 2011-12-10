@@ -499,6 +499,14 @@ config CC_VERSION
     default "3.4.6" if CC_V_3_4_6
     default "custom" if CC_CUSTOM
 
+config CC_REMOVE_USELESS_LA
+    bool
+    prompt "Remove some useless .la files"
+    default n
+    help
+      If set to Y some useless .la files will be removed from sys-root
+      directory that were installed in a wrong manner.
+
 config CC_LANG_JAVA_USE_ECJ
     bool
     default y
