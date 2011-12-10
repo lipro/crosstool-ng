@@ -171,6 +171,15 @@ config CC_VERSION
 # CT_INSERT_VERSION_STRING_ABOVE
 # Don't remove above line!
 
+config CC_REMOVE_USELESS_LA
+    bool
+    prompt "Remove some useless .la files"
+    default n
+    depends on CC_V_4_1_2
+    help
+      If set to Y some useless .la files will be removed from sys-root
+      directory that were installed in a wrong manner.
+
 config CC_CXA_ATEXIT
     bool
     prompt "Use __cxa_atexit"
