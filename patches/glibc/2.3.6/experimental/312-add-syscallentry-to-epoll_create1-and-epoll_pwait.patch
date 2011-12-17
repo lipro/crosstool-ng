@@ -1,0 +1,196 @@
+From c57d53dd9bb8866d654731881111fa9f74024a9c Mon Sep 17 00:00:00 2001
+From: Stephan Linz <linz@li-pro.net>
+Date: Tue, 13 Dec 2011 20:37:07 +0100
+Subject: [PATCH 1/1] add syscallentry to epoll_create1 and epoll_pwait
+
+Signed-off-by: Stephan Linz <linz@li-pro.net>
+---
+ sysdeps/unix/sysv/linux/Makefile      |    2 +-
+ sysdeps/unix/sysv/linux/Versions      |    1 +
+ sysdeps/unix/sysv/linux/epoll_pwait.c |   69 +++++++++++++++++++++++++++++++++
+ sysdeps/unix/sysv/linux/sys/epoll.h   |   34 ++++++++++++++++
+ sysdeps/unix/sysv/linux/syscalls.list |    1 +
+ 5 files changed, 106 insertions(+), 1 deletions(-)
+ create mode 100644 sysdeps/unix/sysv/linux/epoll_pwait.c
+
+diff --git a/sysdeps/unix/sysv/linux/Makefile b/sysdeps/unix/sysv/linux/Makefile
+index c5e1da0..b049be9 100644
+--- a/sysdeps/unix/sysv/linux/Makefile
++++ b/sysdeps/unix/sysv/linux/Makefile
+@@ -13,7 +13,7 @@ endif
+ 
+ ifeq ($(subdir),misc)
+ sysdep_routines += sysctl clone llseek umount umount2 readahead \
+-		   setfsuid setfsgid makedev
++		   setfsuid setfsgid makedev epoll_pwait
+ 
+ CFLAGS-gethostid.c = -fexceptions
+ 
+diff --git a/sysdeps/unix/sysv/linux/Versions b/sysdeps/unix/sysv/linux/Versions
+index b7409f7..c843f9a 100644
+--- a/sysdeps/unix/sysv/linux/Versions
++++ b/sysdeps/unix/sysv/linux/Versions
+@@ -117,6 +117,7 @@ libc {
+   }
+   GLIBC_2.3.6 {
+     # New kernel interfaces.
++    epoll_create1; epoll_pwait;
+     inotify_init; inotify_init1; inotify_add_watch; inotify_rm_watch;
+   }
+   GLIBC_PRIVATE {
+diff --git a/sysdeps/unix/sysv/linux/epoll_pwait.c b/sysdeps/unix/sysv/linux/epoll_pwait.c
+new file mode 100644
+index 0000000..e689073
+--- /dev/null
++++ b/sysdeps/unix/sysv/linux/epoll_pwait.c
+@@ -0,0 +1,69 @@
++/* Copyright (C) 2007 Free Software Foundation, Inc.
++   This file is part of the GNU C Library.
++
++   The GNU C Library is free software; you can redistribute it and/or
++   modify it under the terms of the GNU Lesser General Public
++   License as published by the Free Software Foundation; either
++   version 2.1 of the License, or (at your option) any later version.
++
++   The GNU C Library is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++   Lesser General Public License for more details.
++
++   You should have received a copy of the GNU Lesser General Public
++   License along with the GNU C Library; if not, write to the Free
++   Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
++   02111-1307 USA.  */
++
++#include <errno.h>
++#include <signal.h>
++#include <unistd.h>
++#include <sys/epoll.h>
++
++#include <sysdep-cancel.h>
++#include <sys/syscall.h>
++
++#ifdef __NR_epoll_pwait
++
++/* Wait for events on an epoll instance "epfd". Returns the number of
++   triggered events returned in "events" buffer. Or -1 in case of
++   error with the "errno" variable set to the specific error code. The
++   "events" parameter is a buffer that will contain triggered
++   events. The "maxevents" is the maximum number of events to be
++   returned ( usually size of "events" ). The "timeout" parameter
++   specifies the maximum wait time in milliseconds (-1 == infinite).
++   The thread's signal mask is temporarily and atomically replaced with
++   the one provided as parameter.  */
++
++int epoll_pwait (int epfd, struct epoll_event *events,
++		 int maxevents, int timeout,
++		 const sigset_t *set)
++{
++  if (SINGLE_THREAD_P)
++    return INLINE_SYSCALL (epoll_pwait, 6, epfd, events, maxevents, timeout,
++			   set, _NSIG / 8);
++
++  int oldtype = LIBC_CANCEL_ASYNC ();
++
++  int result = INLINE_SYSCALL (epoll_pwait, 6, epfd, events, maxevents,
++			       timeout, set, _NSIG / 8);
++
++  LIBC_CANCEL_RESET (oldtype);
++
++  return result;
++}
++
++#else
++
++int epoll_pwait (int epfd, struct epoll_event *events,
++		 int maxevents, int timeout,
++		 const sigset_t *set)
++{
++  __set_errno (ENOSYS);
++  return -1;
++}
++stub_warning (epoll_pwait)
++
++# include <stub-tag.h>
++#endif
+diff --git a/sysdeps/unix/sysv/linux/sys/epoll.h b/sysdeps/unix/sysv/linux/sys/epoll.h
+index 6c310bc..9d0548d 100644
+--- a/sysdeps/unix/sysv/linux/sys/epoll.h
++++ b/sysdeps/unix/sysv/linux/sys/epoll.h
+@@ -22,6 +22,24 @@
+ #include <stdint.h>
+ #include <sys/types.h>
+ 
++/* Get __sigset_t.  */
++#include <bits/sigset.h>
++
++#ifndef __sigset_t_defined
++# define __sigset_t_defined
++typedef __sigset_t sigset_t;
++#endif
++
++
++/* Flags to be passed to epoll_create1.  */
++enum
++  {
++    EPOLL_CLOEXEC = 02000000,
++#define EPOLL_CLOEXEC EPOLL_CLOEXEC
++    EPOLL_NONBLOCK = 04000
++#define EPOLL_NONBLOCK EPOLL_NONBLOCK
++  };
++
+ 
+ enum EPOLL_EVENTS
+   {
+@@ -45,6 +63,8 @@ enum EPOLL_EVENTS
+ #define EPOLLERR EPOLLERR
+     EPOLLHUP = 0x010,
+ #define EPOLLHUP EPOLLHUP
++    EPOLLRDHUP = 0x2000,
++#define EPOLLRDHUP EPOLLRDHUP
+     EPOLLONESHOT = (1 << 30),
+ #define EPOLLONESHOT EPOLLONESHOT
+     EPOLLET = (1 << 31)
+@@ -81,6 +101,10 @@ __BEGIN_DECLS
+    returned by epoll_create() should be closed with close().  */
+ extern int epoll_create (int __size) __THROW;
+ 
++/* Same as epoll_create but with an FLAGS parameter.  The unused SIZE
++   parameter has been dropped.  */
++extern int epoll_create1 (int __flags) __THROW;
++
+ 
+ /* Manipulate an epoll instance "epfd". Returns 0 in case of success,
+    -1 in case of error ( the "errno" variable will contain the
+@@ -102,6 +126,16 @@ extern int epoll_ctl (int __epfd, int __op, int __fd,
+ extern int epoll_wait (int __epfd, struct epoll_event *__events,
+ 		       int __maxevents, int __timeout) __THROW;
+ 
++
++/* Same as epoll_wait, but the thread's signal mask is temporarily
++   and atomically replaced with the one provided as parameter.
++
++   This function is a cancellation point and therefore not marked with
++   __THROW.  */
++extern int epoll_pwait (int __epfd, struct epoll_event *__events,
++			int __maxevents, int __timeout,
++			__const __sigset_t *__ss);
++
+ __END_DECLS
+ 
+ #endif /* sys/epoll.h */
+diff --git a/sysdeps/unix/sysv/linux/syscalls.list b/sysdeps/unix/sysv/linux/syscalls.list
+index ac1a637..e1728a7 100644
+--- a/sysdeps/unix/sysv/linux/syscalls.list
++++ b/sysdeps/unix/sysv/linux/syscalls.list
+@@ -9,6 +9,7 @@ creat		-	creat		Ci:si	__libc_creat creat
+ create_module	EXTRA	create_module	3	create_module
+ delete_module	EXTRA	delete_module	3	delete_module
+ epoll_create	EXTRA	epoll_create	i:i	epoll_create
++epoll_create1	EXTRA	epoll_create1	i:i	epoll_create1
+ epoll_ctl	EXTRA	epoll_ctl	i:iiip	epoll_ctl
+ epoll_wait	EXTRA	epoll_wait	i:ipii	epoll_wait
+ fdatasync	-	fdatasync	i:i	fdatasync
+-- 
+1.7.0.4
+
