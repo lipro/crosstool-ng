@@ -1,0 +1,1931 @@
+diff --git a/include/fcntl.h b/include/fcntl.h
+index 7764f1c..52e12fc 100644
+--- a/include/fcntl.h
++++ b/include/fcntl.h
+@@ -17,5 +17,16 @@ extern int __open (__const char *__file, int __oflag, ...);
+ libc_hidden_proto (__open)
+ extern int __fcntl (int __fd, int __cmd, ...);
+ libc_hidden_proto (__fcntl)
++extern int __openat (int __fd, __const char *__file, int __oflag, ...)
++  __nonnull ((2));
++libc_hidden_proto (__openat)
++extern int __openat64 (int __fd, __const char *__file, int __oflag, ...)
++  __nonnull ((2));
++libc_hidden_proto (__openat64)
++
++extern int __open_2 (__const char *__path, int __oflag);
++extern int __open64_2 (__const char *__path, int __oflag);
++extern int __openat_2 (int __fd, __const char *__path, int __oflag);
++extern int __openat64_2 (int __fd, __const char *__path, int __oflag);
+ 
+ #endif
+diff --git a/include/features.h b/include/features.h
+index 5733b9b..e122d3c 100644
+--- a/include/features.h
++++ b/include/features.h
+@@ -38,6 +38,7 @@
+    _FILE_OFFSET_BITS=N	Select default filesystem interface.
+    _BSD_SOURCE		ISO C, POSIX, and 4.3BSD things.
+    _SVID_SOURCE		ISO C, POSIX, and SVID things.
++   _ATFILE_SOURCE	Additional *at interfaces.
+    _GNU_SOURCE		All of the above, plus GNU extensions.
+    _REENTRANT		Select additionally reentrant object.
+    _THREAD_SAFE		Same as _REENTRANT, often used by other systems.
+@@ -69,6 +70,7 @@
+    __USE_BSD		Define 4.3BSD things.
+    __USE_SVID		Define SVID things.
+    __USE_MISC		Define things common to BSD and System V Unix.
++   __USE_ATFILE		Define *at interfaces and AT_* constants for them.
+    __USE_GNU		Define GNU extensions.
+    __USE_REENTRANT	Define reentrant/thread-safe *_r functions.
+    __USE_FORTIFY_LEVEL	Additional security measures used, according to level.
+@@ -102,6 +104,7 @@
+ #undef	__USE_BSD
+ #undef	__USE_SVID
+ #undef	__USE_MISC
++#undef  __USE_ATFILE
+ #undef	__USE_GNU
+ #undef	__USE_REENTRANT
+ #undef	__USE_FORTIFY_LEVEL
+@@ -158,6 +161,8 @@
+ # define _BSD_SOURCE	1
+ # undef  _SVID_SOURCE
+ # define _SVID_SOURCE	1
++# undef  _ATFILE_SOURCE
++# define _ATFILE_SOURCE 1
+ #endif
+ 
+ /* If nothing (other than _GNU_SOURCE) is defined,
+@@ -209,6 +214,8 @@
+ 
+ #if (_POSIX_C_SOURCE - 0) >= 200112L
+ # define __USE_XOPEN2K		1
++# undef  _ATFILE_SOURCE
++# define _ATFILE_SOURCE 1
+ #endif
+ 
+ #ifdef	_XOPEN_SOURCE
+@@ -254,6 +261,10 @@
+ # define __USE_SVID	1
+ #endif
+ 
++#ifdef  _ATFILE_SOURCE
++# define __USE_ATFILE   1
++#endif
++
+ #ifdef	_GNU_SOURCE
+ # define __USE_GNU	1
+ #endif
+diff --git a/io/Makefile b/io/Makefile
+index 906d1e3..e7421fb 100644
+--- a/io/Makefile
++++ b/io/Makefile
+@@ -28,26 +28,31 @@ headers := sys/stat.h bits/stat.h sys/statfs.h bits/statfs.h sys/vfs.h \
+ 
+ routines :=							      \
+ 	utime							      \
+-	mkfifo							      \
+-	stat fstat lstat mknod stat64 fstat64 lstat64		      \
+-	xstat fxstat lxstat xmknod xstat64 fxstat64 lxstat64	      \
++	mkfifo mkfifoat						      \
++	stat fstat lstat stat64 fstat64 lstat64 fstatat fstatat64     \
++	xstat fxstat lxstat xstat64 fxstat64 lxstat64		      \
++	mknod mknodat xmknod xmknodat				      \
++	fxstatat fxstatat64					      \
+ 	statfs fstatfs statfs64 fstatfs64			      \
+ 	statvfs fstatvfs statvfs64 fstatvfs64			      \
+-	umask chmod fchmod lchmod mkdir				      \
+-	open open64 close read write lseek lseek64 access euidaccess  \
++	umask chmod fchmod lchmod fchmodat			      \
++	mkdir mkdirat						      \
++	open open64 openat openat64 close			      \
++	read write lseek lseek64 access euidaccess faccessat	      \
+ 	fcntl flock lockf lockf64				      \
+ 	dup dup2 pipe						      \
+ 	creat creat64						      \
+ 	chdir fchdir						      \
+ 	getcwd getwd getdirname					      \
+-	chown fchown lchown					      \
++	chown fchown lchown fchownat				      \
+ 	ttyname ttyname_r isatty				      \
+-	link symlink readlink					      \
+-	unlink rmdir						      \
++	link linkat symlink symlinkat readlink readlinkat	      \
++	unlink unlinkat rmdir					      \
+ 	ftw ftw64 fts poll					      \
+ 	posix_fadvise posix_fadvise64				      \
+ 	posix_fallocate posix_fallocate64			      \
+-	sendfile sendfile64
++	sendfile sendfile64					      \
++	utimensat
+ 
+ # These routines will be omitted from the libc shared object.
+ # Instead the static object files will be included in a special archive
+diff --git a/io/Versions b/io/Versions
+index 5b311ee..ea76302 100644
+--- a/io/Versions
++++ b/io/Versions
+@@ -97,4 +97,17 @@ libc {
+     # n*
+     nftw; nftw64;
+   }
++  GLIBC_2.3.6 {
++    faccessat;
++    fchmodat;
++    fchownat;
++    __fxstatat; __fxstatat64;
++    linkat;
++    mkdirat; mkfifoat; __xmknodat;
++    openat; openat64;
++    readlinkat;
++    symlinkat;
++    unlinkat; utimensat;
++    __open_2; __open64_2; __openat_2; __openat64_2;
++  }
+ }
+diff --git a/io/bits/fcntl2.h b/io/bits/fcntl2.h
+new file mode 100644
+index 0000000..fbe8585
+--- /dev/null
++++ b/io/bits/fcntl2.h
+@@ -0,0 +1,173 @@
++/* Checking macros for fcntl functions.
++   Copyright (C) 2007 Free Software Foundation, Inc.
++   This file is part of the GNU C Library.
++
++   The GNU C Library is free software; you can redistribute it and/or
++   modify it under the terms of the GNU Lesser General Public
++   License as published by the Free Software Foundation; either
++   version 2.1 of the License, or (at your option) any later version.
++
++   The GNU C Library is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++   Lesser General Public License for more details.
++
++   You should have received a copy of the GNU Lesser General Public
++   License along with the GNU C Library; if not, write to the Free
++   Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
++   02111-1307 USA.  */
++
++#ifndef	_FCNTL_H
++# error "Never include <bits/fcntl2.h> directly; use <fcntl.h> instead."
++#endif
++
++/* Check that calls to open and openat with O_CREAT set have an
++   appropriate third/fourth parameter.  */
++#ifndef __USE_FILE_OFFSET64
++extern int __open_2 (__const char *__path, int __oflag) __nonnull ((1));
++extern int __REDIRECT (__open_alias, (__const char *__path, int __oflag, ...),
++		       open) __nonnull ((1));
++#else
++extern int __REDIRECT (__open_2, (__const char *__path, int __oflag),
++		       __open64_2) __nonnull ((1));
++extern int __REDIRECT (__open_alias, (__const char *__path, int __oflag, ...),
++		       open64) __nonnull ((1));
++#endif
++__errordecl (__open_too_many_args,
++	     "open can be called either with 2 or 3 arguments, not more");
++__errordecl (__open_missing_mode,
++	     "open with O_CREAT in second argument needs 3 arguments");
++
++__extern_always_inline int
++open (__const char *__path, int __oflag, ...)
++{
++  if (__va_arg_pack_len () > 1)
++    __open_too_many_args ();
++
++  if (__builtin_constant_p (__oflag))
++    {
++      if ((__oflag & O_CREAT) != 0 && __va_arg_pack_len () < 1)
++	{
++	  __open_missing_mode ();
++	  return __open_2 (__path, __oflag);
++	}
++      return __open_alias (__path, __oflag, __va_arg_pack ());
++    }
++
++  if (__va_arg_pack_len () < 1)
++    return __open_2 (__path, __oflag);
++
++  return __open_alias (__path, __oflag, __va_arg_pack ());
++}
++
++
++#ifdef __USE_LARGEFILE64
++extern int __open64_2 (__const char *__path, int __oflag) __nonnull ((1));
++extern int __REDIRECT (__open64_alias, (__const char *__path, int __oflag,
++					...), open64) __nonnull ((1));
++__errordecl (__open64_too_many_args,
++	     "open64 can be called either with 2 or 3 arguments, not more");
++__errordecl (__open64_missing_mode,
++	     "open64 with O_CREAT in second argument needs 3 arguments");
++
++__extern_always_inline int
++open64 (__const char *__path, int __oflag, ...)
++{
++  if (__va_arg_pack_len () > 1)
++    __open64_too_many_args ();
++
++  if (__builtin_constant_p (__oflag))
++    {
++      if ((__oflag & O_CREAT) != 0 && __va_arg_pack_len () < 1)
++	{
++	  __open64_missing_mode ();
++	  return __open64_2 (__path, __oflag);
++	}
++      return __open64_alias (__path, __oflag, __va_arg_pack ());
++    }
++
++  if (__va_arg_pack_len () < 1)
++    return __open64_2 (__path, __oflag);
++
++  return __open64_alias (__path, __oflag, __va_arg_pack ());
++}
++#endif
++
++
++#ifdef __USE_ATFILE
++# ifndef __USE_FILE_OFFSET64
++extern int __openat_2 (int __fd, __const char *__path, int __oflag)
++     __nonnull ((2));
++extern int __REDIRECT (__openat_alias, (int __fd, __const char *__path,
++					int __oflag, ...), openat)
++     __nonnull ((2));
++# else
++extern int __REDIRECT (__openat_2, (int __fd, __const char *__path,
++				    int __oflag), __openat64_2)
++     __nonnull ((2));
++extern int __REDIRECT (__openat_alias, (int __fd, __const char *__path,
++					int __oflag, ...), openat64)
++     __nonnull ((2));
++# endif
++__errordecl (__openat_too_many_args,
++	     "openat can be called either with 3 or 4 arguments, not more");
++__errordecl (__openat_missing_mode,
++	     "openat with O_CREAT in third argument needs 4 arguments");
++
++__extern_always_inline int
++openat (int __fd, __const char *__path, int __oflag, ...)
++{
++  if (__va_arg_pack_len () > 1)
++    __openat_too_many_args ();
++
++  if (__builtin_constant_p (__oflag))
++    {
++      if ((__oflag & O_CREAT) != 0 && __va_arg_pack_len () < 1)
++	{
++	  __openat_missing_mode ();
++	  return __openat_2 (__fd, __path, __oflag);
++	}
++      return __openat_alias (__fd, __path, __oflag, __va_arg_pack ());
++    }
++
++  if (__va_arg_pack_len () < 1)
++    return __openat_2 (__fd, __path, __oflag);
++
++  return __openat_alias (__fd, __path, __oflag, __va_arg_pack ());
++}
++
++
++# ifdef __USE_LARGEFILE64
++extern int __openat64_2 (int __fd, __const char *__path, int __oflag)
++     __nonnull ((2));
++extern int __REDIRECT (__openat64_alias, (int __fd, __const char *__path,
++					  int __oflag, ...), openat64)
++     __nonnull ((2));
++__errordecl (__openat64_too_many_args,
++	     "openat64 can be called either with 3 or 4 arguments, not more");
++__errordecl (__openat64_missing_mode,
++	     "openat64 with O_CREAT in third argument needs 4 arguments");
++
++__extern_always_inline int
++openat64 (int __fd, __const char *__path, int __oflag, ...)
++{
++  if (__va_arg_pack_len () > 1)
++    __openat64_too_many_args ();
++
++  if (__builtin_constant_p (__oflag))
++    {
++      if ((__oflag & O_CREAT) != 0 && __va_arg_pack_len () < 1)
++	{
++	  __openat64_missing_mode ();
++	  return __openat64_2 (__fd, __path, __oflag);
++	}
++      return __openat64_alias (__fd, __path, __oflag, __va_arg_pack ());
++    }
++
++  if (__va_arg_pack_len () < 1)
++    return __openat64_2 (__fd, __path, __oflag);
++
++  return __openat64_alias (__fd, __path, __oflag, __va_arg_pack ());
++}
++# endif
++#endif
+diff --git a/io/fcntl.h b/io/fcntl.h
+index ef9d5f9..45a8eaa 100644
+--- a/io/fcntl.h
++++ b/io/fcntl.h
+@@ -55,6 +55,20 @@ __BEGIN_DECLS
+ # define SEEK_END	2	/* Seek from end of file.  */
+ #endif	/* XPG */
+ 
++#ifdef __USE_ATFILE
++# define AT_FDCWD		-100	/* Special value used to indicate
++					   the *at functions should use the
++					   current working directory. */
++# define AT_SYMLINK_NOFOLLOW	0x100	/* Do not follow symbolic links.  */
++# define AT_REMOVEDIR		0x200	/* Remove directory instead of
++					   unlinking file.  */
++# define AT_SYMLINK_FOLLOW	0x400	/* Follow symbolic links.  */
++# define AT_NO_AUTOMOUNT	0x800	/* Suppress terminal automount
++					   traversal.  */
++# define AT_EACCESS		0x200	/* Test access permitted for
++					   effective IDs, not real IDs.  */
++#endif
++
+ /* Do the file control operation described by CMD on FD.
+    The remaining arguments are interpreted depending on CMD.
+ 
+@@ -82,6 +96,33 @@ extern int __REDIRECT (open, (__const char *__file, int __oflag, ...), open64)
+ extern int open64 (__const char *__file, int __oflag, ...) __nonnull ((1));
+ #endif
+ 
++#ifdef __USE_ATFILE
++/* Similar to `open' but a relative path name is interpreted relative to
++   the directory for which FD is a descriptor.
++
++   NOTE: some other `openat' implementation support additional functionality
++   through this interface, especially using the O_XATTR flag.  This is not
++   yet supported here.
++
++   This function is a cancellation point and therefore not marked with
++   __THROW.  */
++# ifndef __USE_FILE_OFFSET64
++extern int openat (int __fd, __const char *__file, int __oflag, ...)
++     __nonnull ((2));
++# else
++#  ifdef __REDIRECT
++extern int __REDIRECT (openat, (int __fd, __const char *__file, int __oflag,
++				...), openat64) __nonnull ((2));
++#  else
++#   define openat openat64
++#  endif
++# endif
++# ifdef __USE_LARGEFILE64
++extern int openat64 (int __fd, __const char *__file, int __oflag, ...)
++     __nonnull ((2));
++# endif
++#endif
++
+ /* Create and open FILE, with mode MODE.  This takes an `int' MODE
+    argument because that is what `mode_t' will be widened to.
+ 
+@@ -171,6 +212,12 @@ extern int posix_fallocate64 (int __fd, __off64_t __offset, __off64_t __len);
+ # endif
+ #endif
+ 
++/* Define some inlines helping to catch common problems.  */
++#if __USE_FORTIFY_LEVEL > 0 && defined __extern_always_inline \
++    && defined __va_arg_pack_len
++# include <bits/fcntl2.h>
++#endif
++
+ __END_DECLS
+ 
+ #endif /* fcntl.h  */
+diff --git a/io/fstatat.c b/io/fstatat.c
+new file mode 100644
+index 0000000..71ae2a1
+--- /dev/null
++++ b/io/fstatat.c
+@@ -0,0 +1,62 @@
++/* Copyright (C) 2005, 2006 Free Software Foundation, Inc.
++   This file is part of the GNU C Library.
++
++   The GNU C Library is free software; you can redistribute it and/or
++   modify it under the terms of the GNU Lesser General Public
++   License as published by the Free Software Foundation; either
++   version 2.1 of the License, or (at your option) any later version.
++
++   In addition to the permissions in the GNU Lesser General Public
++   License, the Free Software Foundation gives you unlimited
++   permission to link the compiled version of this file with other
++   programs, and to distribute those programs without any restriction
++   coming from the use of this file. (The GNU Lesser General Public
++   License restrictions do apply in other respects; for example, they
++   cover modification of the file, and distribution when not linked
++   into another program.)
++
++   Note that people who make modified versions of this file are not
++   obligated to grant this special exception for their modified
++   versions; it is their choice whether to do so. The GNU Lesser
++   General Public License gives permission to release a modified
++   version without this exception; this exception also makes it
++   possible to release a modified version which carries forward this
++   exception.
++
++   The GNU C Library is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++   Lesser General Public License for more details.
++
++   You should have received a copy of the GNU Lesser General Public
++   License along with the GNU C Library; if not, write to the Free
++   Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
++   02111-1307 USA.  */
++
++#include <sys/stat.h>
++
++/* This definition is only used if inlining fails for this function; see
++   the last page of <sys/stat.h>.  The real work is done by the `x'
++   function which is passed a version number argument.  We arrange in the
++   makefile that when not inlined this function is always statically
++   linked; that way a dynamically-linked executable always encodes the
++   version number corresponding to the data structures it uses, so the `x'
++   functions in the shared library can adapt without needing to recompile
++   all callers.  */
++
++#undef fstatat
++#undef __fstatat
++int
++__fstatat (int fd, const char *file, struct stat *buf, int flag)
++{
++  return __fxstatat (_STAT_VER, fd, file, buf, flag);
++}
++
++weak_alias (__fstatat, fstatat)
++
++/* Hide the symbol so that no definition but the one locally in the
++   executable or DSO is used.  */
++#ifdef HAVE_DOT_HIDDEN
++asm (".hidden\tfstatat");
++asm (".hidden\t__fstatat");
++#endif
+diff --git a/io/fstatat64.c b/io/fstatat64.c
+new file mode 100644
+index 0000000..d9d22f7
+--- /dev/null
++++ b/io/fstatat64.c
+@@ -0,0 +1,58 @@
++/* Copyright (C) 2005, 2006 Free Software Foundation, Inc.
++   This file is part of the GNU C Library.
++
++   The GNU C Library is free software; you can redistribute it and/or
++   modify it under the terms of the GNU Lesser General Public
++   License as published by the Free Software Foundation; either
++   version 2.1 of the License, or (at your option) any later version.
++
++   In addition to the permissions in the GNU Lesser General Public
++   License, the Free Software Foundation gives you unlimited
++   permission to link the compiled version of this file with other
++   programs, and to distribute those programs without any restriction
++   coming from the use of this file. (The GNU Lesser General Public
++   License restrictions do apply in other respects; for example, they
++   cover modification of the file, and distribution when not linked
++   into another program.)
++
++   Note that people who make modified versions of this file are not
++   obligated to grant this special exception for their modified
++   versions; it is their choice whether to do so. The GNU Lesser
++   General Public License gives permission to release a modified
++   version without this exception; this exception also makes it
++   possible to release a modified version which carries forward this
++   exception.
++
++   The GNU C Library is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++   Lesser General Public License for more details.
++
++   You should have received a copy of the GNU Lesser General Public
++   License along with the GNU C Library; if not, write to the Free
++   Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
++   02111-1307 USA.  */
++
++#include <sys/stat.h>
++
++/* This definition is only used if inlining fails for this function; see
++   the last page of <sys/stat.h>.  The real work is done by the `x'
++   function which is passed a version number argument.  We arrange in the
++   makefile that when not inlined this function is always statically
++   linked; that way a dynamically-linked executable always encodes the
++   version number corresponding to the data structures it uses, so the `x'
++   functions in the shared library can adapt without needing to recompile
++   all callers.  */
++
++#undef fstatat64
++int
++fstatat64 (int fd, const char *file, struct stat64 *buf, int flag)
++{
++  return __fxstatat64 (_STAT_VER, fd, file, buf, flag);
++}
++
++/* Hide the symbol so that no definition but the one locally in the
++   executable or DSO is used.  */
++#ifdef HAVE_DOT_HIDDEN
++asm (".hidden\tfstatat64");
++#endif
+diff --git a/io/sys/stat.h b/io/sys/stat.h
+index 7075003..3c07469 100644
+--- a/io/sys/stat.h
++++ b/io/sys/stat.h
+@@ -27,11 +27,11 @@
+ 
+ #include <bits/types.h>		/* For __mode_t and __dev_t.  */
+ 
+-#if defined __USE_XOPEN || defined __USE_MISC
++#if defined __USE_XOPEN || defined __USE_MISC || defined __USE_ATFILE
+ # if defined __USE_XOPEN || defined __USE_XOPEN2K
+ #  define __need_time_t
+ # endif
+-# ifdef __USE_MISC
++# if defined __USE_MISC || defined __USE_ATFILE
+ #  define __need_timespec
+ # endif
+ # include <time.h>		/* For time_t resp. timespec.  */
+@@ -228,6 +228,32 @@ extern int stat64 (__const char *__restrict __file,
+ extern int fstat64 (int __fd, struct stat64 *__buf) __THROW __nonnull ((2));
+ #endif
+ 
++#ifdef __USE_ATFILE
++/* Similar to stat, get the attributes for FILE and put them in BUF.
++   Relative path names are interpreted relative to FD unless FD is
++   AT_FDCWD.  */
++# ifndef __USE_FILE_OFFSET64
++extern int fstatat (int __fd, __const char *__restrict __file,
++		    struct stat *__restrict __buf, int __flag)
++     __THROW __nonnull ((2, 3));
++# else
++#  ifdef __REDIRECT_NTH
++extern int __REDIRECT_NTH (fstatat, (int __fd, __const char *__restrict __file,
++				     struct stat *__restrict __buf,
++				     int __flag),
++			   fstatat64) __nonnull ((2, 3));
++#  else
++#   define fstatat fstatat64
++#  endif
++# endif
++
++# ifdef __USE_LARGEFILE64
++extern int fstatat64 (int __fd, __const char *__restrict __file,
++		      struct stat64 *__restrict __buf, int __flag)
++     __THROW __nonnull ((2, 3));
++# endif
++#endif
++
+ #if defined __USE_BSD || defined __USE_XOPEN_EXTENDED
+ # ifndef __USE_FILE_OFFSET64
+ /* Get file attributes about FILE and put them in BUF.
+@@ -269,6 +295,14 @@ extern int lchmod (__const char *__file, __mode_t __mode)
+ extern int fchmod (int __fd, __mode_t __mode) __THROW;
+ #endif
+ 
++#ifdef __USE_ATFILE
++/* Set file access permissions of FILE relative to
++   the directory FD is open on.  */
++extern int fchmodat (int __fd, __const char *__file, __mode_t __mode,
++		     int __flag)
++     __THROW __nonnull ((2));
++#endif /* Use ATFILE.  */
++     
+ 
+ /* Set the file creation mask of the current process to MASK,
+    and return the old creation mask.  */
+@@ -284,18 +318,51 @@ extern __mode_t getumask (void) __THROW;
+ extern int mkdir (__const char *__path, __mode_t __mode)
+      __THROW __nonnull ((1));
+ 
++#ifdef __USE_ATFILE
++/* Like mkdir, create a new directory with permission bits MODE.  But
++   interpret relative PATH names relative to the directory associated
++   with FD.  */
++extern int mkdirat (int __fd, __const char *__path, __mode_t __mode)
++     __THROW __nonnull ((2));
++#endif 
++
+ /* Create a device file named PATH, with permission and special bits MODE
+    and device number DEV (which can be constructed from major and minor
+    device numbers with the `makedev' macro above).  */
+ #if defined __USE_MISC || defined __USE_BSD || defined __USE_XOPEN_EXTENDED
+ extern int mknod (__const char *__path, __mode_t __mode, __dev_t __dev)
+      __THROW __nonnull ((1));
++
++# ifdef __USE_ATFILE
++/* Like mknod, create a new device file with permission bits MODE and
++   device number DEV.  But interpret relative PATH names relative to
++   the directory associated with FD.  */
++extern int mknodat (int __fd, __const char *__path, __mode_t __mode,
++                    __dev_t __dev) __THROW __nonnull ((2));
++# endif
+ #endif
+ 
+ 
+ /* Create a new FIFO named PATH, with permission bits MODE.  */
+ extern int mkfifo (__const char *__path, __mode_t __mode)
+      __THROW __nonnull ((1));
++
++#ifdef __USE_ATFILE
++/* Like mkfifo, create a new FIFO with permission bits MODE.  But
++   interpret relative PATH names relative to the directory associated
++   with FD.  */
++extern int mkfifoat (int __fd, __const char *__path, __mode_t __mode)
++     __THROW __nonnull ((2));
++#endif
++
++#ifdef __USE_ATFILE
++/* Set file access and modification times relative to directory file
++   descriptor.  */
++extern int utimensat (int __fd, __const char *__path,
++		      __const struct timespec __times[2],
++		      int __flags)
++     __THROW __nonnull ((2));
++#endif
+ 
+ /* To allow the `struct stat' structure and the file type `mode_t'
+    bits to vary without changing shared library major version number,
+@@ -327,6 +394,9 @@ extern int __xstat (int __ver, __const char *__filename,
+ 		    struct stat *__stat_buf) __THROW __nonnull ((2, 3));
+ extern int __lxstat (int __ver, __const char *__filename,
+ 		     struct stat *__stat_buf) __THROW __nonnull ((2, 3));
++extern int __fxstatat (int __ver, int __fildes, __const char *__filename,
++		       struct stat *__stat_buf, int __flag)
++     __THROW __nonnull ((3, 4));
+ #else
+ # ifdef __REDIRECT_NTH
+ extern int __REDIRECT_NTH (__fxstat, (int __ver, int __fildes,
+@@ -338,6 +408,10 @@ extern int __REDIRECT_NTH (__xstat, (int __ver, __const char *__filename,
+ extern int __REDIRECT_NTH (__lxstat, (int __ver, __const char *__filename,
+ 				      struct stat *__stat_buf), __lxstat64)
+      __nonnull ((2, 3));
++extern int __REDIRECT_NTH (__fxstatat, (int __ver, int __fildes,
++					__const char *__filename,
++					struct stat *__stat_buf, int __flag),
++			   __fxstatat64) __nonnull ((3, 4));
+ 
+ # else
+ #  define __fxstat __fxstat64
+@@ -353,9 +427,15 @@ extern int __xstat64 (int __ver, __const char *__filename,
+ 		      struct stat64 *__stat_buf) __THROW __nonnull ((2, 3));
+ extern int __lxstat64 (int __ver, __const char *__filename,
+ 		       struct stat64 *__stat_buf) __THROW __nonnull ((2, 3));
++extern int __fxstatat64 (int __ver, int __fildes, __const char *__filename,
++			 struct stat64 *__stat_buf, int __flag)
++     __THROW __nonnull ((3, 4));
+ #endif
+ extern int __xmknod (int __ver, __const char *__path, __mode_t __mode,
+ 		     __dev_t *__dev) __THROW __nonnull ((2, 4));
++extern int __xmknodat (int __ver, int __fd, __const char *__path,
++		       __mode_t __mode, __dev_t *__dev)
++     __THROW __nonnull ((3, 5));
+ 
+ #if defined __GNUC__ && __GNUC__ >= 2
+ /* Inlined versions of the real stat and mknod functions.  */
+@@ -380,6 +460,15 @@ __NTH (fstat (int __fd, struct stat *__statbuf))
+   return __fxstat (_STAT_VER, __fd, __statbuf);
+ }
+ 
++# ifdef __USE_ATFILE
++extern __inline__ int
++__NTH (fstatat (int __fd, __const char *__filename, struct stat *__statbuf,
++		int __flag))
++{
++  return __fxstatat (_STAT_VER, __fd, __filename, __statbuf, __flag);
++}
++# endif
++
+ # if defined __USE_MISC || defined __USE_BSD
+ extern __inline__ int
+ __NTH (mknod (__const char *__path, __mode_t __mode, __dev_t __dev))
+@@ -388,6 +477,15 @@ __NTH (mknod (__const char *__path, __mode_t __mode, __dev_t __dev))
+ }
+ # endif
+ 
++# ifdef __USE_ATFILE
++extern __inline__ int
++__NTH (mknodat (int __fd, __const char *__path, __mode_t __mode,
++		__dev_t __dev))
++{
++  return __xmknodat (_MKNOD_VER, __fd, __path, __mode, &__dev);
++}
++# endif
++
+ # if defined __USE_LARGEFILE64 \
+   && (! defined __USE_FILE_OFFSET64 \
+       || (defined __REDIRECT_NTH && defined __OPTIMIZE__))
+@@ -410,6 +508,16 @@ __NTH (fstat64 (int __fd, struct stat64 *__statbuf))
+ {
+   return __fxstat64 (_STAT_VER, __fd, __statbuf);
+ }
++
++#  ifdef __USE_ATFILE
++extern __inline__ int
++__NTH (fstatat64 (int __fd, __const char *__filename, struct stat64 *__statbuf,
++		  int __flag))
++{
++  return __fxstatat64 (_STAT_VER, __fd, __filename, __statbuf, __flag);
++}
++#  endif
++
+ # endif
+ 
+ #endif
+diff --git a/libio/stdio.h b/libio/stdio.h
+index e1081c9..9854298 100644
+--- a/libio/stdio.h
++++ b/libio/stdio.h
+@@ -154,6 +154,11 @@ extern int remove (__const char *__filename) __THROW;
+ extern int rename (__const char *__old, __const char *__new) __THROW;
+ __END_NAMESPACE_STD
+ 
++#ifdef __USE_ATFILE
++/* Rename file OLD relative to OLDFD to NEW relative to NEWFD.  */
++extern int renameat (int __oldfd, __const char *__old, int __newfd,
++		     __const char *__new) __THROW;
++#endif
+ 
+ __BEGIN_NAMESPACE_STD
+ /* Create a temporary file and open it read/write.
+diff --git a/posix/unistd.h b/posix/unistd.h
+index 3b9e346..fa3eab9 100644
+--- a/posix/unistd.h
++++ b/posix/unistd.h
+@@ -262,6 +262,14 @@ extern int euidaccess (__const char *__name, int __type)
+      __THROW __nonnull ((1));
+ #endif
+ 
++#ifdef __USE_ATFILE
++/* Test for access to FILE relative to the directory FD is open on.
++   If AT_EACCESS is set in FLAG, then use effective IDs like `eaccess',
++   otherwise use real IDs like `access'.  */
++extern int faccessat (int __fd, __const char *__file, int __type, int __flag)
++     __THROW __nonnull ((2));
++#endif /* Use ATFILE.  */
++
+ 
+ /* Values for the WHENCE argument to lseek.  */
+ #ifndef	_STDIO_H		/* <stdio.h> has the same definitions.  */
+@@ -430,6 +438,14 @@ extern int lchown (__const char *__file, __uid_t __owner, __gid_t __group)
+ 
+ #endif /* Use BSD || X/Open Unix.  */
+ 
++#ifdef __USE_ATFILE
++/* Change the owner and group of FILE relative to the directory FD is open
++   on.  */
++extern int fchownat (int __fd, __const char *__file, __uid_t __owner,
++		     __gid_t __group, int __flag)
++     __THROW __nonnull ((2));
++#endif /* Use ATFILE.  */
++
+ /* Change the process's working directory to PATH.  */
+ extern int chdir (__const char *__path) __THROW __nonnull ((1));
+ 
+@@ -728,6 +744,14 @@ extern int ttyslot (void) __THROW;
+ extern int link (__const char *__from, __const char *__to)
+      __THROW __nonnull ((1, 2));
+ 
++#ifdef __USE_ATFILE
++/* Like link but relative paths in TO and FROM are interpreted relative
++   to FROMFD and TOFD respectively.  */
++extern int linkat (int __fromfd, __const char *__from, int __tofd,
++		   __const char *__to, int __flags)
++     __THROW __nonnull ((2, 4));
++#endif 
++
+ #if defined __USE_BSD || defined __USE_XOPEN_EXTENDED || defined __USE_XOPEN2K
+ /* Make a symbolic link to FROM named TO.  */
+ extern int symlink (__const char *__from, __const char *__to)
+@@ -740,9 +764,26 @@ extern int readlink (__const char *__restrict __path, char *__restrict __buf,
+ 		     size_t __len) __THROW __nonnull ((1, 2));
+ #endif /* Use BSD.  */
+ 
++#ifdef __USE_ATFILE
++/* Like symlink but a relative path in TO is interpreted relative to TOFD.  */
++extern int symlinkat (__const char *__from, int __tofd,
++		      __const char *__to) __THROW __nonnull ((1, 3));
++
++/* Like readlink but a relative PATH is interpreted relative to FD.  */
++extern ssize_t readlinkat (int __fd, __const char *__restrict __path,
++			   char *__restrict __buf, size_t __len)
++     __THROW __nonnull ((2, 3));
++#endif
++
+ /* Remove the link NAME.  */
+ extern int unlink (__const char *__name) __THROW __nonnull ((1));
+ 
++#ifdef __USE_ATFILE
++/* Remove the link NAME relative to FD.  */
++extern int unlinkat (int __fd, __const char *__name, int __flag)
++     __THROW __nonnull ((2));
++#endif
++
+ /* Remove the directory PATH.  */
+ extern int rmdir (__const char *__path) __THROW __nonnull ((1));
+ 
+diff --git a/sysdeps/generic/faccessat.c b/sysdeps/generic/faccessat.c
+new file mode 100644
+index 0000000..1bde7ef
+--- /dev/null
++++ b/sysdeps/generic/faccessat.c
+@@ -0,0 +1,52 @@
++/* Test for access to file, relative to open directory.  Stub version.
++   Copyright (C) 2006 Free Software Foundation, Inc.
++   This file is part of the GNU C Library.
++
++   The GNU C Library is free software; you can redistribute it and/or
++   modify it under the terms of the GNU Lesser General Public
++   License as published by the Free Software Foundation; either
++   version 2.1 of the License, or (at your option) any later version.
++
++   The GNU C Library is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++   Lesser General Public License for more details.
++
++   You should have received a copy of the GNU Lesser General Public
++   License along with the GNU C Library; if not, write to the Free
++   Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
++   02111-1307 USA.  */
++
++#include <errno.h>
++#include <fcntl.h>
++#include <stddef.h>
++#include <unistd.h>
++#include <sys/types.h>
++
++int
++__faccessat (fd, file, type, flag)
++     int fd;
++     const char *file;
++     int type;
++     int flag;
++{
++  if (file == NULL || (flag & ~(AT_SYMLINK_NOFOLLOW | AT_EACCESS)) != 0
++      || (type & ~(R_OK|W_OK|X_OK|F_OK)) != 0)
++    {
++      __set_errno (EINVAL);
++      return -1;
++    }
++
++  if (fd < 0 && fd != AT_FDCWD)
++    {
++      __set_errno (EBADF);
++      return -1;
++    }
++
++  __set_errno (ENOSYS);
++  return -1;
++}
++stub_warning (faccessat)
++
++weak_alias (__faccessat, faccessat)
++#include <stub-tag.h>
+diff --git a/sysdeps/generic/fchmodat.c b/sysdeps/generic/fchmodat.c
+new file mode 100644
+index 0000000..55b9dd9
+--- /dev/null
++++ b/sysdeps/generic/fchmodat.c
+@@ -0,0 +1,51 @@
++/* Change the protections of file relative to open directory.  Stub version.
++   Copyright (C) 2006, 2007 Free Software Foundation, Inc.
++   This file is part of the GNU C Library.
++
++   The GNU C Library is free software; you can redistribute it and/or
++   modify it under the terms of the GNU Lesser General Public
++   License as published by the Free Software Foundation; either
++   version 2.1 of the License, or (at your option) any later version.
++
++   The GNU C Library is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++   Lesser General Public License for more details.
++
++   You should have received a copy of the GNU Lesser General Public
++   License along with the GNU C Library; if not, write to the Free
++   Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
++   02111-1307 USA.  */
++
++#include <errno.h>
++#include <fcntl.h>
++#include <stddef.h>
++#include <unistd.h>
++#include <sys/types.h>
++
++int
++__fchmodat (fd, file, mode, flag)
++     int fd;
++     const char *file;
++     mode_t mode;
++     int flag;
++{
++  if (file == NULL || (flag & ~AT_SYMLINK_NOFOLLOW) != 0)
++    {
++      __set_errno (EINVAL);
++      return -1;
++    }
++
++  if (fd < 0 && fd != AT_FDCWD)
++    {
++      __set_errno (EBADF);
++      return -1;
++    }
++
++  __set_errno (ENOSYS);
++  return -1;
++}
++stub_warning (fchmodat)
++
++weak_alias (__fchmodat, fchmodat)
++#include <stub-tag.h>
+diff --git a/sysdeps/generic/fchownat.c b/sysdeps/generic/fchownat.c
+new file mode 100644
+index 0000000..90858d2
+--- /dev/null
++++ b/sysdeps/generic/fchownat.c
+@@ -0,0 +1,52 @@
++/* Copyright (C) 2005 Free Software Foundation, Inc.
++   This file is part of the GNU C Library.
++
++   The GNU C Library is free software; you can redistribute it and/or
++   modify it under the terms of the GNU Lesser General Public
++   License as published by the Free Software Foundation; either
++   version 2.1 of the License, or (at your option) any later version.
++
++   The GNU C Library is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++   Lesser General Public License for more details.
++
++   You should have received a copy of the GNU Lesser General Public
++   License along with the GNU C Library; if not, write to the Free
++   Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
++   02111-1307 USA.  */
++
++#include <errno.h>
++#include <fcntl.h>
++#include <stddef.h>
++#include <unistd.h>
++#include <sys/types.h>
++
++/* Change the owner and group of FILE.  */
++int
++__fchownat (fd, file, owner, group, flag)
++     int fd;
++     const char *file;
++     uid_t owner;
++     gid_t group;
++     int flag;
++{
++  if (file == NULL || (flag & ~AT_SYMLINK_NOFOLLOW) != 0)
++    {
++      __set_errno (EINVAL);
++      return -1;
++    }
++
++  if (fd < 0 && fd != AT_FDCWD)
++    {
++      __set_errno (EBADF);
++      return -1;
++    }
++
++  __set_errno (ENOSYS);
++  return -1;
++}
++stub_warning (fchownat)
++
++weak_alias (__fchownat, fchownat)
++#include <stub-tag.h>
+diff --git a/sysdeps/generic/fxstatat.c b/sysdeps/generic/fxstatat.c
+new file mode 100644
+index 0000000..915ec4c
+--- /dev/null
++++ b/sysdeps/generic/fxstatat.c
+@@ -0,0 +1,51 @@
++/* Copyright (C) 2005, 2006 Free Software Foundation, Inc.
++   This file is part of the GNU C Library.
++
++   The GNU C Library is free software; you can redistribute it and/or
++   modify it under the terms of the GNU Lesser General Public
++   License as published by the Free Software Foundation; either
++   version 2.1 of the License, or (at your option) any later version.
++
++   The GNU C Library is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++   Lesser General Public License for more details.
++
++   You should have received a copy of the GNU Lesser General Public
++   License along with the GNU C Library; if not, write to the Free
++   Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
++   02111-1307 USA.  */
++
++#include <errno.h>
++#include <fcntl.h>
++#include <stddef.h>
++#include <sys/stat.h>
++
++/* Get information about the file descriptor FD in BUF.  */
++int
++__fxstatat (int vers, int fd, const char *filename, struct stat *buf, int flag)
++{
++  if (vers != _STAT_VER)
++    {
++      __set_errno (EINVAL);
++      return -1;
++    }
++
++  if (fd < 0 && fd != AT_FDCWD)
++    {
++      __set_errno (EBADF);
++      return -1;
++    }
++  if (buf == NULL || (flag & ~AT_SYMLINK_NOFOLLOW) != 0)
++    {
++      __set_errno (EINVAL);
++      return -1;
++    }
++
++  __set_errno (ENOSYS);
++  return -1;
++}
++stub_warning (fstatat)
++hidden_def (__fxstatat)
++weak_alias (__fxstatat, _fxstatat)
++#include <stub-tag.h>
+diff --git a/sysdeps/generic/fxstatat64.c b/sysdeps/generic/fxstatat64.c
+new file mode 100644
+index 0000000..67993c9
+--- /dev/null
++++ b/sysdeps/generic/fxstatat64.c
+@@ -0,0 +1,51 @@
++/* Copyright (C) 2005, 2006 Free Software Foundation, Inc.
++   This file is part of the GNU C Library.
++
++   The GNU C Library is free software; you can redistribute it and/or
++   modify it under the terms of the GNU Lesser General Public
++   License as published by the Free Software Foundation; either
++   version 2.1 of the License, or (at your option) any later version.
++
++   The GNU C Library is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++   Lesser General Public License for more details.
++
++   You should have received a copy of the GNU Lesser General Public
++   License along with the GNU C Library; if not, write to the Free
++   Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
++   02111-1307 USA.  */
++
++#include <errno.h>
++#include <fcntl.h>
++#include <stddef.h>
++#include <sys/stat.h>
++
++/* Get information about the file descriptor FD in BUF.  */
++int
++__fxstatat64 (int vers, int fd, const char *filename, struct stat64 *buf,
++	      int flag)
++{
++  if (vers != _STAT_VER)
++    {
++      __set_errno (EINVAL);
++      return -1;
++    }
++
++  if (fd < 0 && fd != AT_FDCWD)
++    {
++      __set_errno (EBADF);
++      return -1;
++    }
++  if (buf == NULL || (flag & ~AT_SYMLINK_NOFOLLOW) != 0)
++    {
++      __set_errno (EINVAL);
++      return -1;
++    }
++
++  __set_errno (ENOSYS);
++  return -1;
++}
++hidden_def (__fxstatat64)
++stub_warning (fstatat64)
++#include <stub-tag.h>
+diff --git a/sysdeps/generic/linkat.c b/sysdeps/generic/linkat.c
+new file mode 100644
+index 0000000..386892c
+--- /dev/null
++++ b/sysdeps/generic/linkat.c
+@@ -0,0 +1,53 @@
++/* Copyright (C) 2005, 2006 Free Software Foundation, Inc.
++   This file is part of the GNU C Library.
++
++   The GNU C Library is free software; you can redistribute it and/or
++   modify it under the terms of the GNU Lesser General Public
++   License as published by the Free Software Foundation; either
++   version 2.1 of the License, or (at your option) any later version.
++
++   The GNU C Library is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++   Lesser General Public License for more details.
++
++   You should have received a copy of the GNU Lesser General Public
++   License along with the GNU C Library; if not, write to the Free
++   Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
++   02111-1307 USA.  */
++
++#include <errno.h>
++#include <fcntl.h>
++#include <stddef.h>
++#include <unistd.h>
++
++
++/* Make a link to FROM relative to FROMFD called TO relative to TOFD.  */
++int
++__linkat (fromfd, from, tofd, to, flags)
++     int fromfd;
++     const char *from;
++     int tofd;
++     const char *to;
++     int flags;
++{
++  if (from == NULL || to == NULL)
++    {
++      __set_errno (EINVAL);
++      return -1;
++    }
++
++  if ((tofd != AT_FDCWD && tofd < 0 && *to != '/')
++      || (fromfd != AT_FDCWD && fromfd < 0 && *from != '/'))
++    {
++      __set_errno (EBADF);
++      return -1;
++    }
++
++  __set_errno (ENOSYS);
++  return -1;
++}
++stub_warning (linkat)
++
++weak_alias (__linkat, linkat)
++#include <stub-tag.h>
+diff --git a/sysdeps/generic/mkdirat.c b/sysdeps/generic/mkdirat.c
+new file mode 100644
+index 0000000..095f56b
+--- /dev/null
++++ b/sysdeps/generic/mkdirat.c
+@@ -0,0 +1,59 @@
++/* Copyright (C) 1991, 1995, 1996, 1997, 2005 Free Software Foundation, Inc.
++   This file is part of the GNU C Library.
++
++   The GNU C Library is free software; you can redistribute it and/or
++   modify it under the terms of the GNU Lesser General Public
++   License as published by the Free Software Foundation; either
++   version 2.1 of the License, or (at your option) any later version.
++
++   The GNU C Library is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++   Lesser General Public License for more details.
++
++   You should have received a copy of the GNU Lesser General Public
++   License along with the GNU C Library; if not, write to the Free
++   Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
++   02111-1307 USA.  */
++
++#include <errno.h>
++#include <fcntl.h>
++#include <stddef.h>
++#include <sys/stat.h>
++#include <sys/types.h>
++
++
++/* Create a directory named PATH relative to FD with protections MODE.  */
++int
++__mkdirat (fd, path, mode)
++     int fd;
++     const char *path;
++     mode_t mode;
++{
++  if (path == NULL)
++    {
++      __set_errno (EINVAL);
++      return -1;
++    }
++
++  if (fd != AT_FDCWD && path[0] != '/')
++    {
++      /* Check FD is associated with a directory.  */
++      struct stat64 st;
++      if (__fxstat64 (_STAT_VER, fd, &st) != 0)
++	return -1;
++
++      if (!S_ISDIR (st.st_mode))
++	{
++	  __set_errno (ENOTDIR);
++	  return -1;
++	}
++    }
++
++  __set_errno (ENOSYS);
++  return -1;
++}
++stub_warning (mkdirat)
++
++weak_alias (__mkdirat, mkdirat)
++#include <stub-tag.h>
+diff --git a/sysdeps/generic/mkfifoat.c b/sysdeps/generic/mkfifoat.c
+new file mode 100644
+index 0000000..48c38c8
+--- /dev/null
++++ b/sysdeps/generic/mkfifoat.c
+@@ -0,0 +1,60 @@
++/* Copyright (C) 1991, 1995, 1996, 1997, 2005 Free Software Foundation, Inc.
++   This file is part of the GNU C Library.
++
++   The GNU C Library is free software; you can redistribute it and/or
++   modify it under the terms of the GNU Lesser General Public
++   License as published by the Free Software Foundation; either
++   version 2.1 of the License, or (at your option) any later version.
++
++   The GNU C Library is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++   Lesser General Public License for more details.
++
++   You should have received a copy of the GNU Lesser General Public
++   License along with the GNU C Library; if not, write to the Free
++   Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
++   02111-1307 USA.  */
++
++#include <errno.h>
++#include <fcntl.h>
++#include <stddef.h>
++#include <sys/stat.h>
++#include <sys/types.h>
++
++
++/* Create a named pipe (FIFO) named PATH relative to FD with
++   protections MODE.  */
++int
++mkfifoat (fd, path, mode)
++     int fd;
++     const char *path;
++     mode_t mode;
++{
++  if (path == NULL)
++    {
++      __set_errno (EINVAL);
++      return -1;
++    }
++
++  if (fd != AT_FDCWD && path[0] != '/')
++    {
++      /* Check FD is associated with a directory.  */
++      struct stat64 st;
++      if (__fxstat64 (_STAT_VER, fd, &st) != 0)
++	return -1;
++
++      if (!S_ISDIR (st.st_mode))
++	{
++	  __set_errno (ENOTDIR);
++	  return -1;
++	}
++    }
++
++  __set_errno (ENOSYS);
++  return -1;
++}
++
++
++stub_warning (mkfifoat)
++#include <stub-tag.h>
+diff --git a/sysdeps/generic/mknodat.c b/sysdeps/generic/mknodat.c
+new file mode 100644
+index 0000000..b4f241a
+--- /dev/null
++++ b/sysdeps/generic/mknodat.c
+@@ -0,0 +1,62 @@
++/* Copyright (C) 1995, 1996, 2001, 2005, 2006 Free Software Foundation, Inc.
++   This file is part of the GNU C Library.
++
++   The GNU C Library is free software; you can redistribute it and/or
++   modify it under the terms of the GNU Lesser General Public
++   License as published by the Free Software Foundation; either
++   version 2.1 of the License, or (at your option) any later version.
++
++   In addition to the permissions in the GNU Lesser General Public
++   License, the Free Software Foundation gives you unlimited
++   permission to link the compiled version of this file with other
++   programs, and to distribute those programs without any restriction
++   coming from the use of this file. (The GNU Lesser General Public
++   License restrictions do apply in other respects; for example, they
++   cover modification of the file, and distribution when not linked
++   into another program.)
++
++   Note that people who make modified versions of this file are not
++   obligated to grant this special exception for their modified
++   versions; it is their choice whether to do so. The GNU Lesser
++   General Public License gives permission to release a modified
++   version without this exception; this exception also makes it
++   possible to release a modified version which carries forward this
++   exception.
++
++   The GNU C Library is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++   Lesser General Public License for more details.
++
++   You should have received a copy of the GNU Lesser General Public
++   License along with the GNU C Library; if not, write to the Free
++   Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
++   02111-1307 USA.  */
++
++
++#include <sys/types.h>
++#include <sys/stat.h>
++
++/* This definition is only used if inlining fails for this function; see
++   the last page of <sys/stat.h>.  The real work is done by the `x'
++   function which is passed a version number argument.  We arrange in the
++   makefile that when not inlined this function is always statically
++   linked; that way a dynamically-linked executable always encodes the
++   version number corresponding to the data structures it uses, so the `x'
++   functions in the shared library can adapt without needing to recompile
++   all callers.  */
++
++int
++__mknodat (int fd, const char *path, mode_t mode, dev_t dev)
++{
++  return __xmknodat (_MKNOD_VER, fd, path, mode, &dev);
++}
++
++weak_alias (__mknodat, mknodat)
++
++/* Hide the symbol so that no definition but the one locally in the
++   executable or DSO is used.  */
++#ifdef HAVE_DOT_HIDDEN
++asm (".hidden\tmknodat");
++asm (".hidden\t__mknodat");
++#endif
+diff --git a/sysdeps/generic/not-cancel.h b/sysdeps/generic/not-cancel.h
+index 396e042..d5bebdf 100644
+--- a/sysdeps/generic/not-cancel.h
++++ b/sysdeps/generic/not-cancel.h
+@@ -23,6 +23,14 @@
+   __libc_open (name, flags, mode)
+ #define open_not_cancel_2(name, flags) \
+   __libc_open (name, flags)
++#define openat_not_cancel(fd, name, flags, mode) \
++  __openat (fd, name, flags, mode)
++#define openat_not_cancel_3(fd, name, flags) \
++  __openat (fd, name, flags, 0)
++#define openat64_not_cancel(fd, name, flags, mode) \
++  __openat64 (fd, name, flags, mode)
++#define openat64_not_cancel_3(fd, name, flags) \
++  __openat64 (fd, name, flags, 0)
+ #define close_not_cancel(fd) \
+   __close (fd)
+ #define close_not_cancel_no_status(fd) \
+diff --git a/sysdeps/generic/openat.c b/sysdeps/generic/openat.c
+new file mode 100644
+index 0000000..a6bd620
+--- /dev/null
++++ b/sysdeps/generic/openat.c
+@@ -0,0 +1,86 @@
++/* Copyright (C) 2005, 2006, 2007 Free Software Foundation, Inc.
++   This file is part of the GNU C Library.
++
++   The GNU C Library is free software; you can redistribute it and/or
++   modify it under the terms of the GNU Lesser General Public
++   License as published by the Free Software Foundation; either
++   version 2.1 of the License, or (at your option) any later version.
++
++   The GNU C Library is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++   Lesser General Public License for more details.
++
++   You should have received a copy of the GNU Lesser General Public
++   License along with the GNU C Library; if not, write to the Free
++   Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
++   02111-1307 USA.  */
++
++#include <errno.h>
++#include <fcntl.h>
++#include <stdarg.h>
++#include <stddef.h>
++#include <stdio.h>
++#include <sys/stat.h>
++
++/* Open FILE with access OFLAG.  Interpret relative paths relative to
++   the directory associated with FD.  If OFLAG includes O_CREAT, a
++   third argument is the file protection.  */
++int
++__openat (fd, file, oflag)
++     int fd;
++     const char *file;
++     int oflag;
++{
++  int mode;
++
++  if (file == NULL)
++    {
++      __set_errno (EINVAL);
++      return -1;
++    }
++
++  if (fd != AT_FDCWD && file[0] != '/')
++    {
++      /* Check FD is associated with a directory.  */
++      struct stat64 st;
++      if (__fxstat64 (_STAT_VER, fd, &st) != 0)
++	return -1;
++
++      if (!S_ISDIR (st.st_mode))
++	{
++	  __set_errno (ENOTDIR);
++	  return -1;
++	}
++    }
++
++  if (oflag & O_CREAT)
++    {
++      va_list arg;
++      va_start (arg, oflag);
++      mode = va_arg (arg, int);
++      va_end (arg);
++    }
++
++  __set_errno (ENOSYS);
++  return -1;
++}
++libc_hidden_def (__openat)
++weak_alias (__openat, openat)
++stub_warning (openat)
++
++
++int
++__openat_2 (fd, file, oflag)
++     int fd;
++     const char *file;
++     int oflag;
++{
++  if (oflag & O_CREAT)
++    __fortify_fail ("invalid openat call: O_CREAT without mode");
++
++  return __openat (fd, file, oflag);
++}
++stub_warning (__openat_2)
++
++#include <stub-tag.h>
+diff --git a/sysdeps/generic/openat64.c b/sysdeps/generic/openat64.c
+new file mode 100644
+index 0000000..1532afe
+--- /dev/null
++++ b/sysdeps/generic/openat64.c
+@@ -0,0 +1,86 @@
++/* Copyright (C) 2005, 2006, 2007 Free Software Foundation, Inc.
++   This file is part of the GNU C Library.
++
++   The GNU C Library is free software; you can redistribute it and/or
++   modify it under the terms of the GNU Lesser General Public
++   License as published by the Free Software Foundation; either
++   version 2.1 of the License, or (at your option) any later version.
++
++   The GNU C Library is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++   Lesser General Public License for more details.
++
++   You should have received a copy of the GNU Lesser General Public
++   License along with the GNU C Library; if not, write to the Free
++   Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
++   02111-1307 USA.  */
++
++#include <errno.h>
++#include <fcntl.h>
++#include <stdarg.h>
++#include <stddef.h>
++#include <stdio.h>
++#include <sys/stat.h>
++
++/* Open FILE with access OFLAG.  Interpret relative paths relative to
++   the directory associated with FD.  If OFLAG includes O_CREAT, a
++   third argument is the file protection.  */
++int
++__openat64 (fd, file, oflag)
++     int fd;
++     const char *file;
++     int oflag;
++{
++  int mode;
++
++  if (file == NULL)
++    {
++      __set_errno (EINVAL);
++      return -1;
++    }
++
++  if (fd != AT_FDCWD && file[0] != '/')
++    {
++      /* Check FD is associated with a directory.  */
++      struct stat64 st;
++      if (__fxstat64 (_STAT_VER, fd, &st) != 0)
++	return -1;
++
++      if (!S_ISDIR (st.st_mode))
++	{
++	  __set_errno (ENOTDIR);
++	  return -1;
++	}
++    }
++
++  if (oflag & O_CREAT)
++    {
++      va_list arg;
++      va_start (arg, oflag);
++      mode = va_arg (arg, int);
++      va_end (arg);
++    }
++
++  __set_errno (ENOSYS);
++  return -1;
++}
++libc_hidden_def (__openat64)
++weak_alias (__openat64, openat64)
++stub_warning (openat64)
++
++
++int
++__openat64_2 (fd, file, oflag)
++     int fd;
++     const char *file;
++     int oflag;
++{
++  if (oflag & O_CREAT)
++    __fortify_fail ("invalid openat64 call: O_CREAT without mode");
++
++  return __openat64 (fd, file, oflag);
++}
++stub_warning (__openat_2)
++
++#include <stub-tag.h>
+diff --git a/sysdeps/generic/readlinkat.c b/sysdeps/generic/readlinkat.c
+new file mode 100644
+index 0000000..8f55a8c
+--- /dev/null
++++ b/sysdeps/generic/readlinkat.c
+@@ -0,0 +1,51 @@
++/* Copyright (C) 2005, 2006 Free Software Foundation, Inc.
++   This file is part of the GNU C Library.
++
++   The GNU C Library is free software; you can redistribute it and/or
++   modify it under the terms of the GNU Lesser General Public
++   License as published by the Free Software Foundation; either
++   version 2.1 of the License, or (at your option) any later version.
++
++   The GNU C Library is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++   Lesser General Public License for more details.
++
++   You should have received a copy of the GNU Lesser General Public
++   License along with the GNU C Library; if not, write to the Free
++   Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
++   02111-1307 USA.  */
++
++#include <errno.h>
++#include <fcntl.h>
++#include <unistd.h>
++
++/* Read the contents of the symbolic link PATH relative to FD into no
++   more than LEN bytes of BUF.  The contents are not null-terminated.
++   Returns the number of characters read, or -1 for errors.  */
++ssize_t
++__readlinkat (fd, path, buf, len)
++     int fd;
++     const char *path;
++     char *buf;
++     size_t len;
++{
++  if (path == NULL)
++    {
++      __set_errno (EINVAL);
++      return -1;
++    }
++
++  if (fd != AT_FDCWD && fd < 0 && *path != '/')
++    {
++      __set_errno (EBADF);
++      return -1;
++    }
++
++  __set_errno (ENOSYS);
++  return -1;
++}
++stub_warning (readlinkat)
++
++weak_alias (__readlinkat, readlinkat)
++#include <stub-tag.h>
+diff --git a/sysdeps/generic/renameat.c b/sysdeps/generic/renameat.c
+new file mode 100644
+index 0000000..1261da8
+--- /dev/null
++++ b/sysdeps/generic/renameat.c
+@@ -0,0 +1,50 @@
++/* Copyright (C) 2005, 2006 Free Software Foundation, Inc.
++   This file is part of the GNU C Library.
++
++   The GNU C Library is free software; you can redistribute it and/or
++   modify it under the terms of the GNU Lesser General Public
++   License as published by the Free Software Foundation; either
++   version 2.1 of the License, or (at your option) any later version.
++
++   The GNU C Library is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++   Lesser General Public License for more details.
++
++   You should have received a copy of the GNU Lesser General Public
++   License along with the GNU C Library; if not, write to the Free
++   Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
++   02111-1307 USA.  */
++
++#include <errno.h>
++#include <fcntl.h>
++#include <stdio.h>
++
++
++/* Rename the file OLD relative to OLDFD to NEW relative to NEWFD.  */
++int
++renameat (oldfd, old, newfd, new)
++     int oldfd;
++     const char *old;
++     int newfd;
++     const char *new;
++{
++  if ((oldfd < 0 && oldfd != AT_FDCWD) || (newfd < 0 && newfd != AT_FDCWD))
++    {
++      __set_errno (EBADF);
++      return -1;
++    }
++
++  if (old == NULL || new == NULL)
++    {
++      __set_errno (EINVAL);
++      return -1;
++    }
++
++  __set_errno (ENOSYS);
++  return -1;
++}
++
++
++stub_warning (renameat)
++#include <stub-tag.h>
+diff --git a/sysdeps/generic/symlinkat.c b/sysdeps/generic/symlinkat.c
+new file mode 100644
+index 0000000..a35d0e1
+--- /dev/null
++++ b/sysdeps/generic/symlinkat.c
+@@ -0,0 +1,50 @@
++/* Copyright (C) 2005 Free Software Foundation, Inc.
++   This file is part of the GNU C Library.
++
++   The GNU C Library is free software; you can redistribute it and/or
++   modify it under the terms of the GNU Lesser General Public
++   License as published by the Free Software Foundation; either
++   version 2.1 of the License, or (at your option) any later version.
++
++   The GNU C Library is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++   Lesser General Public License for more details.
++
++   You should have received a copy of the GNU Lesser General Public
++   License along with the GNU C Library; if not, write to the Free
++   Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
++   02111-1307 USA.  */
++
++#include <errno.h>
++#include <fcntl.h>
++#include <stddef.h>
++#include <unistd.h>
++
++
++/* Make a link to FROM called TO relative to FD.  */
++int
++__symlinkat (from, fd, to)
++     const char *from;
++     int fd;
++     const char *to;
++{
++  if (from == NULL || to == NULL)
++    {
++      __set_errno (EINVAL);
++      return -1;
++    }
++
++  if (fd != AT_FDCWD && fd < 0 && *to != '/')
++    {
++      __set_errno (EBADF);
++      return -1;
++    }
++
++  __set_errno (ENOSYS);
++  return -1;
++}
++stub_warning (symlinkat)
++
++weak_alias (__symlinkat, symlinkat)
++#include <stub-tag.h>
+diff --git a/sysdeps/generic/unlinkat.c b/sysdeps/generic/unlinkat.c
+new file mode 100644
+index 0000000..fa9ed5a
+--- /dev/null
++++ b/sysdeps/generic/unlinkat.c
+@@ -0,0 +1,50 @@
++/* Copyright (C) 2005 Free Software Foundation, Inc.
++   This file is part of the GNU C Library.
++
++   The GNU C Library is free software; you can redistribute it and/or
++   modify it under the terms of the GNU Lesser General Public
++   License as published by the Free Software Foundation; either
++   version 2.1 of the License, or (at your option) any later version.
++
++   The GNU C Library is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++   Lesser General Public License for more details.
++
++   You should have received a copy of the GNU Lesser General Public
++   License along with the GNU C Library; if not, write to the Free
++   Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
++   02111-1307 USA.  */
++
++#include <errno.h>
++#include <fcntl.h>
++#include <stddef.h>
++#include <unistd.h>
++
++
++/* Remove the link named NAME.  */
++int
++__unlinkat (fd, name, flag)
++     int fd;
++     const char *name;
++     int flag;
++{
++  if (name == NULL || (flag & AT_REMOVEDIR) != 0)
++    {
++      __set_errno (EINVAL);
++      return -1;
++    }
++
++  if (fd < 0 && fd != AT_FDCWD)
++    {
++      __set_errno (EBADF);
++      return -1;
++    }
++
++  __set_errno (ENOSYS);
++  return -1;
++}
++stub_warning (unlinkat)
++
++weak_alias (__unlinkat, unlinkat)
++#include <stub-tag.h>
+diff --git a/sysdeps/generic/utimensat.c b/sysdeps/generic/utimensat.c
+new file mode 100644
+index 0000000..3b9e7ef
+--- /dev/null
++++ b/sysdeps/generic/utimensat.c
+@@ -0,0 +1,34 @@
++/* Change access and modification times of open file.  Stub version.
++   Copyright (C) 2007 Free Software Foundation, Inc.
++   This file is part of the GNU C Library.
++
++   The GNU C Library is free software; you can redistribute it and/or
++   modify it under the terms of the GNU Lesser General Public
++   License as published by the Free Software Foundation; either
++   version 2.1 of the License, or (at your option) any later version.
++
++   The GNU C Library is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++   Lesser General Public License for more details.
++
++   You should have received a copy of the GNU Lesser General Public
++   License along with the GNU C Library; if not, write to the Free
++   Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
++   02111-1307 USA.  */
++
++#include <errno.h>
++#include <sys/stat.h>
++
++
++/* Change the access time of FILE to TSP[0] and
++   the modification time of FILE to TSP[1].  */
++int
++utimensat (int fd, const char *file, const struct timespec tsp[2],
++	   int flags)
++{
++  __set_errno (ENOSYS);
++  return -1;
++}
++stub_warning (utimensat)
++#include <stub-tag.h>
+diff --git a/sysdeps/generic/xmknod.c b/sysdeps/generic/xmknod.c
+index 57ed460..c2daa46 100644
+--- a/sysdeps/generic/xmknod.c
++++ b/sysdeps/generic/xmknod.c
+@@ -1,4 +1,4 @@
+-/* Copyright (C) 1991,1993,1995,1996,1997,2002 Free Software Foundation, Inc.
++/* Copyright (C) 1991,1993,1995-1997,2002,2005 Free Software Foundation, Inc.
+    This file is part of the GNU C Library.
+ 
+    The GNU C Library is free software; you can redistribute it and/or
+@@ -32,6 +32,12 @@ __xmknod (int vers, const char *path, mode_t mode, dev_t *dev)
+       return -1;
+     }
+ 
++  if (path == NULL)
++    {
++      __set_errno (EINVAL);
++      return -1;
++    }
++
+   __set_errno (ENOSYS);
+   return -1;
+ }
+diff --git a/sysdeps/generic/xmknodat.c b/sysdeps/generic/xmknodat.c
+new file mode 100644
+index 0000000..6543247
+--- /dev/null
++++ b/sysdeps/generic/xmknodat.c
+@@ -0,0 +1,65 @@
++/* Copyright (C) 2005 Free Software Foundation, Inc.
++   This file is part of the GNU C Library.
++
++   The GNU C Library is free software; you can redistribute it and/or
++   modify it under the terms of the GNU Lesser General Public
++   License as published by the Free Software Foundation; either
++   version 2.1 of the License, or (at your option) any later version.
++
++   The GNU C Library is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++   Lesser General Public License for more details.
++
++   You should have received a copy of the GNU Lesser General Public
++   License along with the GNU C Library; if not, write to the Free
++   Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
++   02111-1307 USA.  */
++
++#include <errno.h>
++#include <fcntl.h>
++#include <stddef.h>
++#include <sys/types.h>
++#include <sys/stat.h>
++
++/* Create a device file named PATH relative to FD, with permission and
++   special bits MODE and device number DEV (which can be constructed
++   from major and minor device numbers with the `makedev' macro
++   above).  */
++int
++__xmknodat (int vers, int fd, const char *path, mode_t mode, dev_t *dev)
++{
++  if (vers != _MKNOD_VER)
++    {
++      __set_errno (EINVAL);
++      return -1;
++    }
++
++  if (path == NULL)
++    {
++      __set_errno (EINVAL);
++      return -1;
++    }
++
++  if (fd != AT_FDCWD && path[0] != '/')
++    {
++      /* Check FD is associated with a directory.  */
++      struct stat64 st;
++      if (__fxstat64 (_STAT_VER, fd, &st) != 0)
++	return -1;
++
++      if (!S_ISDIR (st.st_mode))
++	{
++	  __set_errno (ENOTDIR);
++	  return -1;
++	}
++    }
++
++  __set_errno (ENOSYS);
++  return -1;
++}
++stub_warning (__xmknodat)
++
++weak_alias (__xmknodat, _xmknodat)
++libc_hidden_def (__xmknodat)
++#include <stub-tag.h>
