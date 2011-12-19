@@ -1,0 +1,40 @@
+From f89360a4f845b4675e230baa39ac20ac681625fc Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Fri, 10 Jun 2011 11:05:45 +0200
+Subject: [PATCH] microblaze: Separate fixup section definition
+
+Move fixups below appropriate code.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ arch/microblaze/lib/uaccess_old.S |   10 +++++++++-
+ 1 files changed, 9 insertions(+), 1 deletions(-)
+
+diff --git a/arch/microblaze/lib/uaccess_old.S b/arch/microblaze/lib/uaccess_old.S
+index 5b6d69e..bacfedc 100644
+--- a/arch/microblaze/lib/uaccess_old.S
++++ b/arch/microblaze/lib/uaccess_old.S
+@@ -136,6 +136,12 @@ __copy_tofrom_user:
+ 	addik	r3, r7, 0
+ 	rtsd	r15, 8
+ 	nop
++
++	.section	__ex_table,"a"
++	.word	5b, 0f;
++	.word	6b, 0f;
++	.text
++
+ 4:	or	r3, r0, r0
+ 1:	lbu	r4,r6,r3
+ 2:	sb	r4,r5,r3
+@@ -149,4 +155,6 @@ __copy_tofrom_user:
+ 	.size   __copy_tofrom_user, . - __copy_tofrom_user
+ 
+ 	.section	__ex_table,"a"
+-	.word	1b,0b,2b,0b,5b,0b,6b,0b
++	.word	1b, 0b;
++	.word	2b, 0b;
++	.text
+-- 
+1.7.0.4
+

@@ -1,0 +1,103 @@
+From ec754d76bfadb24a6ff1efb1b096005b1ab33a48 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Sun, 2 Oct 2011 15:14:27 +0200
+Subject: [PATCH] Xilinx: Axi Ethernet Driver: Use u32 instead of int
+
+Use unsigned instead of signed int where necessary.
+
+Coding style cleanup.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ drivers/net/xilinx_axienet.h      |   13 ++++++-------
+ drivers/net/xilinx_axienet_main.c |   11 +++++++----
+ 2 files changed, 13 insertions(+), 11 deletions(-)
+
+diff --git a/drivers/net/xilinx_axienet.h b/drivers/net/xilinx_axienet.h
+index f07554d..6a4ac76 100755
+--- a/drivers/net/xilinx_axienet.h
++++ b/drivers/net/xilinx_axienet.h
+@@ -491,12 +491,12 @@ struct axienet_local {
+ 
+ 	int tx_irq;
+ 	int rx_irq;
+-	int temac_type;
+-	int phy_type;
++	u32 temac_type;
++	u32 phy_type;
+ 
+ 	u32 options;			/* Current options word */
+-	int last_link;
+-	unsigned int features;
++	u32 last_link;
++	u32 features;
+ 
+ 	/* Buffer descriptors */
+ 	struct axidma_bd *tx_bd_v;
+@@ -507,15 +507,14 @@ struct axienet_local {
+ 	u32 tx_bd_tail;
+ 	u32 rx_bd_ci;
+ 
+-	int max_frm_size;
+-	int jumbo_support;
++	u32 max_frm_size;
++	u32 jumbo_support;
+ 
+ 	int csum_offload_on_tx_path;
+ 	int csum_offload_on_rx_path;
+ 
+ 	u32 coalesce_count_rx;
+ 	u32 coalesce_count_tx;
+-
+ };
+ 
+ /**
+diff --git a/drivers/net/xilinx_axienet_main.c b/drivers/net/xilinx_axienet_main.c
+index 9684dfd..21c853a 100755
+--- a/drivers/net/xilinx_axienet_main.c
++++ b/drivers/net/xilinx_axienet_main.c
+@@ -610,8 +610,8 @@ static void axienet_adjust_link(struct net_device *ndev)
+ 	struct axienet_local *lp = netdev_priv(ndev);
+ 	struct phy_device *phy = lp->phy_dev;
+ 	u32 emmc_reg;
+-	int link_state;
+-	int setspeed = 1;
++	u32 link_state;
++	u32 setspeed = 1;
+ 
+ 	/* Hash together the state values to decide if something has changed.*/
+ 	link_state = phy->speed | (phy->duplex << 1) | phy->link;
+@@ -725,9 +725,11 @@ static inline int axienet_check_tx_bd_space(struct axienet_local *lp,
+ 								int num_frag)
+ {
+ 	struct axidma_bd *cur_p;
++
+ 	cur_p = &lp->tx_bd_v[(lp->tx_bd_tail + num_frag) % TX_BD_NUM];
+ 	if (cur_p->status & XAXIDMA_BD_STS_ALL_MASK)
+ 		return NETDEV_TX_BUSY;
++
+ 	return 0;
+ }
+ 
+@@ -798,6 +800,7 @@ static int axienet_start_xmit(struct sk_buff *skb, struct net_device *ndev)
+ 	cur_p->app4 = (unsigned long)skb;
+ 
+ 	tail_p = lp->tx_bd_p + sizeof(*lp->tx_bd_v) * lp->tx_bd_tail;
++
+ 	/* Start the transfer */
+ 	axienet_dma_out32(lp, XAXIDMA_TX_TDESC_OFFSET, tail_p);
+ 
+@@ -821,8 +824,8 @@ static void axienet_recv(struct net_device *ndev)
+ 	struct sk_buff *skb, *new_skb;
+ 	struct axidma_bd *cur_p;
+ 	dma_addr_t tail_p;
+-	int length;
+-	int csumstatus;
++	u32 length;
++	u32 csumstatus;
+ 
+ 	tail_p = lp->rx_bd_p + sizeof(*lp->rx_bd_v) * lp->rx_bd_ci;
+ 	cur_p = &lp->rx_bd_v[lp->rx_bd_ci];
+-- 
+1.7.0.4
+

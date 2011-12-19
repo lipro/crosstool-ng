@@ -1,0 +1,29 @@
+From dda7368b22d0d3904fde987ebe1b38846c726973 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Mon, 11 Oct 2010 09:46:27 +1000
+Subject: [PATCH] of: xilinxfb: Fix OF probing on little-endian systems
+
+DTB is always big-endian that's why is necessary
+to convert it.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ drivers/video/xilinxfb.c |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/drivers/video/xilinxfb.c b/drivers/video/xilinxfb.c
+index 68bd234..fd71609 100644
+--- a/drivers/video/xilinxfb.c
++++ b/drivers/video/xilinxfb.c
+@@ -432,7 +432,7 @@ xilinxfb_of_probe(struct platform_device *op, const struct of_device_id *match)
+ 	 * interface and initialize the tft_access accordingly.
+ 	 */
+ 	p = (u32 *)of_get_property(op->dev.of_node, "xlnx,dcr-splb-slave-if", NULL);
+-	tft_access = p ? *p : 0;
++	tft_access = p ? be32_to_cpup(p) : 0;
+ 
+ 	/*
+ 	 * Fill the resource structure if its direct PLB interface
+-- 
+1.7.0.4
+

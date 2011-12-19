@@ -1,0 +1,44 @@
+From 2db558775bdb02b7c06964efe257f03dbccdf17a Mon Sep 17 00:00:00 2001
+From: Wendy Liang <wendy.liang@petalogix.com>
+Date: Mon, 4 Apr 2011 16:07:47 +1000
+Subject: [PATCH] spi: m25p80: Change s25fl064k sector size from 4KB to 32KB for JFFS2
+
+There are two issues:
+1. the s25fl064k flash has the same manufacturer id and the device id as w25q64
+2. the erase size is 0x1000(4KiB) which is less than the min 8KB requirement of the JFFS2
+   solved by changing the sector size of the s25fl064k to 32K
+
+Signed-off-by: Wendy Liang <wendy.liang@petalogix.com>
+---
+ drivers/mtd/devices/m25p80.c |    8 ++++++--
+ 1 files changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/mtd/devices/m25p80.c b/drivers/mtd/devices/m25p80.c
+index 32cc843..5a8bb2a 100644
+--- a/drivers/mtd/devices/m25p80.c
++++ b/drivers/mtd/devices/m25p80.c
+@@ -598,7 +598,7 @@ struct flash_info {
+ 	u16		flags;
+ #define	SECT_4K		0x01		/* OPCODE_BE_4K works uniformly */
+ #define	M25P_NO_ERASE	0x02		/* No erase command needed */
+-#define	SECT_32K	0x03		/* OPCODE_BE_32K */
++#define	SECT_32K	0x04		/* OPCODE_BE_32K */
+ };
+ 
+ #define INFO(_jedec_id, _ext_id, _sector_size, _n_sectors, _flags)	\
+@@ -669,7 +669,11 @@ static const struct spi_device_id m25p_ids[] = {
+ 	{ "s25fl129p0", INFO(0x012018, 0x4d00, 256 * 1024,  64, 0) },
+ 	{ "s25fl129p1", INFO(0x012018, 0x4d01,  64 * 1024, 256, 0) },
+ 	{ "s25fl016k",  INFO(0xef4015,      0,  64 * 1024,  32, SECT_4K) },
+-	{ "s25fl064k",  INFO(0xef4017,      0,  64 * 1024, 128, SECT_4K) },
++	/* s25fl064k supports 4KiB, 32KiB and 64KiB sectors erase size. */
++	/* To support JFFS2, the minimum erase size is 8KiB(>4KiB). */
++	/* And thus, the sector size of s25fl064k is set to 32KiB for */
++	/* JFFS2 support. */
++	{ "s25fl064k",  INFO(0xef4017,      0,  64 * 1024, 128, SECT_32K) },
+ 
+ 	/* SST -- large erase sizes are "overlays", "sectors" are 4K */
+ 	{ "sst25vf040b", INFO(0xbf258d, 0, 64 * 1024,  8, SECT_4K) },
+-- 
+1.7.0.4
+

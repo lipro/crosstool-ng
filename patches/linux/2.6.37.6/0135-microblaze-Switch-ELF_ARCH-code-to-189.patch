@@ -1,0 +1,54 @@
+From 23fde3c7632f89e0b7a56405b9817eb948c75476 Mon Sep 17 00:00:00 2001
+From: Edgar E. Iglesias <edgar.iglesias@petalogix.com>
+Date: Tue, 23 Aug 2011 23:16:15 +0200
+Subject: [PATCH] microblaze: Switch ELF_ARCH code to 189
+
+Switch arch code to 189, the registered code in the upstream
+version of binutils. Continue to accept the experimental 0xbaab.
+
+Signed-off-by: Edgar E. Iglesias <edgar.iglesias@gmail.com>
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ arch/microblaze/include/asm/elf.h |    8 +++++---
+ arch/microblaze/kernel/ptrace.c   |    2 +-
+ 2 files changed, 6 insertions(+), 4 deletions(-)
+
+diff --git a/arch/microblaze/include/asm/elf.h b/arch/microblaze/include/asm/elf.h
+index 098dfdd..834849f 100644
+--- a/arch/microblaze/include/asm/elf.h
++++ b/arch/microblaze/include/asm/elf.h
+@@ -16,13 +16,15 @@
+  * I've snaffled the value from the microblaze binutils source code
+  * /binutils/microblaze/include/elf/microblaze.h
+  */
+-#define EM_XILINX_MICROBLAZE	0xbaab
+-#define ELF_ARCH		EM_XILINX_MICROBLAZE
++#define EM_MICROBLAZE		189
++#define EM_MICROBLAZE_OLD	0xbaab
++#define ELF_ARCH		EM_MICROBLAZE
+ 
+ /*
+  * This is used to ensure we don't load something for the wrong architecture.
+  */
+-#define elf_check_arch(x)	((x)->e_machine == EM_XILINX_MICROBLAZE)
++#define elf_check_arch(x)	((x)->e_machine == EM_MICROBLAZE \
++				 || (x)->e_machine == EM_MICROBLAZE_OLD)
+ 
+ /*
+  * These are used to set parameters in the core dumps.
+diff --git a/arch/microblaze/kernel/ptrace.c b/arch/microblaze/kernel/ptrace.c
+index 05ac8cc..a75965a 100644
+--- a/arch/microblaze/kernel/ptrace.c
++++ b/arch/microblaze/kernel/ptrace.c
+@@ -147,7 +147,7 @@ asmlinkage long do_syscall_trace_enter(struct pt_regs *regs)
+ 		ret = -1L;
+ 
+ 	if (unlikely(current->audit_context))
+-		audit_syscall_entry(EM_XILINX_MICROBLAZE, regs->r12,
++		audit_syscall_entry(EM_MICROBLAZE, regs->r12,
+ 				    regs->r5, regs->r6,
+ 				    regs->r7, regs->r8);
+ 
+-- 
+1.7.0.4
+

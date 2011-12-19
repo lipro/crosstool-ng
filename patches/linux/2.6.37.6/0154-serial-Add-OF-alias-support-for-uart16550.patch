@@ -1,0 +1,106 @@
+From fc577c7801564aa94f52f23b9ede1dc961160f00 Mon Sep 17 00:00:00 2001
+From: John Williams <john.williams@petalogix.com>
+Date: Wed, 9 Nov 2011 13:05:26 +1000
+Subject: [PATCH] serial: Add OF alias support for uart16550
+
+Backport from the latest Linaro tree.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+Signed-off-by: John Williams <john.williams@petalogix.com>
+---
+ drivers/of/base.c          |    4 ++--
+ drivers/serial/8250.c      |    7 +++++++
+ drivers/serial/of_serial.c |   16 ++++++++++++++++
+ include/linux/of.h         |    2 +-
+ 4 files changed, 26 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/of/base.c b/drivers/of/base.c
+index 5c008a0..766c7ed 100644
+--- a/drivers/of/base.c
++++ b/drivers/of/base.c
+@@ -966,7 +966,7 @@ static void of_alias_add(struct alias_prop *ap, struct device_node *np,
+  * @dt_alloc:	An allocator that provides a virtual address to memory
+  *		for the resulting tree
+  */
+-void of_alias_scan(void * (*dt_alloc)(u64 size, u64 align))
++void of_alias_scan(u64 (*dt_alloc)(u64 size, u64 align))
+ {
+ 	struct property *pp;
+ 
+@@ -1004,7 +1004,7 @@ void of_alias_scan(void * (*dt_alloc)(u64 size, u64 align))
+ 			continue;
+ 
+ 		/* Allocate an alias_prop with enough space for the stem */
+-		ap = dt_alloc(sizeof(*ap) + len + 1, 4);
++		ap = __va(dt_alloc(sizeof(*ap) + len + 1, 4));
+ 		if (!ap)
+ 			continue;
+ 		ap->alias = start;
+diff --git a/drivers/serial/8250.c b/drivers/serial/8250.c
+index b2b40f9..e443ece 100644
+--- a/drivers/serial/8250.c
++++ b/drivers/serial/8250.c
+@@ -3116,6 +3116,13 @@ static struct uart_8250_port *serial8250_find_match_or_unused(struct uart_port *
+ 		if (uart_match_port(&serial8250_ports[i].port, port))
+ 			return &serial8250_ports[i];
+ 
++	/* Look at setup port->line port first. If is available, use it */
++	if (port->line >= 0 && port->line < nr_uarts)
++		if (serial8250_ports[port->line].port.type == PORT_UNKNOWN &&
++		    serial8250_ports[port->line].port.iobase == 0) {
++			return &serial8250_ports[port->line];
++		}
++
+ 	/*
+ 	 * We didn't find a matching entry, so look for the first
+ 	 * free entry.  We look for one which hasn't been previously
+diff --git a/drivers/serial/of_serial.c b/drivers/serial/of_serial.c
+index 17849dc..3b6fed7 100644
+--- a/drivers/serial/of_serial.c
++++ b/drivers/serial/of_serial.c
+@@ -86,6 +86,7 @@ static int __devinit of_platform_serial_probe(struct platform_device *ofdev,
+ 	struct uart_port port;
+ 	int port_type;
+ 	int ret;
++	int ids;
+ 
+ 	if (of_find_property(ofdev->dev.of_node, "used-by-rtas", NULL))
+ 		return -EBUSY;
+@@ -99,6 +100,21 @@ static int __devinit of_platform_serial_probe(struct platform_device *ofdev,
+ 	if (ret)
+ 		goto out;
+ 
++	ids = of_alias_get_id(ofdev->dev.of_node, "serial");
++	if (ids < 0) {
++		dev_warn(&ofdev->dev,
++				"failed to get serial alias for %d id\n", ids);
++	} else {
++		if (ids < CONFIG_SERIAL_8250_RUNTIME_UARTS)
++			port.line = ids;
++		else {
++			dev_warn(&ofdev->dev,
++				"FAILED to register serial driver with id %d\n",
++									ids);
++			goto out;
++		}
++	}
++
+ 	switch (port_type) {
+ #ifdef CONFIG_SERIAL_8250
+ 	case PORT_8250 ... PORT_MAX_8250:
+diff --git a/include/linux/of.h b/include/linux/of.h
+index aac39af..9d9d107 100644
+--- a/include/linux/of.h
++++ b/include/linux/of.h
+@@ -212,7 +212,7 @@ extern int of_parse_phandles_with_args(struct device_node *np,
+ 	const char *list_name, const char *cells_name, int index,
+ 	struct device_node **out_node, const void **out_args);
+ 
+-extern void of_alias_scan(void * (*dt_alloc)(u64 size, u64 align));
++extern void of_alias_scan(u64 (*dt_alloc)(u64 size, u64 align));
+ extern int of_alias_get_id(struct device_node *np, const char *stem);
+ 
+ extern int of_machine_is_compatible(const char *compat);
+-- 
+1.7.0.4
+

@@ -1,0 +1,34 @@
+From 3e4fa2466db6f540480acae59c1031100a98c9ba Mon Sep 17 00:00:00 2001
+From: Matt Fleming <matt.fleming@intel.com>
+Date: Thu, 11 Aug 2011 14:56:46 +0100
+Subject: [PATCH] microblaze: Don't reimplement force_sigsegv()
+
+Instead of open coding the sequence from force_sigsegv() just call
+it. This also fixes a race because sa_handler was being modified
+without holding ->sighand->siglock.
+
+Cc: Oleg Nesterov <oleg@redhat.com>
+Cc: Michal Simek <monstr@monstr.eu>
+Signed-off-by: Matt Fleming <matt.fleming@intel.com>
+---
+ arch/microblaze/kernel/signal.c |    4 +---
+ 1 files changed, 1 insertions(+), 3 deletions(-)
+
+diff --git a/arch/microblaze/kernel/signal.c b/arch/microblaze/kernel/signal.c
+index 93a7b64..e0b6c6a 100644
+--- a/arch/microblaze/kernel/signal.c
++++ b/arch/microblaze/kernel/signal.c
+@@ -270,9 +270,7 @@ static void setup_rt_frame(int sig, struct k_sigaction *ka, siginfo_t *info,
+ 	return;
+ 
+ give_sigsegv:
+-	if (sig == SIGSEGV)
+-		ka->sa.sa_handler = SIG_DFL;
+-	force_sig(SIGSEGV, current);
++	force_sigsegv(sig, current);
+ }
+ 
+ /* Handle restarting system calls */
+-- 
+1.7.0.4
+

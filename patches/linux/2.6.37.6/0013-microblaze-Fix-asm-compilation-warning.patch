@@ -1,0 +1,40 @@
+From 5f51c76adbab44018ff15db7d967ccf99199e1de Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Mon, 7 Feb 2011 11:29:43 +0100
+Subject: [PATCH] microblaze: Fix asm compilation warning
+
+Microblaze ASM doesn't support hex values for mfs instructions.
+
+/tmp/ccwiXVmt.s: Assembler messages:
+/tmp/ccwiXVmt.s:19: Warning: ignoring operands: x00
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ arch/microblaze/kernel/cpu/pvr.c |    4 ++--
+ 1 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/arch/microblaze/kernel/cpu/pvr.c b/arch/microblaze/kernel/cpu/pvr.c
+index e01afa6..488c1ed 100644
+--- a/arch/microblaze/kernel/cpu/pvr.c
++++ b/arch/microblaze/kernel/cpu/pvr.c
+@@ -27,7 +27,7 @@
+ 	register unsigned tmp __asm__("r3");			\
+ 	tmp = 0x0;	/* Prevent warning about unused */	\
+ 	__asm__ __volatile__ (					\
+-			"mfs	%0, rpvr" #pvrid ";"	\
++			"mfs	%0, rpvr" #pvrid ";"		\
+ 			: "=r" (tmp) : : "memory"); 		\
+ 	val = tmp;						\
+ }
+@@ -54,7 +54,7 @@ int cpu_has_pvr(void)
+ 	if (!(flags & PVR_MSR_BIT))
+ 		return 0;
+ 
+-	get_single_pvr(0x00, pvr0);
++	get_single_pvr(0, pvr0);
+ 	pr_debug("%s: pvr0 is 0x%08x\n", __func__, pvr0);
+ 
+ 	if (pvr0 & PVR0_PVR_FULL_MASK)
+-- 
+1.7.0.4
+

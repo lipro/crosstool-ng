@@ -1,0 +1,37 @@
+From 27464cb4c12ca9145aa5e76655f17de39a377f3b Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Mon, 6 Jun 2011 10:08:43 +0200
+Subject: [PATCH] axi_ethernet: Remove section mismatch
+
+Warning log:
+MODPOST vmlinux.o
+WARNING: vmlinux.o(.data+0xb078): Section mismatch in reference
+from the variable axienet_of_driver to the function
+.init.text:axienet_probe()
+The variable axienet_of_driver references
+the function __init axienet_probe()
+If the reference is valid then annotate the
+variable with __init* or __refdata (see linux/init.h) or name the variable:
+*_template, *_timer, *_sht, *_ops, *_probe, *_probe_one, *_console,
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ drivers/net/xilinx_axienet_main.c |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/drivers/net/xilinx_axienet_main.c b/drivers/net/xilinx_axienet_main.c
+index 6a511ce..3a5c6b4 100755
+--- a/drivers/net/xilinx_axienet_main.c
++++ b/drivers/net/xilinx_axienet_main.c
+@@ -1777,7 +1777,7 @@ static void axienet_dma_err_handler(unsigned long data)
+  * device. Parses through device tree and populates fields of
+  * axienet_local. It registers the Ethernet device.
+  **/
+-static int __init
++static int __devinit
+ axienet_probe(struct platform_device *op)
+ {
+ 	struct device_node *np;
+-- 
+1.7.0.4
+

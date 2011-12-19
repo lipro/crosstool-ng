@@ -1,0 +1,71 @@
+From d51a8b597a85646739565347a8c4e4bd2f505628 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Thu, 9 Jun 2011 15:25:52 +0200
+Subject: [PATCH] net: xilinx_drivers: Fix DMA map size bug
+
+axi_ethernet come from ll_temac that's why both drivers
+contain the same fault. DMA allocate skb->len instead of
+headlen which is used for DMA.
+
+LOG for axi ethernet:
+------------[ cut here ]------------
+WARNING: at lib/dma-debug.c:812 check_unmap+0x328/0x814()
+xilinx_axienet 40c40000.axi-ethernet: DMA-API: device driver
+frees DMA memory with different size [device address=0x00000000cea64e5e]
+[map size=322 bytes] [unmap size=66 bytes]
+Modules linked in:
+Kernel Stack:
+...
+Call Trace:
+[<c0004428>] microblaze_unwind+0x54/0x78
+[<c0004134>] show_stack+0x120/0x158
+[<c0004174>] dump_stack+0x8/0x20
+[<c0011b84>] warn_slowpath_common+0x80/0xbc
+[<c0011c4c>] warn_slowpath_fmt+0x28/0x40
+[<c0144b04>] check_unmap+0x31c/0x814
+[<c0145140>] debug_dma_unmap_page+0x98/0xcc
+[<c01865f8>] axienet_tx_irq+0xd4/0x290
+[<c00429ec>] handle_IRQ_event+0x2c/0x12c
+[<c004552c>] handle_level_irq+0xb4/0x130
+[<c0001ef0>] do_IRQ+0x90/0xf8
+[<c00069d0>] _interrupt+0x170/0x174
+
+---[ end trace 91389daf999a9686 ]---
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ drivers/net/ll_temac_main.c       |    4 ++--
+ drivers/net/xilinx_axienet_main.c |    2 +-
+ 2 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/net/ll_temac_main.c b/drivers/net/ll_temac_main.c
+index 9f8e702..d064dcf 100644
+--- a/drivers/net/ll_temac_main.c
++++ b/drivers/net/ll_temac_main.c
+@@ -702,8 +702,8 @@ static int temac_start_xmit(struct sk_buff *skb, struct net_device *ndev)
+ 
+ 	cur_p->app0 |= STS_CTRL_APP0_SOP;
+ 	cur_p->len = skb_headlen(skb);
+-	cur_p->phys = dma_map_single(ndev->dev.parent, skb->data, skb->len,
+-				     DMA_TO_DEVICE);
++	cur_p->phys = dma_map_single(ndev->dev.parent, skb->data,
++				skb_headlen(skb), DMA_TO_DEVICE);
+ 	cur_p->app4 = (unsigned long)skb;
+ 
+ 	for (ii = 0; ii < num_frag; ii++) {
+diff --git a/drivers/net/xilinx_axienet_main.c b/drivers/net/xilinx_axienet_main.c
+index bc06634..6a511ce 100755
+--- a/drivers/net/xilinx_axienet_main.c
++++ b/drivers/net/xilinx_axienet_main.c
+@@ -785,7 +785,7 @@ static int axienet_start_xmit(struct sk_buff *skb, struct net_device *ndev)
+ 	}
+ 
+ 	cur_p->cntrl = skb_headlen(skb) | XAXIDMA_BD_CTRL_TXSOF_MASK;
+-	cur_p->phys = dma_map_single(ndev->dev.parent, skb->data, skb->len,
++	cur_p->phys = dma_map_single(ndev->dev.parent, skb->data, skb_headlen(skb),
+ 				     DMA_TO_DEVICE);
+ 	for (ii = 0; ii < num_frag; ii++) {
+ 
+-- 
+1.7.0.4
+

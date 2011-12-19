@@ -1,0 +1,31 @@
+From 5b68098b5f1213c9201de0294d8e9075fc036d5d Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Thu, 21 Apr 2011 12:09:08 +0200
+Subject: [PATCH] ll_temac: Simplify xmit
+
+Use one return statement instead of two.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ drivers/net/ll_temac_main.c |    4 +---
+ 1 files changed, 1 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/net/ll_temac_main.c b/drivers/net/ll_temac_main.c
+index 4f5cc4b..a1d6a59 100644
+--- a/drivers/net/ll_temac_main.c
++++ b/drivers/net/ll_temac_main.c
+@@ -682,10 +682,8 @@ static int temac_start_xmit(struct sk_buff *skb, struct net_device *ndev)
+ 	cur_p = &lp->tx_bd_v[lp->tx_bd_tail];
+ 
+ 	if (temac_check_tx_bd_space(lp, num_frag)) {
+-		if (!netif_queue_stopped(ndev)) {
++		if (!netif_queue_stopped(ndev))
+ 			netif_stop_queue(ndev);
+-			return NETDEV_TX_BUSY;
+-		}
+ 		return NETDEV_TX_BUSY;
+ 	}
+ 
+-- 
+1.7.0.4
+

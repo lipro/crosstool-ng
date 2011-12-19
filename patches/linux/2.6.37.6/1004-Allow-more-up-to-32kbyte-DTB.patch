@@ -1,0 +1,29 @@
+From de28df3bd26489a0ae6716f94892c4f2bd9433e1 Mon Sep 17 00:00:00 2001
+From: Stephan Linz <linz@li-pro.net>
+Date: Sat, 21 May 2011 18:19:40 +0200
+Subject: [PATCH] Allow more up to 32kbyte DTB
+
+In certain circumstances, the default space of 16kbyte for the
+precompiled DTB is not enough and needs expanded.
+
+Signed-off-by: Stephan Linz <linz@li-pro.net>
+---
+ arch/microblaze/kernel/vmlinux.lds.S |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/arch/microblaze/kernel/vmlinux.lds.S b/arch/microblaze/kernel/vmlinux.lds.S
+index ac0e1a5..109e9d8 100644
+--- a/arch/microblaze/kernel/vmlinux.lds.S
++++ b/arch/microblaze/kernel/vmlinux.lds.S
+@@ -44,7 +44,7 @@ SECTIONS {
+ 	__fdt_blob : AT(ADDR(__fdt_blob) - LOAD_OFFSET) {
+ 		_fdt_start = . ;		/* place for fdt blob */
+ 		*(__fdt_blob) ;			/* Any link-placed DTB */
+-	        . = _fdt_start + 0x4000;	/* Pad up to 16kbyte */
++	        . = _fdt_start + 0x8000;	/* Pad up to 32kbyte */
+ 		_fdt_end = . ;
+ 	}
+ 
+-- 
+1.7.0.4
+

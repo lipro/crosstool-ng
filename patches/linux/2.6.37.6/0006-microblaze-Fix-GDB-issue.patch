@@ -1,0 +1,51 @@
+From c21924ccf9ce9296f641cec34927f786b6411ae6 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Fri, 28 May 2010 14:45:38 +0200
+Subject: [PATCH] microblaze: Fix GDB issue
+
+I am using the same solution as use SH.
+
+I am not really sure about copy_to_user_page macro.
+I changed there len to PAGE_SIZE as SH does.
+
+Please test it.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ arch/microblaze/include/asm/cacheflush.h |   12 +++++++++---
+ 1 files changed, 9 insertions(+), 3 deletions(-)
+
+diff --git a/arch/microblaze/include/asm/cacheflush.h b/arch/microblaze/include/asm/cacheflush.h
+index 7ebd955..5a5d835 100644
+--- a/arch/microblaze/include/asm/cacheflush.h
++++ b/arch/microblaze/include/asm/cacheflush.h
+@@ -89,7 +89,9 @@ do { \
+ #define flush_cache_vmap(start, end)			do { } while (0)
+ #define flush_cache_vunmap(start, end)			do { } while (0)
+ #define flush_cache_mm(mm)			do { } while (0)
+-#define flush_cache_page(vma, vmaddr, pfn)	do { } while (0)
++
++#define flush_cache_page(vma, vmaddr, pfn) \
++	flush_dcache_range(pfn << PAGE_SHIFT, (pfn << PAGE_SHIFT) + PAGE_SIZE);
+ 
+ /* MS: kgdb code use this macro, wrong len with FLASH */
+ #if 0
+@@ -104,9 +106,13 @@ do { \
+ #define copy_to_user_page(vma, page, vaddr, dst, src, len)		\
+ do {									\
+ 	u32 addr = virt_to_phys(dst);					\
+-	invalidate_icache_range((unsigned) (addr), (unsigned) (addr) + (len));\
+ 	memcpy((dst), (src), (len));					\
+-	flush_dcache_range((unsigned) (addr), (unsigned) (addr) + (len));\
++	if (vma->vm_flags & VM_EXEC) {					\
++		invalidate_icache_range((unsigned) (addr),		\
++					(unsigned) (addr) + PAGE_SIZE);	\
++		flush_dcache_range((unsigned) (addr),			\
++					(unsigned) (addr) + PAGE_SIZE);	\
++	}								\
+ } while (0)
+ 
+ #define copy_from_user_page(vma, page, vaddr, dst, src, len)		\
+-- 
+1.7.0.4
+

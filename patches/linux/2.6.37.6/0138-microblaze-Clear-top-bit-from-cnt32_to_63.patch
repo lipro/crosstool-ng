@@ -1,0 +1,33 @@
+From 7cfaf00065723ef62cf60f17723085b6d4a4bb8c Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Fri, 23 Sep 2011 09:52:24 +0200
+Subject: [PATCH] microblaze: Clear top bit from cnt32_to_63
+
+Top bit is used as garbage and it must be clear
+explicitly.
+It is causing the problem with soft lookup code
+because it checks delays which are long when
+top bit is setup.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ arch/microblaze/kernel/timer.c |    3 ++-
+ 1 files changed, 2 insertions(+), 1 deletions(-)
+
+diff --git a/arch/microblaze/kernel/timer.c b/arch/microblaze/kernel/timer.c
+index d23a9db..2d3ed0b 100644
+--- a/arch/microblaze/kernel/timer.c
++++ b/arch/microblaze/kernel/timer.c
+@@ -312,7 +312,8 @@ unsigned long long notrace sched_clock(void)
+ {
+ 	if (timer_initialized) {
+ 		struct clocksource *cs = &clocksource_microblaze;
+-		cycle_t cyc = cnt32_to_63(cs->read(NULL));
++
++		cycle_t cyc = cnt32_to_63(cs->read(NULL)) & LLONG_MAX;
+ 		return clocksource_cyc2ns(cyc, cs->mult, cs->shift);
+ 	}
+ 	return 0;
+-- 
+1.7.0.4
+

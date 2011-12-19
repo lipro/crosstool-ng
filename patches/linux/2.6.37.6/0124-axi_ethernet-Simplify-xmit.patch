@@ -1,0 +1,31 @@
+From 2d4613b463b7e8217f872136b47c4ed5f75515e4 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Mon, 13 Jun 2011 08:26:33 +0200
+Subject: [PATCH] axi_ethernet: Simplify xmit
+
+Use one return statement instead of two.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ drivers/net/xilinx_axienet_main.c |    4 +---
+ 1 files changed, 1 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/net/xilinx_axienet_main.c b/drivers/net/xilinx_axienet_main.c
+index 3a5c6b4..4276362 100755
+--- a/drivers/net/xilinx_axienet_main.c
++++ b/drivers/net/xilinx_axienet_main.c
+@@ -761,10 +761,8 @@ static int axienet_start_xmit(struct sk_buff *skb, struct net_device *ndev)
+ 	cur_p = &lp->tx_bd_v[lp->tx_bd_tail];
+ 
+ 	if (axienet_check_tx_bd_space(lp, num_frag)) {
+-		if (!netif_queue_stopped(ndev)) {
++		if (!netif_queue_stopped(ndev))
+ 			netif_stop_queue(ndev);
+-			return NETDEV_TX_BUSY;
+-		}
+ 		return NETDEV_TX_BUSY;
+ 	}
+ 
+-- 
+1.7.0.4
+

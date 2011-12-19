@@ -1,0 +1,33 @@
+From a6495354e14cfe0c6a828d05d180e5534de04327 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Mon, 30 May 2011 14:10:17 +0200
+Subject: [PATCH] axi_ethernet: Remove additional clear
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ drivers/net/xilinx_axienet_main.c |    4 +---
+ 1 files changed, 1 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/net/xilinx_axienet_main.c b/drivers/net/xilinx_axienet_main.c
+index d1eacf1..71c60a3 100755
+--- a/drivers/net/xilinx_axienet_main.c
++++ b/drivers/net/xilinx_axienet_main.c
+@@ -801,14 +801,12 @@ static int axienet_start_xmit(struct sk_buff *skb, struct net_device *ndev)
+ 			lp->tx_bd_tail = 0;
+ 
+ 		cur_p = &lp->tx_bd_v[lp->tx_bd_tail];
+-		cur_p->cntrl = 0;
+ 		frag = &skb_shinfo(skb)->frags[ii];
+ 		cur_p->phys = dma_map_single(ndev->dev.parent,
+ 			(void *)page_address(frag->page) + frag->page_offset,
+ 			frag->size,
+ 			DMA_TO_DEVICE);
+-		cur_p->cntrl = ((cur_p->cntrl & (~XAXIDMA_BD_CTRL_LENGTH_MASK))
+-								| frag->size);
++		cur_p->cntrl = frag->size;
+ 	}
+ 	cur_p->cntrl |= XAXIDMA_BD_CTRL_TXEOF_MASK;
+ 
+-- 
+1.7.0.4
+

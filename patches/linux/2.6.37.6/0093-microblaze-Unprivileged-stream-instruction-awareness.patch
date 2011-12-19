@@ -1,0 +1,117 @@
+From 9b2f6f6b966bb930ca8c9621d1771aa0ae130c17 Mon Sep 17 00:00:00 2001
+From: John A. Williams <john.williams@petalogix.com>
+Date: Tue, 24 May 2011 18:57:11 +1000
+Subject: [PATCH] microblaze: Unprivileged stream instruction awareness
+
+Add cpuinfo support for the new MicroBlaze option permitting userspace
+(unprivileged) access to the streaming instructions (FSL / AXI-stream).
+
+Emit a noisy warning at bootup if this is enabled, because bad user code
+can potentially lockup the CPU.
+
+Signed-off-by: John A. Williams <john.williams@petalogix.com>
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ arch/microblaze/include/asm/cpuinfo.h         |    1 +
+ arch/microblaze/include/asm/pvr.h             |    5 ++++-
+ arch/microblaze/kernel/cpu/cpuinfo-pvr-full.c |    1 +
+ arch/microblaze/kernel/cpu/cpuinfo-static.c   |    1 +
+ arch/microblaze/kernel/cpu/cpuinfo.c          |    4 ++++
+ arch/microblaze/kernel/cpu/mb.c               |    4 ++++
+ 6 files changed, 15 insertions(+), 1 deletions(-)
+
+diff --git a/arch/microblaze/include/asm/cpuinfo.h b/arch/microblaze/include/asm/cpuinfo.h
+index cd25753..c9a8c68 100644
+--- a/arch/microblaze/include/asm/cpuinfo.h
++++ b/arch/microblaze/include/asm/cpuinfo.h
+@@ -38,6 +38,7 @@ struct cpuinfo {
+ 	u32 use_exc;
+ 	u32 ver_code;
+ 	u32 mmu;
++	u32 mmu_privins;
+ 	u32 endian;
+ 
+ 	/* CPU caches */
+diff --git a/arch/microblaze/include/asm/pvr.h b/arch/microblaze/include/asm/pvr.h
+index 37db96a..49b6ad1 100644
+--- a/arch/microblaze/include/asm/pvr.h
++++ b/arch/microblaze/include/asm/pvr.h
+@@ -111,12 +111,14 @@ struct pvr_s {
+ /* Target family PVR mask */
+ #define PVR10_TARGET_FAMILY_MASK	0xFF000000
+ 
+-/* MMU descrtiption */
++/* MMU description */
+ #define PVR11_USE_MMU			0xC0000000
+ #define PVR11_MMU_ITLB_SIZE		0x38000000
+ #define PVR11_MMU_DTLB_SIZE		0x07000000
+ #define PVR11_MMU_TLB_ACCESS		0x00C00000
+ #define PVR11_MMU_ZONES			0x003C0000
++#define PVR11_MMU_PRIVINS		0x00010000
++
+ /* MSR Reset value PVR mask */
+ #define PVR11_MSR_RESET_VALUE_MASK	0x000007FF
+ 
+@@ -209,6 +211,7 @@ struct pvr_s {
+ #define PVR_MMU_DTLB_SIZE(pvr)	(pvr.pvr[11] & PVR11_MMU_DTLB_SIZE)
+ #define PVR_MMU_TLB_ACCESS(pvr)	(pvr.pvr[11] & PVR11_MMU_TLB_ACCESS)
+ #define PVR_MMU_ZONES(pvr)	(pvr.pvr[11] & PVR11_MMU_ZONES)
++#define PVR_MMU_PRIVINS(pvr)	(pvr.pvr[11] & PVR11_MMU_PRIVINS)
+ 
+ /* endian */
+ #define PVR_ENDIAN(pvr)	(pvr.pvr[0] & PVR0_ENDI)
+diff --git a/arch/microblaze/kernel/cpu/cpuinfo-pvr-full.c b/arch/microblaze/kernel/cpu/cpuinfo-pvr-full.c
+index f70a604..916aaed 100644
+--- a/arch/microblaze/kernel/cpu/cpuinfo-pvr-full.c
++++ b/arch/microblaze/kernel/cpu/cpuinfo-pvr-full.c
+@@ -72,6 +72,7 @@ void set_cpuinfo_pvr_full(struct cpuinfo *ci, struct device_node *cpu)
+ 	CI(pvr_user2, USER2);
+ 
+ 	CI(mmu, USE_MMU);
++	CI(mmu_privins, MMU_PRIVINS);
+ 	CI(endian, ENDIAN);
+ 
+ 	CI(use_icache, USE_ICACHE);
+diff --git a/arch/microblaze/kernel/cpu/cpuinfo-static.c b/arch/microblaze/kernel/cpu/cpuinfo-static.c
+index b16b994..592bb2e 100644
+--- a/arch/microblaze/kernel/cpu/cpuinfo-static.c
++++ b/arch/microblaze/kernel/cpu/cpuinfo-static.c
+@@ -119,6 +119,7 @@ void __init set_cpuinfo_static(struct cpuinfo *ci, struct device_node *cpu)
+ 	ci->pvr_user2 = fcpu(cpu, "xlnx,pvr-user2");
+ 
+ 	ci->mmu = fcpu(cpu, "xlnx,use-mmu");
++	ci->mmu_privins = fcpu(cpu, "xlnx,mmu-privileged-instr");
+ 	ci->endian = fcpu(cpu, "xlnx,endianness");
+ 
+ 	ci->ver_code = 0;
+diff --git a/arch/microblaze/kernel/cpu/cpuinfo.c b/arch/microblaze/kernel/cpu/cpuinfo.c
+index 87c78e4..54194b2 100644
+--- a/arch/microblaze/kernel/cpu/cpuinfo.c
++++ b/arch/microblaze/kernel/cpu/cpuinfo.c
+@@ -89,4 +89,8 @@ void __init setup_cpuinfo(void)
+ 		printk(KERN_WARNING "%s: Unsupported PVR setting\n", __func__);
+ 		set_cpuinfo_static(&cpuinfo, cpu);
+ 	}
++
++	if (cpuinfo.mmu_privins)
++		printk(KERN_WARNING "%s: Stream instructions enabled"
++			" - USERSPACE CAN LOCK THIS KERNEL!\n", __func__);
+ }
+diff --git a/arch/microblaze/kernel/cpu/mb.c b/arch/microblaze/kernel/cpu/mb.c
+index b4048af..49f1894 100644
+--- a/arch/microblaze/kernel/cpu/mb.c
++++ b/arch/microblaze/kernel/cpu/mb.c
+@@ -97,6 +97,10 @@ static int show_cpuinfo(struct seq_file *m, void *v)
+ 		(cpuinfo.use_exc & PVR2_FPU_EXC_MASK) ? "fpu " : "",
+ 		(cpuinfo.use_exc & PVR2_USE_FSL_EXC) ? "fsl " : "");
+ 
++	count += seq_printf(m,
++			"Stream-Insns:\t%sprivileged\n",
++			cpuinfo.mmu_privins ? "un" : "");
++
+ 	if (cpuinfo.use_icache)
+ 		count += seq_printf(m,
+ 				"Icache:\t\t%ukB\tline length:\t%dB\n",
+-- 
+1.7.0.4
+

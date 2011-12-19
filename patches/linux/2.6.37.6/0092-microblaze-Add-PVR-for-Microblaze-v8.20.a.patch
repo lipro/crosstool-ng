@@ -1,0 +1,27 @@
+From 50d68ec26ed75001f3f3d53c19178796f096654e Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Mon, 23 May 2011 13:06:43 +0200
+Subject: [PATCH] microblaze: Add PVR for Microblaze v8.20.a
+
+Microblaze v8.20.a has 0x15 version string.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ arch/microblaze/kernel/cpu/cpuinfo.c |    1 +
+ 1 files changed, 1 insertions(+), 0 deletions(-)
+
+diff --git a/arch/microblaze/kernel/cpu/cpuinfo.c b/arch/microblaze/kernel/cpu/cpuinfo.c
+index c1640c5..87c78e4 100644
+--- a/arch/microblaze/kernel/cpu/cpuinfo.c
++++ b/arch/microblaze/kernel/cpu/cpuinfo.c
+@@ -34,6 +34,7 @@ const struct cpu_ver_key cpu_ver_lookup[] = {
+ 	{"8.00.a", 0x12},
+ 	{"8.00.b", 0x13},
+ 	{"8.10.a", 0x14},
++	{"8.20.a", 0x15},
+ 	{NULL, 0},
+ };
+ 
+-- 
+1.7.0.4
+

@@ -1,0 +1,30 @@
+From 3f6ba15dfb9e731355b3cb6ffa5df843db44c7ed Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Wed, 5 Jan 2011 13:50:11 +0100
+Subject: [PATCH] microblaze: Extend time for sending chars through mdm IP
+
+mdm uart support uses uartlite Linux driver. There was scrambled
+output because mdm wasn't able to read chars.
+Extending time for reading solved this issue.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ drivers/serial/uartlite.c |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/drivers/serial/uartlite.c b/drivers/serial/uartlite.c
+index d2fce86..a8a129f 100644
+--- a/drivers/serial/uartlite.c
++++ b/drivers/serial/uartlite.c
+@@ -376,7 +376,7 @@ static void ulite_console_wait_tx(struct uart_port *port)
+ 	u8 val;
+ 
+ 	/* Spin waiting for TX fifo to have space available */
+-	for (i = 0; i < 100000; i++) {
++	for (i = 0; i < 10000000; i++) {
+ 		val = ioread32be(port->membase + ULITE_STATUS);
+ 		if ((val & ULITE_STATUS_TXFULL) == 0)
+ 			break;
+-- 
+1.7.0.4
+

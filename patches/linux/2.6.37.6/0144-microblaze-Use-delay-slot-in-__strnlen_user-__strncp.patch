@@ -1,0 +1,39 @@
+From 71266b9a9372f999eab35ff2a3fbb8429f31abd3 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Sun, 2 Oct 2011 13:07:02 +0200
+Subject: [PATCH] microblaze: Use delay slot in __strnlen_user, __strncpy_user
+
+Use delay slot to speedup if maxlen is zero.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ arch/microblaze/lib/uaccess_old.S |    4 ++--
+ 1 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/arch/microblaze/lib/uaccess_old.S b/arch/microblaze/lib/uaccess_old.S
+index 142492e..f037266 100644
+--- a/arch/microblaze/lib/uaccess_old.S
++++ b/arch/microblaze/lib/uaccess_old.S
+@@ -34,8 +34,8 @@ __strncpy_user:
+ 	 * r3 - temp count
+ 	 * r4 - temp val
+ 	 */
++	beqid	r7,3f
+ 	addik	r3,r7,0		/* temp_count = len */
+-	beqi	r3,3f
+ 1:
+ 	lbu	r4,r6,r0
+ 	sb	r4,r5,r0
+@@ -77,8 +77,8 @@ __strncpy_user:
+ .type  __strnlen_user, @function
+ .align 4;
+ __strnlen_user:
++	beqid	r6,3f
+ 	addik	r3,r6,0
+-	beqi	r3,3f
+ 1:
+ 	lbu	r4,r5,r0
+ 	beqid	r4,2f		/* break on NUL */
+-- 
+1.7.0.4
+

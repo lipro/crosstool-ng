@@ -1,0 +1,26 @@
+From 5b1465b1f9f0c794d06d1559bbd6d10902add4db Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Tue, 5 Apr 2011 15:49:22 +0200
+Subject: [PATCH] microblaze: trivial: Fix typo fault in timer.c
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ arch/microblaze/kernel/timer.c |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/arch/microblaze/kernel/timer.c b/arch/microblaze/kernel/timer.c
+index a5aa33d..d23a9db 100644
+--- a/arch/microblaze/kernel/timer.c
++++ b/arch/microblaze/kernel/timer.c
+@@ -79,7 +79,7 @@ static inline void microblaze_timer0_start_periodic(unsigned long load_val)
+ 	 * !PWMA - disable pwm
+ 	 * TINT - clear interrupt status
+ 	 * ENT- enable timer itself
+-	 * EINT - enable interrupt
++	 * ENIT - enable interrupt
+ 	 * !LOAD - clear the bit to let go
+ 	 * ARHT - auto reload
+ 	 * !CAPT - no external trigger
+-- 
+1.7.0.4
+

@@ -1,0 +1,54 @@
+From 0053c412b974a7ff1bc70daa6068f6eec54df894 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Tue, 8 Nov 2011 13:30:29 +0100
+Subject: [PATCH] dt: Fixes for backported of_alias_get_id function
+
+Backport from the latest Linaro tree.
+Cherry picked patch is
+"dt: add of_alias_scan and of_alias_get_id"
+(sha1: ffe5e8578c5d52b4c4cf379da5e696db5189d4c5)
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ drivers/of/base.c  |    4 ++--
+ include/linux/of.h |    2 +-
+ 2 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/of/base.c b/drivers/of/base.c
+index 5c008a0..766c7ed 100644
+--- a/drivers/of/base.c
++++ b/drivers/of/base.c
+@@ -966,7 +966,7 @@ static void of_alias_add(struct alias_prop *ap, struct device_node *np,
+  * @dt_alloc:	An allocator that provides a virtual address to memory
+  *		for the resulting tree
+  */
+-void of_alias_scan(void * (*dt_alloc)(u64 size, u64 align))
++void of_alias_scan(u64 (*dt_alloc)(u64 size, u64 align))
+ {
+ 	struct property *pp;
+ 
+@@ -1004,7 +1004,7 @@ void of_alias_scan(void * (*dt_alloc)(u64 size, u64 align))
+ 			continue;
+ 
+ 		/* Allocate an alias_prop with enough space for the stem */
+-		ap = dt_alloc(sizeof(*ap) + len + 1, 4);
++		ap = __va(dt_alloc(sizeof(*ap) + len + 1, 4));
+ 		if (!ap)
+ 			continue;
+ 		ap->alias = start;
+diff --git a/include/linux/of.h b/include/linux/of.h
+index aac39af..9d9d107 100644
+--- a/include/linux/of.h
++++ b/include/linux/of.h
+@@ -212,7 +212,7 @@ extern int of_parse_phandles_with_args(struct device_node *np,
+ 	const char *list_name, const char *cells_name, int index,
+ 	struct device_node **out_node, const void **out_args);
+ 
+-extern void of_alias_scan(void * (*dt_alloc)(u64 size, u64 align));
++extern void of_alias_scan(u64 (*dt_alloc)(u64 size, u64 align));
+ extern int of_alias_get_id(struct device_node *np, const char *stem);
+ 
+ extern int of_machine_is_compatible(const char *compat);
+-- 
+1.7.0.4
+

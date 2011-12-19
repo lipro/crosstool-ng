@@ -1,0 +1,30 @@
+From 4f801db7ff63f3236380c57f47e0e1277f83f946 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Wed, 27 Jul 2011 10:45:32 +0200
+Subject: [PATCH] microblaze: Do not show error message for 32 interrupt lines
+
+When interrupt controller uses 32 interrupts lines the kernel
+show error message about mismatch in kind-of-intr parameter
+because it exceeds u32. Recast fixs this issue.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ arch/microblaze/kernel/intc.c |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/arch/microblaze/kernel/intc.c b/arch/microblaze/kernel/intc.c
+index d61ea33..02aa520 100644
+--- a/arch/microblaze/kernel/intc.c
++++ b/arch/microblaze/kernel/intc.c
+@@ -147,7 +147,7 @@ void __init init_IRQ(void)
+ 	intr_type =
+ 		be32_to_cpup(of_get_property(intc,
+ 						"xlnx,kind-of-intr", NULL));
+-	if (intr_type >= (1 << (nr_irq + 1)))
++	if (intr_type > (u32)((1ULL << nr_irq) - 1))
+ 		printk(KERN_INFO " ERROR: Mismatch in kind-of-intr param\n");
+ 
+ #ifdef CONFIG_SELFMOD_INTC
+-- 
+1.7.0.4
+

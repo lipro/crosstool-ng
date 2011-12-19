@@ -1,0 +1,28 @@
+From 9c10ad569f7ea19daa83e02a4c145e90be70b2c6 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Tue, 5 Apr 2011 08:26:33 +0200
+Subject: [PATCH] uio/pdrv_genirq: Handle dt version string
+
+Do not use uioinfo->name as version. Use "dt" instead.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ drivers/uio/uio_pdrv_genirq.c |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/drivers/uio/uio_pdrv_genirq.c b/drivers/uio/uio_pdrv_genirq.c
+index dd94385..fb858e0 100644
+--- a/drivers/uio/uio_pdrv_genirq.c
++++ b/drivers/uio/uio_pdrv_genirq.c
+@@ -110,7 +110,7 @@ static int uio_pdrv_genirq_probe(struct platform_device *pdev)
+ 			goto bad2;
+ 		}
+ 		uioinfo->name = pdev->dev.of_node->name;
+-		uioinfo->version = uioinfo->name; /* FIXME */
++		uioinfo->version = "dt";
+ 
+ 		/* Multiple IRQs are not supported */
+ 		if (pdev->num_resources > 1) {
+-- 
+1.7.0.4
+

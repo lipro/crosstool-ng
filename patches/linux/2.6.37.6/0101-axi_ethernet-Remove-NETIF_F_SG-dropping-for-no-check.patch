@@ -1,0 +1,45 @@
+From bf1cbb6521d15b950ec0b8c53491da2b325c7e8c Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Fri, 27 May 2011 10:04:16 +0200
+Subject: [PATCH] axi_ethernet: Remove NETIF_F_SG dropping for no checksum feature
+
+Warning message:
+eth0: Dropping NETIF_F_SG since no checksum feature.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ drivers/net/xilinx_axienet_main.c |    6 +++---
+ 1 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/net/xilinx_axienet_main.c b/drivers/net/xilinx_axienet_main.c
+index 4233452..3d0dd5f 100755
+--- a/drivers/net/xilinx_axienet_main.c
++++ b/drivers/net/xilinx_axienet_main.c
+@@ -1824,7 +1824,7 @@ axienet_of_probe(struct platform_device *op, const struct of_device_id *match)
+ 	dev_set_drvdata(&op->dev, ndev);
+ 	SET_NETDEV_DEV(ndev, &op->dev);
+ 	ndev->flags &= ~IFF_MULTICAST;  /* clear multicast */
+-	ndev->features = NETIF_F_SG | NETIF_F_FRAGLIST;
++	ndev->features = NETIF_F_FRAGLIST;
+ 	ndev->netdev_ops = &axienet_netdev_ops;
+ 	ndev->ethtool_ops = &axienet_ethtool_ops;
+ 
+@@ -1851,13 +1851,13 @@ axienet_of_probe(struct platform_device *op, const struct of_device_id *match)
+ 					XAE_FEATURE_PARTIAL_TX_CSUM;
+ 			lp->features |= XAE_FEATURE_PARTIAL_TX_CSUM;
+ 			/* Can checksum TCP/UDP over IPv4. */
+-			ndev->features |= NETIF_F_IP_CSUM;
++			ndev->features |= NETIF_F_IP_CSUM | NETIF_F_SG;
+ 			break;
+ 		case 2:	lp->csum_offload_on_tx_path =
+ 					XAE_FEATURE_FULL_TX_CSUM;
+ 			lp->features |= XAE_FEATURE_FULL_TX_CSUM;
+ 			/* Can checksum TCP/UDP over IPv4. */
+-			ndev->features |= NETIF_F_IP_CSUM;
++			ndev->features |= NETIF_F_IP_CSUM | NETIF_F_SG;
+ 			break;
+ 		default:
+ 			lp->csum_offload_on_tx_path = XAE_NO_CSUM_OFFLOAD;
+-- 
+1.7.0.4
+

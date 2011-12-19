@@ -1,0 +1,47 @@
+From 2bf8a78d0a544a794c90075e75a61d56ead5671c Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Wed, 26 Jan 2011 13:41:05 +0100
+Subject: [PATCH] microblaze: Fix DTB passing from bootloader
+
+Little endian system needs to check OF_DT_HEADER
+but it is swapped because it is in big-endian.
+Microblaze LE provides lwr instruction which loads
+magic number in BIG endian format which can be compared.
+
+There is used the fact that if you write 0x1 as word
+and load it as byte then you get for big-endian zero
+and 1 for little-endian.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ arch/microblaze/kernel/head.S |   14 ++++++++++++--
+ 1 files changed, 12 insertions(+), 2 deletions(-)
+
+diff --git a/arch/microblaze/kernel/head.S b/arch/microblaze/kernel/head.S
+index fc1d0f2..778a5ce 100644
+--- a/arch/microblaze/kernel/head.S
++++ b/arch/microblaze/kernel/head.S
+@@ -76,8 +76,18 @@ real_start:
+    We ensure r7 points to a valid FDT, just in case the bootloader
+    is broken or non-existent */
+ 	beqi	r7, no_fdt_arg			/* NULL pointer?  don't copy */
+-	lw	r11, r0, r7			/* Does r7 point to a */
+-	rsubi	r11, r11, OF_DT_HEADER		/* valid FDT? */
++/* Does r7 point to a valid FDT? Load HEADER magic number */
++	/* Run time Big/Little endian platform */
++	/* Save 1 as word and load byte - 0 - BIG, 1 - LITTLE */
++	addik	r11, r0, 0x1 /* BIG/LITTLE checking value */
++	/* __bss_start will be zeroed later - it is just temp location */
++	swi	r11, r0, TOPHYS(__bss_start)
++	lbui	r11, r0, TOPHYS(__bss_start)
++	beqid	r11, big_endian /* DO NOT break delay stop dependency */
++	lw	r11, r0, r7 /* Big endian load in delay slot */
++	lwr	r11, r0, r7 /* Little endian load */
++big_endian:
++	rsubi	r11, r11, OF_DT_HEADER	/* Check FDT header */
+ 	beqi	r11, _prepare_copy_fdt
+ 	or	r7, r0, r0		/* clear R7 when not valid DTB */
+ 	bnei	r11, no_fdt_arg			/* No - get out of here */
+-- 
+1.7.0.4
+

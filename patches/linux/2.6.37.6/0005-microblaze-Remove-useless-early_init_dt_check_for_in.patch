@@ -1,0 +1,36 @@
+From b56e526fa9506d4703da78b9e1c1ae4034806eee Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Mon, 20 Dec 2010 15:03:11 +0100
+Subject: [PATCH] microblaze: Remove useless early_init_dt_check_for_initrd
+
+Remove copy&paste error. Microblaze doesn't support initrd.
+
+Signed-off-by: Walter Goossens <waltergoossens@home.nl>
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ arch/microblaze/kernel/prom.c |    4 +---
+ 1 files changed, 1 insertions(+), 3 deletions(-)
+
+diff --git a/arch/microblaze/kernel/prom.c b/arch/microblaze/kernel/prom.c
+index a105301..c881393 100644
+--- a/arch/microblaze/kernel/prom.c
++++ b/arch/microblaze/kernel/prom.c
+@@ -61,14 +61,12 @@ static int __init early_init_dt_scan_serial(unsigned long node,
+ 	char *p;
+ 	int *addr;
+ 
+-	pr_debug("search \"chosen\", depth: %d, uname: %s\n", depth, uname);
++	pr_debug("search \"serial\", depth: %d, uname: %s\n", depth, uname);
+ 
+ /* find all serial nodes */
+ 	if (strncmp(uname, "serial", 6) != 0)
+ 		return 0;
+ 
+-	early_init_dt_check_for_initrd(node);
+-
+ /* find compatible node with uartlite */
+ 	p = of_get_flat_dt_prop(node, "compatible", &l);
+ 	if ((strncmp(p, "xlnx,xps-uartlite", 17) != 0) &&
+-- 
+1.7.0.4
+

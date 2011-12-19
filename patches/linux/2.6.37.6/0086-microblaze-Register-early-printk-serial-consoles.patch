@@ -1,0 +1,113 @@
+From f5883801cf738cda77f5b411fe35aa2b505bea8d Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Mon, 4 Apr 2011 15:45:06 +0200
+Subject: [PATCH] microblaze: Register early printk serial consoles
+
+- add CON_BOOT flag
+- register consoles
+- remapping console address when memory is setup
+
+Early console early mapping used TLB 63 to ensure
+1:1 mapping. When memory is setup, ioremap is called to get
+new virtual address. TLB 63 mapping is lost.
+It is necessary to do remapping because without it we should
+keep one hardcoded TLB for early console which caused
+performance degression.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ arch/microblaze/include/asm/setup.h   |    1 +
+ arch/microblaze/kernel/early_printk.c |   20 ++++++++++++++++----
+ arch/microblaze/kernel/setup.c        |    5 +++++
+ 3 files changed, 22 insertions(+), 4 deletions(-)
+
+diff --git a/arch/microblaze/include/asm/setup.h b/arch/microblaze/include/asm/setup.h
+index 5a01cbc..105fea3 100644
+--- a/arch/microblaze/include/asm/setup.h
++++ b/arch/microblaze/include/asm/setup.h
+@@ -23,6 +23,7 @@ extern char cmd_line[COMMAND_LINE_SIZE];
+ void early_printk(const char *fmt, ...);
+ 
+ int setup_early_printk(char *opt);
++void remap_early_printk(void);
+ void disable_early_printk(void);
+ 
+ #if defined(CONFIG_EARLY_PRINTK)
+diff --git a/arch/microblaze/kernel/early_printk.c b/arch/microblaze/kernel/early_printk.c
+index c3616a0..2e0fd9a 100644
+--- a/arch/microblaze/kernel/early_printk.c
++++ b/arch/microblaze/kernel/early_printk.c
+@@ -60,7 +60,7 @@ static void early_printk_uartlite_write(struct console *unused,
+ static struct console early_serial_uartlite_console = {
+ 	.name = "earlyser",
+ 	.write = early_printk_uartlite_write,
+-	.flags = CON_PRINTBUFFER,
++	.flags = CON_PRINTBUFFER | CON_BOOT,
+ 	.index = -1,
+ };
+ #endif /* CONFIG_SERIAL_UARTLITE_CONSOLE */
+@@ -104,7 +104,7 @@ static void early_printk_uart16550_write(struct console *unused,
+ static struct console early_serial_uart16550_console = {
+ 	.name = "earlyser",
+ 	.write = early_printk_uart16550_write,
+-	.flags = CON_PRINTBUFFER,
++	.flags = CON_PRINTBUFFER | CON_BOOT,
+ 	.index = -1,
+ };
+ #endif /* CONFIG_SERIAL_8250_CONSOLE */
+@@ -141,7 +141,7 @@ int __init setup_early_printk(char *opt)
+ 		early_printk("early_printk_console is enabled at 0x%08x\n",
+ 							base_addr);
+ 
+-		/* register_console(early_console); */
++		register_console(early_console);
+ 
+ 		return 0;
+ 	}
+@@ -160,7 +160,7 @@ int __init setup_early_printk(char *opt)
+ 		early_printk("early_printk_console is enabled at 0x%08x\n",
+ 							base_addr);
+ 
+-		/* register_console(early_console); */
++		register_console(early_console);
+ 
+ 		return 0;
+ 	}
+@@ -169,6 +169,18 @@ int __init setup_early_printk(char *opt)
+ 	return 1;
+ }
+ 
++/* Remap early console to virtual address and do not allocate one TLB
++ * only for early console because of performance degression */
++void __init remap_early_printk(void)
++{
++	if (!early_console_initialized || !early_console)
++		return;
++	printk(KERN_INFO "early_printk_console remaping from 0x%x to ",
++							base_addr);
++	base_addr = (u32) ioremap(base_addr, PAGE_SIZE);
++	printk("0x%x\n", base_addr);
++}
++
+ void __init disable_early_printk(void)
+ {
+ 	if (!early_console_initialized || !early_console)
+diff --git a/arch/microblaze/kernel/setup.c b/arch/microblaze/kernel/setup.c
+index 15231fc..1681b46 100644
+--- a/arch/microblaze/kernel/setup.c
++++ b/arch/microblaze/kernel/setup.c
+@@ -59,6 +59,11 @@ void __init setup_arch(char **cmdline_p)
+ 
+ 	setup_memory();
+ 
++	/* remap early console to virtual address */
++#ifdef CONFIG_EARLY_PRINTK
++	remap_early_printk();
++#endif
++
+ 	xilinx_pci_init();
+ 
+ #if defined(CONFIG_SELFMOD_INTC) || defined(CONFIG_SELFMOD_TIMER)
+-- 
+1.7.0.4
+

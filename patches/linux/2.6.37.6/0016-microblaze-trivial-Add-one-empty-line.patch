@@ -1,0 +1,41 @@
+From 653cf84f3e261f30cc3690fb1336eb45ce22754e Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Tue, 21 Jul 2009 12:58:21 +0200
+Subject: [PATCH] microblaze: trivial: Add one empty line
+
+Add one empty line to microblaze_ksyms.c.
+Remove one empty line to cacheflush.h.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ arch/microblaze/include/asm/cacheflush.h  |    1 -
+ arch/microblaze/kernel/microblaze_ksyms.c |    1 +
+ 2 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/arch/microblaze/include/asm/cacheflush.h b/arch/microblaze/include/asm/cacheflush.h
+index 5a5d835..0f553bc 100644
+--- a/arch/microblaze/include/asm/cacheflush.h
++++ b/arch/microblaze/include/asm/cacheflush.h
+@@ -84,7 +84,6 @@ do { \
+ #define flush_dcache_mmap_lock(mapping)		do { } while (0)
+ #define flush_dcache_mmap_unlock(mapping)	do { } while (0)
+ 
+-
+ #define flush_cache_dup_mm(mm)				do { } while (0)
+ #define flush_cache_vmap(start, end)			do { } while (0)
+ #define flush_cache_vunmap(start, end)			do { } while (0)
+diff --git a/arch/microblaze/kernel/microblaze_ksyms.c b/arch/microblaze/kernel/microblaze_ksyms.c
+index 5cb0341..b52fc2f 100644
+--- a/arch/microblaze/kernel/microblaze_ksyms.c
++++ b/arch/microblaze/kernel/microblaze_ksyms.c
+@@ -24,6 +24,7 @@
+ 
+ extern char *_ebss;
+ EXPORT_SYMBOL_GPL(_ebss);
++
+ #ifdef CONFIG_FUNCTION_TRACER
+ extern void _mcount(void);
+ EXPORT_SYMBOL(_mcount);
+-- 
+1.7.0.4
+

@@ -1,0 +1,66 @@
+From c6a43fe0e30d9f5e37ac57f6286636c2583bffbb Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Fri, 4 Feb 2011 15:24:11 +0100
+Subject: [PATCH] microblaze: Fix msr instruction detection
+
+Fix msr instructions detection. The current code
+just use msrclr for loading msr content and compare
+it with proper MSR content. If msrclr is not implemented
+r8 contains pc address.
+Previous code wanted to use MSR carry bit but if msrclr
+wasn't implemented carry wasn't cleared.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ arch/microblaze/kernel/head.S  |   15 +++++++--------
+ arch/microblaze/kernel/setup.c |    4 ++--
+ 2 files changed, 9 insertions(+), 10 deletions(-)
+
+diff --git a/arch/microblaze/kernel/head.S b/arch/microblaze/kernel/head.S
+index 4243400..fc1d0f2 100644
+--- a/arch/microblaze/kernel/head.S
++++ b/arch/microblaze/kernel/head.S
+@@ -62,15 +62,14 @@ real_start:
+ 	andi	r1, r1, ~2
+ 	mts	rmsr, r1
+ /*
+- * Here is checking mechanism which check if Microblaze has msr instructions
+- * We load msr and compare it with previous r1 value - if is the same,
+- * msr instructions works if not - cpu don't have them.
++ * According to Xilinx, msrclr instruction behaves like 'mfs rX,rpc'
++ * if the msrclr instruction is not enabled. We use this to detect
++ * if the opcode is available, by issuing msrclr and then testing the result.
++ * r8 == 0 - msr instructions are implemented
++ * r8 != 0 - msr instructions are not implemented
+  */
+-	/* r8=0 - I have msr instr, 1 - I don't have them */
+-	rsubi	r0, r0, 1	/* set the carry bit */
+-	msrclr	r0, 0x4		/* try to clear it */
+-	/* read the carry bit, r8 will be '0' if msrclr exists */
+-	addik	r8, r0, 0
++	msrclr	r8, 0 /* clear nothing - just read msr for test */
++	cmpu	r8, r8, r1 /* r1 must contain msr reg content */
+ 
+ /* r7 may point to an FDT, or there may be one linked in.
+    if it's in r7, we've got to save it away ASAP.
+diff --git a/arch/microblaze/kernel/setup.c b/arch/microblaze/kernel/setup.c
+index bb1558e..9312fbb 100644
+--- a/arch/microblaze/kernel/setup.c
++++ b/arch/microblaze/kernel/setup.c
+@@ -161,11 +161,11 @@ void __init machine_early_init(const char *cmdline, unsigned int ram,
+ #if CONFIG_XILINX_MICROBLAZE0_USE_MSR_INSTR
+ 	if (msr)
+ 		eprintk("!!!Your kernel has setup MSR instruction but "
+-				"CPU don't have it %d\n", msr);
++				"CPU don't have it %x\n", msr);
+ #else
+ 	if (!msr)
+ 		eprintk("!!!Your kernel not setup MSR instruction but "
+-				"CPU have it %d\n", msr);
++				"CPU have it %x\n", msr);
+ #endif
+ 
+ 	for (src = __ivt_start; src < __ivt_end; src++, dst++)
+-- 
+1.7.0.4
+

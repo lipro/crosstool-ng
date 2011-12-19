@@ -1,0 +1,28 @@
+From b589caf309ee7a33f08820a7f37f551b32107c18 Mon Sep 17 00:00:00 2001
+From: Wendy Liang <wendy.liang@petalogix.com>
+Date: Thu, 3 Nov 2011 10:53:23 +1000
+Subject: [PATCH] enlarge DEFAULT_EOT in c67x00 for massive storage support in MicroBlaze system
+
+Signed-off-by: Wendy Liang <wendy.liang@petalogix.com>
+---
+ drivers/usb/c67x00/c67x00-hcd.h |    4 +++-
+ 1 files changed, 3 insertions(+), 1 deletions(-)
+
+diff --git a/drivers/usb/c67x00/c67x00-hcd.h b/drivers/usb/c67x00/c67x00-hcd.h
+index 74e4462..473bf73 100644
+--- a/drivers/usb/c67x00/c67x00-hcd.h
++++ b/drivers/usb/c67x00/c67x00-hcd.h
+@@ -52,7 +52,9 @@
+  */
+ 
+ #define TOTAL_FRAME_BW		12000
+-#define DEFAULT_EOT		2250
++#define DEFAULT_EOT		9600 /* This value fits MicroBlaze system.
++					it may requires a bigger value for
++					some USB device. */
+ 
+ #define MAX_FRAME_BW_STD	(TOTAL_FRAME_BW - DEFAULT_EOT)
+ #define MAX_FRAME_BW_ISO	2400
+-- 
+1.7.0.4
+

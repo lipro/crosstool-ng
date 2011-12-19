@@ -1,0 +1,176 @@
+From 2a0313e71a70a045af9cb478b3da53e3e86b42df Mon Sep 17 00:00:00 2001
+From: John Williams <john.williams@petalogix.com>
+Date: Thu, 6 May 2010 13:54:02 +1000
+Subject: [PATCH] ll_temac: Allocate skb buffer which correspond to mtu size + pad
+
+From: Michal Simek <monstr@monstr.eu>
+
+This patch fix regression on Microblaze which is caused by skb->truesize
+which is used in kernel.
+Driver can work with actual mtu size and prepared skb buffer for it.
+This change also caused that dma_map/unmap operations take less time
+because of cache handling.
+
+xenet_change_mtu function close device. Free all preallocated buffers
+with old mtu size, enable dma engine, prepared skb buffer with new
+mtu size and open it again.
+
+Signed-off-by: Michal Simek <michal.simek@petalogix.com>
+Signed-off-by: John Williams <john.williams@petalogix.com>
+---
+ drivers/net/xilinx_lltemac/xlltemac_main.c |   51 ++++++++++++++++++++++-----
+ 1 files changed, 41 insertions(+), 10 deletions(-)
+
+diff --git a/drivers/net/xilinx_lltemac/xlltemac_main.c b/drivers/net/xilinx_lltemac/xlltemac_main.c
+index 3e48a64..a8dd62b 100644
+--- a/drivers/net/xilinx_lltemac/xlltemac_main.c
++++ b/drivers/net/xilinx_lltemac/xlltemac_main.c
+@@ -157,6 +157,7 @@ struct net_local {
+ 	XInterruptHandler Isr;	/* Pointer to the XLlTemac ISR routine */
+ #endif
+ 	u8 gmii_addr;		/* The GMII address of the PHY */
++	u32 virt_dma_addr;	/* Virtual address to mapped dma */
+ 
+ 	/* The underlying OS independent code needs space as well.  A
+ 	 * pointer to the following XLlTemac structure will be passed to
+@@ -170,7 +171,7 @@ struct net_local {
+ 	unsigned int fifo_irq;	/* fifo irq */
+ 	unsigned int dma_irq_s;	/* send irq */
+ 	unsigned int dma_irq_r;	/* recv irq */
+-	unsigned int max_frame_size;
++	unsigned int frame_size; /* actual frame size = mtu + padding */
+ 
+ 	int cur_speed;
+ 
+@@ -1148,6 +1149,7 @@ static int xenet_open(struct net_device *dev)
+ 	 */
+ 	Options = XLlTemac_GetOptions(&lp->Emac);
+ 	Options |= XTE_FLOW_CONTROL_OPTION;
++	/* Enabling jumbo packets shouldn't be a problem if MTU is smaller */
+ 	Options |= XTE_JUMBO_OPTION;
+ 	Options |= XTE_TRANSMITTER_ENABLE_OPTION;
+ 	Options |= XTE_RECEIVER_ENABLE_OPTION;
+@@ -1310,8 +1312,12 @@ static struct net_device_stats *xenet_get_stats(struct net_device *dev)
+ 	return &lp->stats;
+ }
+ 
++static int descriptor_init(struct net_device *dev);
++static void free_descriptor_skb(struct net_device *dev);
++
+ static int xenet_change_mtu(struct net_device *dev, int new_mtu)
+ {
++	int result;
+ #ifdef CONFIG_XILINX_GIGE_VLAN
+ 	int head_size = XTE_HDR_VLAN_SIZE;
+ #else
+@@ -1321,10 +1327,32 @@ static int xenet_change_mtu(struct net_device *dev, int new_mtu)
+ 	int max_frame = new_mtu + head_size + XTE_TRL_SIZE;
+ 	int min_frame = 1 + head_size + XTE_TRL_SIZE;
+ 
+-	if ((max_frame < min_frame) || (max_frame > lp->max_frame_size))
++	if (max_frame < min_frame)
+ 		return -EINVAL;
+ 
++	if (max_frame > XTE_MAX_JUMBO_FRAME_SIZE) {
++		printk(KERN_INFO "Wrong MTU packet size. Use %d size\n",
++							XTE_JUMBO_MTU);
++		new_mtu = XTE_JUMBO_MTU;
++	}
++
+ 	dev->mtu = new_mtu;	/* change mtu in net_device structure */
++
++	/* stop driver */
++	xenet_close(dev);
++	/* free all created descriptors for previous size */
++	free_descriptor_skb(dev);
++	/* setup new frame size */
++	lp->frame_size = dev->mtu + XTE_HDR_SIZE + XTE_TRL_SIZE;
++	XLlDma_Initialize(&lp->Dma, lp->virt_dma_addr); /* initialize dma */
++
++	result = descriptor_init(dev); /* create new skb with new size */
++	if (result) {
++		printk(KERN_ERR "Descriptor initialization failed.\n");
++		return -EINVAL;
++	}
++
++	xenet_open(dev); /* open the device */
+ 	return 0;
+ }
+ 
+@@ -1849,7 +1877,7 @@ static void _xenet_DmaSetupRecvBuffers(struct net_device *dev)
+ 
+ 	skb_queue_head_init(&sk_buff_list);
+ 	for (num_sk_buffs = 0; num_sk_buffs < free_bd_count; num_sk_buffs++) {
+-		new_skb = alloc_skb(lp->max_frame_size + align_max, GFP_ATOMIC);
++		new_skb = alloc_skb(lp->frame_size + align_max, GFP_ATOMIC);
+ 		if (new_skb == NULL) {
+ 			break;
+ 		}
+@@ -1888,10 +1916,10 @@ static void _xenet_DmaSetupRecvBuffers(struct net_device *dev)
+ 
+ 		/* Get dma handle of skb->data */
+ 		new_skb_baddr = (u32) dma_map_single(dev->dev.parent,
+-					new_skb->data, lp->max_frame_size,
++					new_skb->data, lp->frame_size,
+ 						     DMA_FROM_DEVICE);
+ 		XLlDma_mBdSetBufAddr(BdCurPtr, new_skb_baddr);
+-		XLlDma_mBdSetLength(BdCurPtr, lp->max_frame_size);
++		XLlDma_mBdSetLength(BdCurPtr, lp->frame_size);
+ 		XLlDma_mBdSetId(BdCurPtr, new_skb);
+ 		XLlDma_mBdSetStsCtrl(BdCurPtr,
+ 				     XLLDMA_BD_STSCTRL_SOP_MASK |
+@@ -1965,7 +1993,7 @@ static void DmaRecvHandlerBH(unsigned long p)
+ 				/* get and free up dma handle used by skb->data */
+ 				skb_baddr = (dma_addr_t) XLlDma_mBdGetBufAddr(BdCurPtr);
+ 				dma_unmap_single(dev->dev.parent, skb_baddr,
+-						 lp->max_frame_size,
++						 lp->frame_size,
+ 						 DMA_FROM_DEVICE);
+ 
+ 				/* reset ID */
+@@ -2200,7 +2228,7 @@ static void free_descriptor_skb(struct net_device *dev)
+ 		if (skb) {
+ 			skb_dma_addr = (dma_addr_t) XLlDma_mBdGetBufAddr(BdPtr);
+ 			dma_unmap_single(dev->dev.parent, skb_dma_addr,
+-					lp->max_frame_size, DMA_FROM_DEVICE);
++					lp->frame_size, DMA_FROM_DEVICE);
+ 			dev_kfree_skb(skb);
+ 		}
+ 		/* find the next BD in the DMA RX BD ring */
+@@ -2229,9 +2257,11 @@ static void free_descriptor_skb(struct net_device *dev)
+ 	}
+ 
+ #if BD_IN_BRAM == 0
+-	dma_free_coherent(NULL,
++	kfree(lp->desc_space);
++/* this is old approach which was removed */
++/*	dma_free_coherent(NULL,
+ 			  lp->desc_space_size,
+-			  lp->desc_space, lp->desc_space_handle);
++			  lp->desc_space, lp->desc_space_handle); */
+ #else
+ 	iounmap(lp->desc_space);
+ #endif
+@@ -3252,10 +3282,10 @@ static int xtenet_setup(
+ 			pdata->mac_addr[2], pdata->mac_addr[3],
+ 			pdata->mac_addr[4], pdata->mac_addr[5]);
+ 
+-	lp->max_frame_size = XTE_MAX_JUMBO_FRAME_SIZE;
+ 	if (ndev->mtu > XTE_JUMBO_MTU)
+ 		ndev->mtu = XTE_JUMBO_MTU;
+ 
++	lp->frame_size = ndev->mtu + XTE_HDR_SIZE + XTE_TRL_SIZE;
+ 
+ 	if (XLlTemac_IsDma(&lp->Emac)) {
+ 		int result;
+@@ -3267,6 +3297,7 @@ static int xtenet_setup(
+ 			XLlDma_Initialize(&lp->Dma, pdata->ll_dev_baseaddress);
+ 		} else {
+ 		        virt_baddr = (u32) ioremap(pdata->ll_dev_baseaddress, 4096);
++			lp->virt_dma_addr = virt_baddr;
+ 			if (0 == virt_baddr) {
+ 			        dev_err(dev,
+ 					"XLlTemac: Could not allocate iomem for local link connected device.\n");
+-- 
+1.7.0.4
+

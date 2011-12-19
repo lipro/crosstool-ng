@@ -1,0 +1,38 @@
+From a2a780789351f3470624c8caf6920bdb5125c82d Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Tue, 17 Aug 2010 17:14:40 +0200
+Subject: [PATCH] drivers: Netconsole must be compiled after all network drivers
+
+Thanks to later netconsole compilation module_init is
+called later and netconsole can be used.
+
+Without this patch netconsole is not able to find out valid
+network driver.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ drivers/net/Makefile |    4 ++--
+ 1 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/net/Makefile b/drivers/net/Makefile
+index c05824c..08e8fe9 100644
+--- a/drivers/net/Makefile
++++ b/drivers/net/Makefile
+@@ -287,8 +287,6 @@ obj-$(CONFIG_IRDA) += irda/
+ obj-$(CONFIG_ETRAX_ETHERNET) += cris/
+ obj-$(CONFIG_ENP2611_MSF_NET) += ixp2000/
+ 
+-obj-$(CONFIG_NETCONSOLE) += netconsole.o
+-
+ obj-$(CONFIG_FS_ENET) += fs_enet/
+ 
+ obj-$(CONFIG_NETXEN_NIC) += netxen/
+@@ -304,3 +302,5 @@ obj-$(CONFIG_PCH_GBE) += pch_gbe/
+ obj-$(CONFIG_TILE_NET) += tile/
+ 
+ obj-$(CONFIG_XILINX_LLTEMAC) += xilinx_lltemac/
++
++obj-$(CONFIG_NETCONSOLE) += netconsole.o
+-- 
+1.7.0.4
+

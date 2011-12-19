@@ -1,0 +1,48 @@
+From 9d3d536e044fa46c8ff6f193a93127831801143e Mon Sep 17 00:00:00 2001
+From: Anirudha Sarangi <anirudh@xhd-lin64re49.(none)>
+Date: Thu, 18 Nov 2010 23:04:34 +0530
+Subject: [PATCH] Xilinx: Of MDIO driver
+
+Changes are made to byte swap the PHY address after it
+is read from device-tree. Since PHY address as read from
+device-tree is in big-endian format, it needs to be swapped
+to little-endian format.
+
+Signed-off-by: Anirudha Sarangi anirudh@xilinx.com
+---
+ drivers/of/of_mdio.c |    9 ++++++---
+ 1 files changed, 6 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/of/of_mdio.c b/drivers/of/of_mdio.c
+index 1fce00e..01a54e0 100644
+--- a/drivers/of/of_mdio.c
++++ b/drivers/of/of_mdio.c
+@@ -52,11 +52,14 @@ int of_mdiobus_register(struct mii_bus *mdio, struct device_node *np)
+ 
+ 	/* Loop over the child nodes and register a phy_device for each one */
+ 	for_each_child_of_node(np, child) {
+-		const __be32 *addr;
++		__be32 *addr;
++
+ 		int len;
+ 
+ 		/* A PHY must have a reg property in the range [0-31] */
+-		addr = of_get_property(child, "reg", &len);
++		addr = (__be32 *)of_get_property(child, "reg", &len);
++
++		*addr = be32_to_cpup(addr);
+ 		if (!addr || len < sizeof(*addr) || *addr >= 32 || *addr < 0) {
+ 			dev_err(&mdio->dev, "%s has invalid PHY address\n",
+ 				child->full_name);
+@@ -69,7 +72,7 @@ int of_mdiobus_register(struct mii_bus *mdio, struct device_node *np)
+ 				mdio->irq[*addr] = PHY_POLL;
+ 		}
+ 
+-		phy = get_phy_device(mdio, be32_to_cpup(addr));
++		phy = get_phy_device(mdio, *addr);
+ 		if (!phy || IS_ERR(phy)) {
+ 			dev_err(&mdio->dev, "error probing PHY at address %i\n",
+ 				*addr);
+-- 
+1.7.0.4
+

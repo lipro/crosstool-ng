@@ -1,0 +1,49 @@
+From bb6fd56d8c7dca2b05e6b7cb1db12506230ff242 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Mon, 7 Nov 2011 13:42:12 +0100
+Subject: [PATCH] microblaze: Use node name instead of compatible string
+
+Change report in bootlog:
+Origin:
+xlnx,xps-intc-1.00.a #0 at 0xc8000000, num_irq=6, edge=0x4
+xlnx,xps-timer-1.00.a #0 at 0xc8004000, irq=2
+
+New:
+interrupt-controller #0 at 0xc8000000, num_irq=6, edge=0x4
+system-timer #0 at 0xc8004000, irq=2
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ arch/microblaze/kernel/intc.c  |    2 +-
+ arch/microblaze/kernel/timer.c |    2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/arch/microblaze/kernel/intc.c b/arch/microblaze/kernel/intc.c
+index 02aa520..7a6df66 100644
+--- a/arch/microblaze/kernel/intc.c
++++ b/arch/microblaze/kernel/intc.c
+@@ -154,7 +154,7 @@ void __init init_IRQ(void)
+ 	selfmod_function((int *) arr_func, intc_baseaddr);
+ #endif
+ 	printk(KERN_INFO "%s #0 at 0x%08x, num_irq=%d, edge=0x%x\n",
+-		intc_list[j], intc_baseaddr, nr_irq, intr_type);
++		intc->name, intc_baseaddr, nr_irq, intr_type);
+ 
+ 	/*
+ 	 * Disable all external interrupts until they are
+diff --git a/arch/microblaze/kernel/timer.c b/arch/microblaze/kernel/timer.c
+index 2d3ed0b..2fafa93 100644
+--- a/arch/microblaze/kernel/timer.c
++++ b/arch/microblaze/kernel/timer.c
+@@ -288,7 +288,7 @@ void __init time_init(void)
+ 	selfmod_function((int *) arr_func, timer_baseaddr);
+ #endif
+ 	printk(KERN_INFO "%s #0 at 0x%08x, irq=%d\n",
+-		timer_list[i], timer_baseaddr, irq);
++		timer->name, timer_baseaddr, irq);
+ 
+ 	/* If there is clock-frequency property than use it */
+ 	prop = of_get_property(timer, "clock-frequency", NULL);
+-- 
+1.7.0.4
+

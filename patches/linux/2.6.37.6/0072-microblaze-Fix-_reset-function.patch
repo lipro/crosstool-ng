@@ -1,0 +1,31 @@
+From 1be9f40498cdd03066996037d719d54fc8d6eba0 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Thu, 10 Mar 2011 10:56:21 +0100
+Subject: [PATCH] microblaze: Fix _reset function
+
+If soft reset falls through with no hardware assisted reset, the best
+we can do is jump to the reset vector and see what the bootloader left
+for us.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+Signed-off-by: John Williams <john.williams@petalogix.com>
+---
+ arch/microblaze/kernel/entry.S |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/arch/microblaze/kernel/entry.S b/arch/microblaze/kernel/entry.S
+index c35dffe..35dc0a9 100644
+--- a/arch/microblaze/kernel/entry.S
++++ b/arch/microblaze/kernel/entry.S
+@@ -981,7 +981,7 @@ ENTRY(_switch_to)
+ 	nop
+ 
+ ENTRY(_reset)
+-	brai	0x70; /* Jump back to FS-boot */
++	brai	0; /* Jump to reset vector */
+ 
+ 	/* These are compiled and loaded into high memory, then
+ 	 * copied into place in mach_early_setup */
+-- 
+1.7.0.4
+

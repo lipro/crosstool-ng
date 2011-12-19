@@ -1,0 +1,60 @@
+From 164266377a1d5d5ec214443a747f088f79a106b2 Mon Sep 17 00:00:00 2001
+From: John Williams <john.williams@petalogix.com>
+Date: Thu, 8 Oct 2009 11:09:34 +1000
+Subject: [PATCH] xsysace: v3: Additional OF binding test for automatically generated width property
+
+The Xilinx DTS generator creates SysACE bus-width related properties like
+
+  xlnx,mem-width = <0x8>;
+
+rather than the original "8-bit" tag.
+
+To keep back compatibility, this tag should remain, so we add an additional
+test for the automatic properties as well.
+
+"16-bit" mode tested on ml505
+
+Signed-off-by: John Williams <john.williams@petalogix.com>
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ drivers/block/xsysace.c |   17 ++++++++++++++++-
+ 1 files changed, 16 insertions(+), 1 deletions(-)
+
+diff --git a/drivers/block/xsysace.c b/drivers/block/xsysace.c
+index 829161e..9961043 100644
+--- a/drivers/block/xsysace.c
++++ b/drivers/block/xsysace.c
+@@ -1200,7 +1200,7 @@ ace_of_probe(struct platform_device *op, const struct of_device_id *match)
+ {
+ 	struct resource res;
+ 	resource_size_t physaddr;
+-	const u32 *id;
++	const u32 *id, *mem_width;
+ 	int irq, bus_width, rc;
+ 
+ 	dev_dbg(&op->dev, "ace_of_probe(%p, %p)\n", op, match);
+@@ -1223,6 +1223,21 @@ ace_of_probe(struct platform_device *op, const struct of_device_id *match)
+ 	bus_width = ACE_BUS_WIDTH_16;
+ 	if (of_find_property(op->dev.of_node, "8-bit", NULL))
+ 		bus_width = ACE_BUS_WIDTH_8;
++	else {
++		mem_width = of_get_property(op->dev.of_node,
++							"xlnx,mem-width", NULL);
++		if (mem_width) {
++			switch (*mem_width) {
++			case 8:
++				bus_width = ACE_BUS_WIDTH_8; break;
++			case 16:
++				bus_width = ACE_BUS_WIDTH_16; break;
++			default:
++				dev_err(&op->dev, "invalid width (%i)\n",
++								*mem_width);
++			}
++		}
++	}
+ 
+ 	/* Call the bus-independant setup code */
+ 	return ace_alloc(&op->dev, id ? be32_to_cpup(id) : 0,
+-- 
+1.7.0.4
+

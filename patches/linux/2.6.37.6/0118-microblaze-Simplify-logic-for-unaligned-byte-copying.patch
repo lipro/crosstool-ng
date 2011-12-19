@@ -1,0 +1,42 @@
+From d725eae48afd4210c78899a2e909d2c88b2c3d30 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Fri, 10 Jun 2011 11:08:57 +0200
+Subject: [PATCH] microblaze: Simplify logic for unaligned byte copying
+
+Save jump instruction for unaligned byte copying.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ arch/microblaze/lib/uaccess_old.S |    8 +++-----
+ 1 files changed, 3 insertions(+), 5 deletions(-)
+
+diff --git a/arch/microblaze/lib/uaccess_old.S b/arch/microblaze/lib/uaccess_old.S
+index 6dfd4a0..78dcdb3 100644
+--- a/arch/microblaze/lib/uaccess_old.S
++++ b/arch/microblaze/lib/uaccess_old.S
+@@ -120,11 +120,10 @@ __copy_tofrom_user:
+ 	 * r4 - tempval
+ 	 */
+ 	beqid	r7, 0f /* zero size is not likely */
+-	andi	r3, r7, 0x3 /* filter add count */
+-	bneid	r3, bu /* if is odd value then byte copying */
+ 	or	r3, r5, r6 /* find if is any to/from unaligned */
+-	andi	r3, r3, 0x3 /* mask unaligned */
+-	bneid	r3, bu1 /* it is unaligned -> then jump */
++	or	r3, r3, r7 /* find if count is unaligned */
++	andi	r3, r7, 0x3 /* mask last 3 bits */
++	bneid	r3, bu1 /* if r3 is not zero then byte copying */
+ 	or	r3, r0, r0
+ 
+ w1:	lw	r4, r6, r3 /* at least one 4 byte copy */
+@@ -141,7 +140,6 @@ w2:	sw	r4, r5, r3
+ 	.word	w2, 0f;
+ 	.text
+ 
+-bu:	or	r3, r0, r0
+ bu1:	lbu	r4,r6,r3
+ bu2:	sb	r4,r5,r3
+ 	addik	r7,r7,-1
+-- 
+1.7.0.4
+

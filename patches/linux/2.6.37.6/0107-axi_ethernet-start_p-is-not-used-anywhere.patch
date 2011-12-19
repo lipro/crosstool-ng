@@ -1,0 +1,34 @@
+From 74e1ab90e5992fb25242892e92b58df027b1205c Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Mon, 30 May 2011 16:05:40 +0200
+Subject: [PATCH] axi_ethernet: start_p is not used anywhere
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ drivers/net/xilinx_axienet_main.c |    3 +--
+ 1 files changed, 1 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/net/xilinx_axienet_main.c b/drivers/net/xilinx_axienet_main.c
+index 71c60a3..6053707 100755
+--- a/drivers/net/xilinx_axienet_main.c
++++ b/drivers/net/xilinx_axienet_main.c
+@@ -750,7 +750,7 @@ static int axienet_start_xmit(struct sk_buff *skb, struct net_device *ndev)
+ {
+ 	struct axienet_local *lp = netdev_priv(ndev);
+ 	struct axidma_bd *cur_p;
+-	dma_addr_t start_p, tail_p;
++	dma_addr_t tail_p;
+ 	u32 ii;
+ 	u32 num_frag;
+ 	skb_frag_t *frag;
+@@ -758,7 +758,6 @@ static int axienet_start_xmit(struct sk_buff *skb, struct net_device *ndev)
+ 	u32 csum_index_off;
+ 
+ 	num_frag = skb_shinfo(skb)->nr_frags;
+-	start_p = lp->tx_bd_p + sizeof(*lp->tx_bd_v) * lp->tx_bd_tail;
+ 	cur_p = &lp->tx_bd_v[lp->tx_bd_tail];
+ 
+ 	if (axienet_check_tx_bd_space(lp, num_frag)) {
+-- 
+1.7.0.4
+

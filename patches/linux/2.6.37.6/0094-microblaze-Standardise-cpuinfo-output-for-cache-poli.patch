@@ -1,0 +1,34 @@
+From 8f6de307480c7f7abc0dfb53d8de2a49a8a3975e Mon Sep 17 00:00:00 2001
+From: John A. Williams <john.williams@petalogix.com>
+Date: Tue, 24 May 2011 18:59:45 +1000
+Subject: [PATCH] microblaze: Standardise cpuinfo output for cache policy
+
+The current cpuinfo output for the cache policy has no leading tag:, making
+it difficult to parse.  Add a leaning "Dcache-policy:" tag to this field.
+
+Signed-off-by: John A. Williams <john.williams@petalogix.com>
+---
+ arch/microblaze/kernel/cpu/mb.c |    5 +++--
+ 1 files changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/arch/microblaze/kernel/cpu/mb.c b/arch/microblaze/kernel/cpu/mb.c
+index 49f1894..b04a2a6 100644
+--- a/arch/microblaze/kernel/cpu/mb.c
++++ b/arch/microblaze/kernel/cpu/mb.c
+@@ -114,10 +114,11 @@ static int show_cpuinfo(struct seq_file *m, void *v)
+ 				"Dcache:\t\t%ukB\tline length:\t%dB\n",
+ 				cpuinfo.dcache_size >> 10,
+ 				cpuinfo.dcache_line_length);
++		seq_printf(m, "Dcache-Policy:\t");
+ 		if (cpuinfo.dcache_wb)
+-			count += seq_printf(m, "\t\twrite-back\n");
++			count += seq_printf(m, "write-back\n");
+ 		else
+-			count += seq_printf(m, "\t\twrite-through\n");
++			count += seq_printf(m, "write-through\n");
+ 	} else
+ 		count += seq_printf(m, "Dcache:\t\tno\n");
+ 
+-- 
+1.7.0.4
+

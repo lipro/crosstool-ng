@@ -1,0 +1,40 @@
+From 618765f962f22ad3d455d292d5f292b1bf70a774 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Mon, 4 Apr 2011 11:06:35 +0200
+Subject: [PATCH] ftrace: Build without frame pointers on Microblaze
+
+Microblaze doesn't need/support FRAME_POINTERS in order to have a working
+function tracer.
+
+The patch remove Kconfig warning.
+
+Warning log:
+warning: (LOCKDEP && FAULT_INJECTION_STACKTRACE_FILTER && LATENCYTOP &&
+FUNCTION_TRACER && KMEMCHECK) selects FRAME_POINTER which has unmet direct
+dependencies (DEBUG_KERNEL && (CRIS || M68K || FRV || UML || AVR32 ||
+SUPERH || BLACKFIN || MN10300) || ARCH_WANT_FRAME_POINTERS)
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+CC: Steven Rostedt <rostedt@goodmis.org>
+CC: Frederic Weisbecker <fweisbec@gmail.com>
+CC: Ingo Molnar <mingo@redhat.com>
+---
+ kernel/trace/Kconfig |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/kernel/trace/Kconfig b/kernel/trace/Kconfig
+index ea37e2f..4f804fe 100644
+--- a/kernel/trace/Kconfig
++++ b/kernel/trace/Kconfig
+@@ -126,7 +126,7 @@ if FTRACE
+ config FUNCTION_TRACER
+ 	bool "Kernel Function Tracer"
+ 	depends on HAVE_FUNCTION_TRACER
+-	select FRAME_POINTER if !ARM_UNWIND && !S390
++	select FRAME_POINTER if !ARM_UNWIND && !S390 && !MICROBLAZE
+ 	select KALLSYMS
+ 	select GENERIC_TRACER
+ 	select CONTEXT_SWITCH_TRACER
+-- 
+1.7.0.4
+

@@ -1,0 +1,36 @@
+From d456757a75762f9f22cb92839fef0f6cf161fc4c Mon Sep 17 00:00:00 2001
+From: Matt Fleming <matt.fleming@intel.com>
+Date: Thu, 11 Aug 2011 14:56:47 +0100
+Subject: [PATCH] microblaze: No need to reset handler if SA_ONESHOT
+
+get_signal_to_deliver() already resets the signal handler if
+SA_ONESHOT is set in ka->sa.sa_flags, there's no need to do it again
+in handle_signal(). Furthermore, because we were modifying
+ka->sa.sa_handler without holding ->sighand->siglock there's the
+potential we can race with another thread if it modifies the signal
+handlers.
+
+Cc: Oleg Nesterov <oleg@redhat.com>
+Cc: Michal Simek <monstr@monstr.eu>
+Signed-off-by: Matt Fleming <matt.fleming@intel.com>
+---
+ arch/microblaze/kernel/signal.c |    3 ---
+ 1 files changed, 0 insertions(+), 3 deletions(-)
+
+diff --git a/arch/microblaze/kernel/signal.c b/arch/microblaze/kernel/signal.c
+index e0b6c6a..9ea192b 100644
+--- a/arch/microblaze/kernel/signal.c
++++ b/arch/microblaze/kernel/signal.c
+@@ -312,9 +312,6 @@ handle_signal(unsigned long sig, struct k_sigaction *ka,
+ 	else
+ 		setup_rt_frame(sig, ka, NULL, oldset, regs);
+ 
+-	if (ka->sa.sa_flags & SA_ONESHOT)
+-		ka->sa.sa_handler = SIG_DFL;
+-
+ 	if (!(ka->sa.sa_flags & SA_NODEFER)) {
+ 		spin_lock_irq(&current->sighand->siglock);
+ 		sigorsets(&current->blocked,
+-- 
+1.7.0.4
+

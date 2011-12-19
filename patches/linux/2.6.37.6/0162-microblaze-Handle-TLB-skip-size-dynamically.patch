@@ -1,0 +1,326 @@
+From 7af81672fedc8d9c937371bd272e39ff9ee68195 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Thu, 20 Oct 2011 15:00:59 +0200
+Subject: [PATCH] microblaze: Handle TLB skip size dynamically
+
+This patch fix the problem with rootfs on JFFS2 with early printk
+console turned on.
+Bug was introduced by:
+"microblaze: Register early printk serial consoles"
+(sha1: 3fe34e73f218c2b5113a73c6a6843af6afb715d2)
+
+The origin version used TLB63 for temporary early printk mapping.
+The code expect that kernel is not able to use all 64 TLB entries
+till early printk console is remapped by ioremap. After that
+temporary mapping on TLB63 is silently lost.
+This expectation give the opportunity to have early console pretty
+early.
+
+Microblaze systems with JFFS2 rootfs with early printk console turned on
+used more than 64 TLB entries before kernel can remap early console.
+Based on that kernel does access to bad area because early printk mapping
+is rewritten.
+
+This patch introduces tlb_skip variable which dynamically stores number
+of skipped TLB entries from the TLB0. skip_tlb=2 means that TLB0 and TLB1
+should be skipped.
+
+MICROBLAZE_TLB_SKIP defines how many TLB is skipped at the kernel start.
+They can be used for user purpose.
+
+TLB 63 is used for temporary LMB mapping (MICROBLAZE_LMB_TLB_ID).
+
+Also clean TLBLO when kernel starts.
+
+For specific kernel sizes kernel can use just one TLB. Detect this case
+and use the second TLB for general purpose.
+
+Change _tlbia function to flush TLB entries from tlb_skip to TLB_SIZE.
+
+Export tlb_skip size through debugfs.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+
+---
+Just kept there MICROBLAZE_TLB_SKIP with zero value - make we can remove it.
+
+v2: Move tlb_skip/tlb_index values to data segment - because it is not code.
+    Microblaze v8.00.a has any problem with tlb_skip value updating because
+    of cache code.
+    Here is the sequency I see when early printk is enabled:
+	tlb_skip = 2
+	microblaze_cache_init()
+	tlb_skip = 1
+    The latest MB version keeps skip size correctly.
+    Based on that I have added MB version checking + error message
+---
+ arch/microblaze/include/asm/mmu.h             |   13 +++++++-
+ arch/microblaze/kernel/early_printk.c         |   14 ++++++++
+ arch/microblaze/kernel/head.S                 |   42 ++++++++++++++++---------
+ arch/microblaze/kernel/hw_exception_handler.S |   10 +++++-
+ arch/microblaze/kernel/misc.S                 |   13 +++++--
+ arch/microblaze/kernel/setup.c                |   13 ++++++++
+ 6 files changed, 83 insertions(+), 22 deletions(-)
+
+diff --git a/arch/microblaze/include/asm/mmu.h b/arch/microblaze/include/asm/mmu.h
+index 5198de8..8e0fbd7 100644
+--- a/arch/microblaze/include/asm/mmu.h
++++ b/arch/microblaze/include/asm/mmu.h
+@@ -56,6 +56,12 @@ typedef struct _SEGREG {
+ 
+ extern void _tlbie(unsigned long va);	/* invalidate a TLB entry */
+ extern void _tlbia(void);		/* invalidate all TLB entries */
++
++/*
++ * tlb_skip size stores actual number skipped TLBs from TLB0 - every directy TLB
++ * mapping has to increase tlb_skip size. 
++ */
++extern u32 tlb_skip;
+ #   endif /* __ASSEMBLY__ */
+ 
+ /*
+@@ -68,7 +74,12 @@ extern void _tlbia(void);		/* invalidate all TLB entries */
+  */
+ 
+ #  define MICROBLAZE_TLB_SIZE 64
+-#  define MICROBLAZE_TLB_SKIP 2
++
++/* For cases when you want to skip some TLB entries */
++#  define MICROBLAZE_TLB_SKIP 0
++
++/* Use the last TLB for temporary access to LMB */
++#  define MICROBLAZE_LMB_TLB_ID 63
+ 
+ /*
+  * TLB entries are defined by a "high" tag portion and a "low" data
+diff --git a/arch/microblaze/kernel/early_printk.c b/arch/microblaze/kernel/early_printk.c
+index 82b0b36..6e36128 100644
+--- a/arch/microblaze/kernel/early_printk.c
++++ b/arch/microblaze/kernel/early_printk.c
+@@ -175,6 +175,20 @@ void __init remap_early_printk(void)
+ 							base_addr);
+ 	base_addr = (u32) ioremap(base_addr, PAGE_SIZE);
+ 	printk("0x%x\n", base_addr);
++
++	/*
++	 * Early console is on the top of skipped TLB entries
++	 * decrease tlb_skip size ensure that hardcoded TLB entry will be
++	 * used by generic algorithm
++	 * FIXME check if early console mapping is on the top by rereading
++	 * TLB entry and compare baseaddr
++	 *  mts  rtlbx, (tlb_skip - 1)
++	 *  nop
++	 *  mfs  rX, rtlblo
++	 *  nop
++	 *  cmp rX, orig_base_addr
++	 */
++	tlb_skip -= 1;
+ }
+ 
+ void __init disable_early_printk(void)
+diff --git a/arch/microblaze/kernel/head.S b/arch/microblaze/kernel/head.S
+index 6097026..cc21195 100644
+--- a/arch/microblaze/kernel/head.S
++++ b/arch/microblaze/kernel/head.S
+@@ -150,6 +150,7 @@ _copy_bram:
+ _invalidate:
+ 	mts	rtlbx, r3
+ 	mts	rtlbhi, r0			/* flush: ensure V is clear   */
++	mts	rtlblo, r0
+ 	bgtid	r3, _invalidate		/* loop for all entries       */
+ 	addik	r3, r3, -1
+ 	/* sync */
+@@ -224,7 +225,14 @@ tlb_end:
+ 	andi	r4,r4,0xfffffc00	/* Mask off the real page number */
+ 	ori	r4,r4,(TLB_WR | TLB_EX)	/* Set the write and execute bits */
+ 
+-	beqi	r9, jump_over /* TLB0 can be zeroes that's why we not setup it */
++	/*
++	 * TLB0 is always used - check if is not zero (r9 stores TLB0 value)
++	 * if is use TLB1 value and clear it (r10 stores TLB1 value)
++	 */
++	bnei	r9, tlb0_not_zero
++	add	r9, r10, r0
++	add	r10, r0, r0
++tlb0_not_zero:
+ 
+ 	/* look at the code below */
+ 	ori	r30, r0, 0x200
+@@ -238,20 +246,22 @@ tlb_end:
+ 	bneid	r29, 1f
+ 	addik	r30, r30, 0x80
+ 1:
+-	ori r11, r30, 0
+-
+ 	andi	r3,r3,0xfffffc00	/* Mask off the effective page number */
+ 	ori	r3,r3,(TLB_VALID)
+-	or	r3, r3, r11
++	or	r3, r3, r30
+ 
+-	mts     rtlbx,r0		/* TLB slow 0 */
++	/* Load tlb_skip size value which is index to first unused TLB entry */
++	lwi	r11, r0, TOPHYS(tlb_skip)
++	mts     rtlbx,r11		/* TLB slow 0 */
+ 
+ 	mts	rtlblo,r4		/* Load the data portion of the entry */
+ 	mts	rtlbhi,r3		/* Load the tag portion of the entry */
+ 
+-jump_over:
++	/* Increase tlb_skip size */
++	addik	r11, r11, 1
++	swi	r11, r0, TOPHYS(tlb_skip)
+ 
+-	beqi	r10, jump_over2 /* TLB0 can be zeroes that's why we not setup it */
++	beqi	r10, jump_over2 /* TLB1 can be zeroes that's why we not setup it */
+ 
+ 	/* look at the code below */
+ 	ori	r30, r0, 0x200
+@@ -265,27 +275,30 @@ jump_over:
+ 	bneid	r29, 1f
+ 	addik	r30, r30, 0x80
+ 1:
+-	ori r12, r30, 0
+-
+ 	addk	r4, r4, r9	/* previous addr + TLB0 size */
+ 	addk	r3, r3, r9
+ 
+ 	andi	r3,r3,0xfffffc00	/* Mask off the effective page number */
+ 	ori	r3,r3,(TLB_VALID)
+-	or	r3, r3, r12
++	or	r3, r3, r30
+ 
+-	ori	r6,r0,1			/* TLB slot 1 */
+-	mts     rtlbx,r6
++	lwi	r11, r0, TOPHYS(tlb_skip)
++	mts     rtlbx, r11		/* r11 is used from TLB0 */
+ 
+ 	mts	rtlblo,r4		/* Load the data portion of the entry */
+ 	mts	rtlbhi,r3		/* Load the tag portion of the entry */
+ 
++	/* Increase tlb_skip size */
++	addik	r11, r11, 1
++	swi	r11, r0, TOPHYS(tlb_skip)
++
+ jump_over2:
+ 	/*
+ 	 * Load a TLB entry for LMB, since we need access to
+ 	 * the exception vectors, using a 4k real==virtual mapping.
+ 	 */
+-	ori	r6,r0,3			/* TLB slot 3 */
++	/* Use temporary TLB_ID for LMB - clear this temporary mapping later */
++	ori	r6, r0, MICROBLAZE_LMB_TLB_ID
+ 	mts     rtlbx,r6
+ 
+ 	ori	r4,r0,(TLB_WR | TLB_EX)
+@@ -354,8 +367,7 @@ start_here:
+ 
+ 	/* Load up the kernel context */
+ kernel_load_context:
+-	# Keep entry 0 and 1 valid. Entry 3 mapped to LMB can go away.
+-	ori	r5,r0,3
++	ori	r5, r0, MICROBLAZE_LMB_TLB_ID
+ 	mts     rtlbx,r5
+ 	nop
+ 	mts	rtlbhi,r0
+diff --git a/arch/microblaze/kernel/hw_exception_handler.S b/arch/microblaze/kernel/hw_exception_handler.S
+index 93bd770..8e242e0 100644
+--- a/arch/microblaze/kernel/hw_exception_handler.S
++++ b/arch/microblaze/kernel/hw_exception_handler.S
+@@ -820,9 +820,15 @@ ex_handler_done:
+  *	Upon exit, we reload everything and RFI.
+  * A common place to load the TLB.
+  */
++.section .data
++.align 4
++.global tlb_skip
++	tlb_skip:
++		.long	MICROBLAZE_TLB_SKIP
+ 	tlb_index:
+ 		/* MS: storing last used tlb index */
+-		.long	(MICROBLAZE_TLB_SKIP - 1)
++		.long	MICROBLAZE_TLB_SIZE/2
++.previous
+ 	finish_tlb_load:
+ 		/* MS: load the last used TLB index. */
+ 		lwi	r5, r0, TOPHYS(tlb_index)
+@@ -833,7 +839,7 @@ ex_handler_done:
+ 		ori	r6, r0, 1
+ 		cmp	r31, r5, r6
+ 		blti	r31, ex12
+-		addik	r5, r6, MICROBLAZE_TLB_SKIP - 1
++		lwi	r5, r0, TOPHYS(tlb_skip)
+ 	ex12:
+ 		/* MS: save back current TLB index */
+ 		swi	r5, r0, TOPHYS(tlb_index)
+diff --git a/arch/microblaze/kernel/misc.S b/arch/microblaze/kernel/misc.S
+index c9090d7..1dafdde 100644
+--- a/arch/microblaze/kernel/misc.S
++++ b/arch/microblaze/kernel/misc.S
+@@ -29,16 +29,16 @@
+ .type  _tlbia, @function
+ .align 4;
+ _tlbia:
+-	addik	r12, r0, MICROBLAZE_TLB_SIZE - 1 /* flush all entries (63 - 3) */
++	lwi	r12, r0, tlb_skip;
+ 	/* isync */
+ _tlbia_1:
+ 	mts	rtlbx, r12
+ 	nop
+ 	mts	rtlbhi, r0 /* flush: ensure V is clear */
+ 	nop
+-	addik	r11, r12, -MICROBLAZE_TLB_SKIP
++	rsubi	r11, r12, MICROBLAZE_TLB_SIZE - 1
+ 	bneid	r11, _tlbia_1 /* loop for all entries */
+-	addik	r12, r12, -1
++	addik	r12, r12, 1
+ 	/* sync */
+ 	rtsd	r15, 8
+ 	nop
+@@ -75,7 +75,7 @@ early_console_reg_tlb_alloc:
+ 	 * Load a TLB entry for the UART, so that microblaze_progress() can use
+ 	 * the UARTs nice and early.  We use a 4k real==virtual mapping.
+ 	 */
+-	ori	r4, r0, 63
++	lwi	r4, r0, tlb_skip
+ 	mts	rtlbx, r4 /* TLB slot 63 */
+ 
+ 	or	r4,r5,r0
+@@ -89,6 +89,11 @@ early_console_reg_tlb_alloc:
+ 	nop
+ 	mts	rtlbhi,r5 /* Load the tag portion of the entry */
+ 	nop
++
++	lwi	r5, r0, tlb_skip
++	addik	r5, r5, 1
++	swi	r5, r0, tlb_skip
++
+ 	rtsd	r15, 8
+ 	nop
+ 
+diff --git a/arch/microblaze/kernel/setup.c b/arch/microblaze/kernel/setup.c
+index 1681b46..8746604 100644
+--- a/arch/microblaze/kernel/setup.c
++++ b/arch/microblaze/kernel/setup.c
+@@ -208,6 +208,19 @@ static int microblaze_debugfs_init(void)
+ 	return of_debugfs_root == NULL;
+ }
+ arch_initcall(microblaze_debugfs_init);
++
++static int __init debugfs_tlb(void)
++{
++       struct dentry *d;
++
++       if (!of_debugfs_root)
++               return -ENODEV;
++
++       d = debugfs_create_u32("tlb_skip", S_IRUGO, of_debugfs_root, &tlb_skip);
++       if (!d)
++               return -ENOMEM;
++}
++device_initcall(debugfs_tlb);
+ #endif
+ 
+ static int dflt_bus_notify(struct notifier_block *nb,
+-- 
+1.7.0.4
+

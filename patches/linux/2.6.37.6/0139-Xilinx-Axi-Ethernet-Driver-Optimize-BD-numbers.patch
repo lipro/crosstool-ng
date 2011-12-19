@@ -1,0 +1,106 @@
+From 6840781662e73738b3b5f756b24e157a24b64d63 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Sun, 2 Oct 2011 15:10:31 +0200
+Subject: [PATCH] Xilinx: Axi Ethernet Driver: Optimize BD numbers
+
+Replaced:
+       lp->tx_bd_tail++;
+       if (lp->tx_bd_tail >= TX_BD_NUM)
+               lp->tx_bd_tail = 0;
+By:
+       lp->tx_bd_tail = ++lp->tx_bd_tail % TX_BD_NUM;
+
+Because gcc generates for old implementation longer code (7 instructions
+with 3 lw/sw) than should be. New one is composed with 4 instructions
+(lwi, addik, andi, swi).
+
+This code is called in loop a lot.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+
+---
+
+There is also added patch for changing s/int/u32/g for others var in lp.
+---
+ drivers/net/xilinx_axienet.h      |    6 +++---
+ drivers/net/xilinx_axienet_main.c |   19 +++++--------------
+ 2 files changed, 8 insertions(+), 17 deletions(-)
+
+diff --git a/drivers/net/xilinx_axienet.h b/drivers/net/xilinx_axienet.h
+index 34e46dc..f07554d 100755
+--- a/drivers/net/xilinx_axienet.h
++++ b/drivers/net/xilinx_axienet.h
+@@ -503,9 +503,9 @@ struct axienet_local {
+ 	dma_addr_t tx_bd_p;
+ 	struct axidma_bd *rx_bd_v;
+ 	dma_addr_t rx_bd_p;
+-	int tx_bd_ci;
+-	int tx_bd_tail;
+-	int rx_bd_ci;
++	u32 tx_bd_ci;
++	u32 tx_bd_tail;
++	u32 rx_bd_ci;
+ 
+ 	int max_frm_size;
+ 	int jumbo_support;
+diff --git a/drivers/net/xilinx_axienet_main.c b/drivers/net/xilinx_axienet_main.c
+index 4276362..20ea0e1 100755
+--- a/drivers/net/xilinx_axienet_main.c
++++ b/drivers/net/xilinx_axienet_main.c
+@@ -33,7 +33,7 @@
+ 
+ #include "xilinx_axienet.h"
+ 
+-/* Descriptors defines for Tx and Rx DMA */
++/* Descriptors defines for Tx and Rx DMA - 2^n for the best performance */
+ #define TX_BD_NUM	64
+ #define RX_BD_NUM	128
+ 
+@@ -699,9 +699,7 @@ static void axienet_start_xmit_done(struct net_device *ndev)
+ 		ndev->stats.tx_bytes += (status &
+ 					XAXIDMA_BD_STS_ACTUAL_LEN_MASK);
+ 
+-		lp->tx_bd_ci++;
+-		if (lp->tx_bd_ci >= TX_BD_NUM)
+-			lp->tx_bd_ci = 0;
++		lp->tx_bd_ci = ++lp->tx_bd_ci % TX_BD_NUM;
+ 
+ 		cur_p = &lp->tx_bd_v[lp->tx_bd_ci];
+ 		status = cur_p->status;
+@@ -786,10 +784,7 @@ static int axienet_start_xmit(struct sk_buff *skb, struct net_device *ndev)
+ 	cur_p->phys = dma_map_single(ndev->dev.parent, skb->data, skb_headlen(skb),
+ 				     DMA_TO_DEVICE);
+ 	for (ii = 0; ii < num_frag; ii++) {
+-
+-		lp->tx_bd_tail++;
+-		if (lp->tx_bd_tail >= TX_BD_NUM)
+-			lp->tx_bd_tail = 0;
++		lp->tx_bd_tail = ++lp->tx_bd_tail % TX_BD_NUM;
+ 
+ 		cur_p = &lp->tx_bd_v[lp->tx_bd_tail];
+ 		frag = &skb_shinfo(skb)->frags[ii];
+@@ -806,9 +801,7 @@ static int axienet_start_xmit(struct sk_buff *skb, struct net_device *ndev)
+ 	/* Start the transfer */
+ 	axienet_dma_out32(lp, XAXIDMA_TX_TDESC_OFFSET, tail_p);
+ 
+-	lp->tx_bd_tail++;
+-	if (lp->tx_bd_tail >= TX_BD_NUM)
+-		lp->tx_bd_tail = 0;
++	lp->tx_bd_tail = ++lp->tx_bd_tail % TX_BD_NUM;
+ 
+ 	return NETDEV_TX_OK;
+ }
+@@ -883,9 +876,7 @@ static void axienet_recv(struct net_device *ndev)
+ 		cur_p->status = 0;
+ 		cur_p->sw_id_offset = (u32)(new_skb);
+ 
+-		lp->rx_bd_ci++;
+-		if (lp->rx_bd_ci >= RX_BD_NUM)
+-			lp->rx_bd_ci = 0;
++		lp->rx_bd_ci = ++lp->rx_bd_ci % RX_BD_NUM;
+ 
+ 		cur_p = &lp->rx_bd_v[lp->rx_bd_ci];
+ 	}
+-- 
+1.7.0.4
+

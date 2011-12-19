@@ -1,0 +1,30 @@
+From 3a4cfc97393cc04ae3e072e915c346983a8048b3 Mon Sep 17 00:00:00 2001
+From: Wendy Liang <wendy.liang@petalogix.com>
+Date: Wed, 24 Feb 2010 17:16:18 +1000
+Subject: [PATCH] Add getting Flash partition information from device tree to m25p80 SPI Flash driver
+
+Signed-off-by: Wendy Liang <wendy.liang@petalogix.com>
+---
+ drivers/mtd/devices/m25p80.c |    6 +++++-
+ 1 files changed, 5 insertions(+), 1 deletions(-)
+
+diff --git a/drivers/mtd/devices/m25p80.c b/drivers/mtd/devices/m25p80.c
+index bf5a002..4dfbbf8 100644
+--- a/drivers/mtd/devices/m25p80.c
++++ b/drivers/mtd/devices/m25p80.c
+@@ -915,7 +915,11 @@ static int __devinit m25p_probe(struct spi_device *spi)
+ 		struct mtd_partition	*parts = NULL;
+ 		int			nr_parts = 0;
+ 
+-		if (mtd_has_cmdlinepart()) {
++#ifdef CONFIG_MTD_OF_PARTS
++		nr_parts = of_mtd_parse_partitions(&spi->dev, spi->dev.archdata.of_node,&parts); 
++#endif
++
++		if (nr_parts <= 0 && mtd_has_cmdlinepart()) {
+ 			static const char *part_probes[]
+ 					= { "cmdlinepart", NULL, };
+ 
+-- 
+1.7.0.4
+

@@ -1,0 +1,108 @@
+From 584b0bb634ae10589f7ab22fcbc9de227c80ec05 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Thu, 14 Jan 2010 14:38:39 +0100
+Subject: [PATCH] ll_temac: Setup correct dma operations
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ drivers/net/xilinx_lltemac/xlltemac_main.c |   27 ++++++++++++++-------------
+ 1 files changed, 14 insertions(+), 13 deletions(-)
+
+diff --git a/drivers/net/xilinx_lltemac/xlltemac_main.c b/drivers/net/xilinx_lltemac/xlltemac_main.c
+index 5b42329..3e48a64 100644
+--- a/drivers/net/xilinx_lltemac/xlltemac_main.c
++++ b/drivers/net/xilinx_lltemac/xlltemac_main.c
+@@ -1514,7 +1514,8 @@ static int xenet_DmaSend_internal(struct sk_buff *skb, struct net_device *dev)
+ 	len = skb_headlen(skb);
+ 
+ 	/* get the physical address of the header */
+-	phy_addr = (u32) dma_map_single(NULL, skb->data, len, DMA_TO_DEVICE);
++	phy_addr = (u32) dma_map_single(dev->dev.parent, skb->data, len,
++								DMA_TO_DEVICE);
+ 
+ 	/* get the header fragment, it's in the skb differently */
+ 	XLlDma_mBdSetBufAddr(bd_ptr, phy_addr);
+@@ -1589,8 +1590,8 @@ static int xenet_DmaSend_internal(struct sk_buff *skb, struct net_device *dev)
+ 		virt_addr =
+ 			(void *) page_address(frag->page) + frag->page_offset;
+ 		phy_addr =
+-			(u32) dma_map_single(NULL, virt_addr, frag->size,
+-					     DMA_TO_DEVICE);
++			(u32) dma_map_single(dev->dev.parent, virt_addr,
++					frag->size, DMA_TO_DEVICE);
+ 
+ 		XLlDma_mBdSetBufAddr(bd_ptr, phy_addr);
+ 		XLlDma_mBdSetLength(bd_ptr, frag->size);
+@@ -1683,8 +1684,8 @@ static void DmaSendHandlerBH(unsigned long p)
+ 			do {
+ 				len = XLlDma_mBdGetLength(BdCurPtr);
+ 				skb_dma_addr = (dma_addr_t) XLlDma_mBdGetBufAddr(BdCurPtr);
+-				dma_unmap_single(NULL, skb_dma_addr, len,
+-						 DMA_TO_DEVICE);
++				dma_unmap_single(dev->dev.parent, skb_dma_addr,
++						len, DMA_TO_DEVICE);
+ 
+ 				/* get ptr to skb */
+ 				skb = (struct sk_buff *)
+@@ -1886,10 +1887,9 @@ static void _xenet_DmaSetupRecvBuffers(struct net_device *dev)
+ 		}
+ 
+ 		/* Get dma handle of skb->data */
+-		new_skb_baddr = (u32) dma_map_single(NULL, new_skb->data,
+-						     lp->max_frame_size,
++		new_skb_baddr = (u32) dma_map_single(dev->dev.parent,
++					new_skb->data, lp->max_frame_size,
+ 						     DMA_FROM_DEVICE);
+-
+ 		XLlDma_mBdSetBufAddr(BdCurPtr, new_skb_baddr);
+ 		XLlDma_mBdSetLength(BdCurPtr, lp->max_frame_size);
+ 		XLlDma_mBdSetId(BdCurPtr, new_skb);
+@@ -1964,7 +1964,7 @@ static void DmaRecvHandlerBH(unsigned long p)
+ 
+ 				/* get and free up dma handle used by skb->data */
+ 				skb_baddr = (dma_addr_t) XLlDma_mBdGetBufAddr(BdCurPtr);
+-				dma_unmap_single(NULL, skb_baddr,
++				dma_unmap_single(dev->dev.parent, skb_baddr,
+ 						 lp->max_frame_size,
+ 						 DMA_FROM_DEVICE);
+ 
+@@ -2199,8 +2199,8 @@ static void free_descriptor_skb(struct net_device *dev)
+ 		skb = (struct sk_buff *) XLlDma_mBdGetId(BdPtr);
+ 		if (skb) {
+ 			skb_dma_addr = (dma_addr_t) XLlDma_mBdGetBufAddr(BdPtr);
+-			dma_unmap_single(NULL, skb_dma_addr, lp->max_frame_size,
+-					 DMA_FROM_DEVICE);
++			dma_unmap_single(dev->dev.parent, skb_dma_addr,
++					lp->max_frame_size, DMA_FROM_DEVICE);
+ 			dev_kfree_skb(skb);
+ 		}
+ 		/* find the next BD in the DMA RX BD ring */
+@@ -2220,7 +2220,7 @@ static void free_descriptor_skb(struct net_device *dev)
+ 		if (skb) {
+ 			skb_dma_addr = (dma_addr_t) XLlDma_mBdGetBufAddr(BdPtr);
+ 			len = XLlDma_mBdGetLength(BdPtr);
+-			dma_unmap_single(NULL, skb_dma_addr, len,
++			dma_unmap_single(dev->dev.parent, skb_dma_addr, len,
+ 					 DMA_TO_DEVICE);
+ 			dev_kfree_skb(skb);
+ 		}
+@@ -3194,6 +3194,7 @@ static int xtenet_setup(
+ 	}
+ 	dev_set_drvdata(dev, ndev);
+ 
++	SET_NETDEV_DEV(ndev, &dev->parent);
+ 	ndev->irq = r_irq->start;
+ 
+ 	/* Initialize the private data used by XEmac_LookupConfig().
+@@ -3595,7 +3596,7 @@ static int __devinit xtenet_of_probe(struct of_device *ofdev, const struct of_de
+             dev_warn(&ofdev->dev, "No MAC address found.\n");
+         }
+ 
+-        return xtenet_setup(&ofdev->dev, r_mem, r_irq, pdata);
++	return xtenet_setup(&ofdev->dev, r_mem, r_irq, pdata);
+ }
+ 
+ static int __devexit xtenet_of_remove(struct of_device *dev)
+-- 
+1.7.0.4
+

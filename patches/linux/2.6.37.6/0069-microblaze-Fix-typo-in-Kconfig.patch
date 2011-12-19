@@ -1,0 +1,28 @@
+From 725b1d92417133c1accaa42fce5afb23c172dbea Mon Sep 17 00:00:00 2001
+From: Tobias Klauser <tklauser@distanz.ch>
+Date: Wed, 2 Mar 2011 18:38:35 +0100
+Subject: [PATCH] microblaze: Fix typo in Kconfig
+
+s/Exectuable/Executable/
+
+Signed-off-by: Tobias Klauser <tklauser@distanz.ch>
+---
+ arch/microblaze/Kconfig |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/arch/microblaze/Kconfig b/arch/microblaze/Kconfig
+index 77fa51b..7d53c39 100644
+--- a/arch/microblaze/Kconfig
++++ b/arch/microblaze/Kconfig
+@@ -258,7 +258,7 @@ endmenu
+ 
+ source "mm/Kconfig"
+ 
+-menu "Exectuable file formats"
++menu "Executable file formats"
+ 
+ source "fs/Kconfig.binfmt"
+ 
+-- 
+1.7.0.4
+

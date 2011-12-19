@@ -1,0 +1,41 @@
+From 9563e53ddb75cfb119190c87e04982c91d73e12c Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Thu, 10 Nov 2011 13:40:08 +0100
+Subject: [PATCH] microblaze: Send CR before LF for early console
+
+This patch fixes problem with measuring tools.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ arch/microblaze/kernel/early_printk.c |    4 ++--
+ 1 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/arch/microblaze/kernel/early_printk.c b/arch/microblaze/kernel/early_printk.c
+index 6e36128..2ffe5ed 100644
+--- a/arch/microblaze/kernel/early_printk.c
++++ b/arch/microblaze/kernel/early_printk.c
+@@ -50,9 +50,9 @@ static void early_printk_uartlite_write(struct console *unused,
+ 					const char *s, unsigned n)
+ {
+ 	while (*s && n-- > 0) {
+-		early_printk_uartlite_putc(*s);
+ 		if (*s == '\n')
+ 			early_printk_uartlite_putc('\r');
++		early_printk_uartlite_putc(*s);
+ 		s++;
+ 	}
+ }
+@@ -94,9 +94,9 @@ static void early_printk_uart16550_write(struct console *unused,
+ 					const char *s, unsigned n)
+ {
+ 	while (*s && n-- > 0) {
+-		early_printk_uart16550_putc(*s);
+ 		if (*s == '\n')
+ 			early_printk_uart16550_putc('\r');
++		early_printk_uart16550_putc(*s);
+ 		s++;
+ 	}
+ }
+-- 
+1.7.0.4
+

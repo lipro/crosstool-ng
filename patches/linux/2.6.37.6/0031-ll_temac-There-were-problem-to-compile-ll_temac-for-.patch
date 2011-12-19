@@ -1,0 +1,28 @@
+From 4195d5144934169e6b265ab40c40ce1537ced7b1 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Wed, 20 Jan 2010 13:24:38 +0100
+Subject: [PATCH] ll_temac: There were problem to compile ll_temac for noMMU
+
+there were missing include - warning announce that HZ is not found
+for udelay.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ drivers/net/xilinx_lltemac/xlltemac.c |    1 +
+ 1 files changed, 1 insertions(+), 0 deletions(-)
+
+diff --git a/drivers/net/xilinx_lltemac/xlltemac.c b/drivers/net/xilinx_lltemac/xlltemac.c
+index bae4eb6..5bc92b5 100644
+--- a/drivers/net/xilinx_lltemac/xlltemac.c
++++ b/drivers/net/xilinx_lltemac/xlltemac.c
+@@ -46,6 +46,7 @@
+ 
+ /***************************** Include Files *********************************/
+ 
++#include <linux/dma-mapping.h>
+ #include <linux/string.h>
+ #include <linux/delay.h>
+ 
+-- 
+1.7.0.4
+

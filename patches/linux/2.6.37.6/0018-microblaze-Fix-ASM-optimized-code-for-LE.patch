@@ -1,0 +1,34 @@
+From 47315cf7fadd52965219f56c6da5647c747ace04 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Fri, 28 Jan 2011 13:26:54 +0100
+Subject: [PATCH] microblaze: Fix ASM optimized code for LE
+
+Microblaze little-endian doesn't support ASM optimized library
+functions(memcpy/memmove). Kconfig doens't contain
+any information about endian that's why it is necessary to
+check it in the source code.
+The code is used with barrel shifter is used.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ arch/microblaze/lib/fastcopy.S |    4 ++++
+ 1 files changed, 4 insertions(+), 0 deletions(-)
+
+diff --git a/arch/microblaze/lib/fastcopy.S b/arch/microblaze/lib/fastcopy.S
+index fdc48bb..62021d7 100644
+--- a/arch/microblaze/lib/fastcopy.S
++++ b/arch/microblaze/lib/fastcopy.S
+@@ -29,6 +29,10 @@
+  *	between mem locations with size of xfer spec'd in bytes
+  */
+ 
++#ifdef __MICROBLAZEEL__
++#error Microblaze LE not support ASM optimized lib func. Disable OPT_LIB_ASM.
++#endif
++
+ #include <linux/linkage.h>
+ 	.text
+ 	.globl	memcpy
+-- 
+1.7.0.4
+

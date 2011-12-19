@@ -1,0 +1,32 @@
+From c8c3f6ed7e73aacd0ec2b86e0749e12fd406bdb8 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Wed, 19 Oct 2011 11:01:17 +0200
+Subject: [PATCH] uartlite: Do not probe uartlite driver if IRQ is not connected
+
+Linux serial drivers don't support poll mode.
+
+This patch is not required in Linux > 3.0 because probing is changed
+there.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ drivers/serial/uartlite.c |    3 +++
+ 1 files changed, 3 insertions(+), 0 deletions(-)
+
+diff --git a/drivers/serial/uartlite.c b/drivers/serial/uartlite.c
+index 72fb403..261472a 100644
+--- a/drivers/serial/uartlite.c
++++ b/drivers/serial/uartlite.c
+@@ -623,6 +623,9 @@ ulite_of_probe(struct platform_device *op, const struct of_device_id *match)
+ 	}
+ 
+ 	irq = irq_of_parse_and_map(op->dev.of_node, 0);
++	if (irq == -1) {
++		return -ENODEV;
++	}
+ 
+ 	id = of_get_property(op->dev.of_node, "port-number", NULL);
+ 
+-- 
+1.7.0.4
+

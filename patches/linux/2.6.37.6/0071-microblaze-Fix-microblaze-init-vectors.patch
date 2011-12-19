@@ -1,0 +1,40 @@
+From 107ecca93670389e9e0b7d4b9ac0928855a4da9d Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Thu, 10 Mar 2011 10:51:27 +0100
+Subject: [PATCH] microblaze: Fix microblaze init vectors
+
+Microblaze vector table stores several vectors (reset, user exception,
+interrupt, debug exception and hardware exception).
+All these functions can be below address 0x10000. If they are, wrong
+vector table is genarated because jump is not setup from two instructions
+(imm upper 16bit and brai lower 16bit).
+Adding specific offset prevent problem if address is below 0x10000.
+For this case only brai instruction is used.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ arch/microblaze/kernel/entry.S |    5 ++++-
+ 1 files changed, 4 insertions(+), 1 deletions(-)
+
+diff --git a/arch/microblaze/kernel/entry.S b/arch/microblaze/kernel/entry.S
+index 41c30cd..c35dffe 100644
+--- a/arch/microblaze/kernel/entry.S
++++ b/arch/microblaze/kernel/entry.S
+@@ -991,10 +991,13 @@ ENTRY(_reset)
+ 	/* in current MMU branch you don't care what is here - it is
+ 	 * used from bootloader site - but this is correct for FS-BOOT */
+ 	brai	0x70
+-	nop
++	.org	0x8
+ 	brai	TOPHYS(_user_exception); /* syscall handler */
++	.org	0x10
+ 	brai	TOPHYS(_interrupt);	/* Interrupt handler */
++	.org	0x18
+ 	brai	TOPHYS(_debug_exception);	/* debug trap handler */
++	.org	0x20
+ 	brai	TOPHYS(_hw_exception_handler);	/* HW exception handler */
+ 
+ .section .rodata,"a"
+-- 
+1.7.0.4
+

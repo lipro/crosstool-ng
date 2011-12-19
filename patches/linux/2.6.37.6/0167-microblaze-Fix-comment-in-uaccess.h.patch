@@ -1,0 +1,27 @@
+From 31d3fae934b9a308637b2e8cfcab5dcdaf804ce2 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Mon, 14 Nov 2011 15:32:12 +0100
+Subject: [PATCH] microblaze: Fix comment in uaccess.h
+
+Fix ancient commentary for development version.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ arch/microblaze/include/asm/uaccess.h |    1 -
+ 1 files changed, 0 insertions(+), 1 deletions(-)
+
+diff --git a/arch/microblaze/include/asm/uaccess.h b/arch/microblaze/include/asm/uaccess.h
+index 2082d8c..ca9e26c 100644
+--- a/arch/microblaze/include/asm/uaccess.h
++++ b/arch/microblaze/include/asm/uaccess.h
+@@ -92,7 +92,6 @@ static inline int ___range_ok(unsigned long addr, unsigned long size)
+ /*
+  * Address is valid if:
+  *  - "addr", "addr + size" and "size" are all below the limit
+- * Also return 0 for size 0
+  */
+ static inline int access_ok(int type, const void __user *addr, unsigned long size)
+ {
+-- 
+1.7.0.4
+

@@ -1,0 +1,42 @@
+From 16bf53c95992bfde7fa04ffab9dbfaa23419c8de Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Wed, 9 Nov 2011 15:39:58 +0100
+Subject: [PATCH] microblaze: Clear all MSR flags on the first kernel instruction
+
+The main reason is bug because of dynamic TLB allocation.
+U-BOOT didn't disable dcache and then writing to physical address
+from ASM wan't visible for reading through MMU.
+Disabling caches and clearing all flags from previous code
+is good to do so.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ arch/microblaze/kernel/head.S |    5 ++---
+ 1 files changed, 2 insertions(+), 3 deletions(-)
+
+diff --git a/arch/microblaze/kernel/head.S b/arch/microblaze/kernel/head.S
+index cc21195..41b0fe7 100644
+--- a/arch/microblaze/kernel/head.S
++++ b/arch/microblaze/kernel/head.S
+@@ -63,9 +63,7 @@ ENTRY(_start)
+ real_start:
+ #endif
+ 
+-	mfs	r1, rmsr
+-	andi	r1, r1, ~2
+-	mts	rmsr, r1
++	mts	rmsr, r0
+ /*
+  * According to Xilinx, msrclr instruction behaves like 'mfs rX,rpc'
+  * if the msrclr instruction is not enabled. We use this to detect
+@@ -73,6 +71,7 @@ real_start:
+  * r8 == 0 - msr instructions are implemented
+  * r8 != 0 - msr instructions are not implemented
+  */
++	mfs	r1, rmsr
+ 	msrclr	r8, 0 /* clear nothing - just read msr for test */
+ 	cmpu	r8, r8, r1 /* r1 must contain msr reg content */
+ 
+-- 
+1.7.0.4
+

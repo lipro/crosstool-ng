@@ -1,0 +1,40 @@
+From d08ab51ca3742871b6ea71248f54e971ceb28a36 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Tue, 8 Feb 2011 14:55:09 +0100
+Subject: [PATCH] microblaze: Fix coding style - ptrace.h
+
+Use tab instead of spaces.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ arch/microblaze/include/asm/ptrace.h |   14 +++++++-------
+ 1 files changed, 7 insertions(+), 7 deletions(-)
+
+diff --git a/arch/microblaze/include/asm/ptrace.h b/arch/microblaze/include/asm/ptrace.h
+index d74dbfb..d9b6630 100644
+--- a/arch/microblaze/include/asm/ptrace.h
++++ b/arch/microblaze/include/asm/ptrace.h
+@@ -66,13 +66,13 @@ void show_regs(struct pt_regs *);
+ #else /* __KERNEL__ */
+ 
+ /* pt_regs offsets used by gdbserver etc in ptrace syscalls */
+-#define PT_GPR(n)       ((n) * sizeof(microblaze_reg_t))
+-#define PT_PC           (32 * sizeof(microblaze_reg_t))
+-#define PT_MSR          (33 * sizeof(microblaze_reg_t))
+-#define PT_EAR          (34 * sizeof(microblaze_reg_t))
+-#define PT_ESR          (35 * sizeof(microblaze_reg_t))
+-#define PT_FSR          (36 * sizeof(microblaze_reg_t))
+-#define PT_KERNEL_MODE  (37 * sizeof(microblaze_reg_t))
++#define PT_GPR(n)	((n) * sizeof(microblaze_reg_t))
++#define PT_PC		(32 * sizeof(microblaze_reg_t))
++#define PT_MSR		(33 * sizeof(microblaze_reg_t))
++#define PT_EAR		(34 * sizeof(microblaze_reg_t))
++#define PT_ESR		(35 * sizeof(microblaze_reg_t))
++#define PT_FSR		(36 * sizeof(microblaze_reg_t))
++#define PT_KERNEL_MODE	(37 * sizeof(microblaze_reg_t))
+ 
+ #endif /* __KERNEL */
+ 
+-- 
+1.7.0.4
+

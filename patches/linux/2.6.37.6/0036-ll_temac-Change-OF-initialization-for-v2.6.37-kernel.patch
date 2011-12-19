@@ -1,0 +1,193 @@
+From 7e396bc2d05ef3e83c5f0e20bd3d5067860c8d7a Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Wed, 9 Feb 2011 14:38:00 +0100
+Subject: [PATCH] ll_temac: Change OF initialization for v2.6.37 kernel
+
+OF probing was changed that's why it is necessary to
+change old ll_temac driver.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ drivers/net/xilinx_lltemac/xlltemac_main.c |   60 ++++++++++++++-------------
+ 1 files changed, 31 insertions(+), 29 deletions(-)
+
+diff --git a/drivers/net/xilinx_lltemac/xlltemac_main.c b/drivers/net/xilinx_lltemac/xlltemac_main.c
+index 2642075..a9b6f90 100644
+--- a/drivers/net/xilinx_lltemac/xlltemac_main.c
++++ b/drivers/net/xilinx_lltemac/xlltemac_main.c
+@@ -33,6 +33,7 @@
+ 
+ #ifdef CONFIG_OF
+ // For open firmware.
++#include <linux/of_address.h>
+ #include <linux/of_device.h>
+ #include <linux/of_platform.h>
+ #endif
+@@ -3477,12 +3478,12 @@ static struct device_driver xtenet_driver = {
+ };
+ 
+ #ifdef CONFIG_OF
+-static u32 get_u32(struct of_device *ofdev, const char *s) {
+-	u32 *p = (u32 *)of_get_property(ofdev->node, s, NULL);
++static u32 get_u32(struct platform_device *op, const char *s) {
++	u32 *p = (u32 *)of_get_property(op->dev.of_node, s, NULL);
+ 	if(p) {
+ 		return *p;
+ 	} else {
+-		dev_warn(&ofdev->dev, "Parameter %s not found, defaulting to false.\n", s);
++		dev_warn(&op->dev, "Parameter %s not found, defaulting to false.\n", s);
+ 		return FALSE;
+ 	}
+ }
+@@ -3511,7 +3512,7 @@ static struct of_device_id xtenet_sdma_of_match[] = {
+ 	{ /* end of list */ },
+ };
+ 
+-static int __devinit xtenet_of_probe(struct of_device *ofdev, const struct of_device_id *match)
++static int __devinit xtenet_of_probe(struct platform_device *op, const struct of_device_id *match)
+ {
+ 	struct resource r_irq_struct;
+ 	struct resource r_mem_struct;
+@@ -3529,29 +3530,29 @@ static int __devinit xtenet_of_probe(struct of_device *ofdev, const struct of_de
+ 	u32 *dcrreg_property;
+ 
+ 	printk(KERN_INFO "Device Tree Probing \'%s\'\n",
+-                        ofdev->node->name);
++                        op->dev.of_node->name);
+ 
+ 	/* Get iospace for the device */
+-	rc = of_address_to_resource(ofdev->node, 0, r_mem);
++	rc = of_address_to_resource(op->dev.of_node, 0, r_mem);
+ 	if(rc) {
+-		dev_warn(&ofdev->dev, "invalid address\n");
++		dev_warn(&op->dev, "invalid address\n");
+ 		return rc;
+ 	}
+ 
+ 	/* Get IRQ for the device */
+-	rc = of_irq_to_resource(ofdev->node, 0, r_irq);
++	rc = of_irq_to_resource(op->dev.of_node, 0, r_irq);
+ 	if(rc == NO_IRQ) {
+-		dev_warn(&ofdev->dev, "no IRQ found.\n");
++		dev_warn(&op->dev, "no IRQ found.\n");
+ 		return rc;
+ 	}
+ 
+-	pdata_struct.tx_csum		= get_u32(ofdev, "xlnx,txcsum");
+-	pdata_struct.rx_csum		= get_u32(ofdev, "xlnx,rxcsum");
+-	pdata_struct.phy_type           = get_u32(ofdev, "xlnx,phy-type");
++	pdata_struct.tx_csum = get_u32(op, "xlnx,txcsum");
++	pdata_struct.rx_csum = get_u32(op, "xlnx,rxcsum");
++	pdata_struct.phy_type = get_u32(op, "xlnx,phy-type");
+         llink_connected_handle =
+-		of_get_property(ofdev->node, "llink-connected", NULL);
++		of_get_property(op->dev.of_node, "llink-connected", NULL);
+         if(!llink_connected_handle) {
+-            dev_warn(&ofdev->dev, "no Locallink connection found.\n");
++            dev_warn(&op->dev, "no Locallink connection found.\n");
+             return rc;
+         }
+ 
+@@ -3568,7 +3569,7 @@ static int __devinit xtenet_of_probe(struct of_device *ofdev, const struct of_de
+ 		/** Connected to a fifo. */
+ 
+ 		if(rc) {
+-			dev_warn(&ofdev->dev, "invalid address\n");
++			dev_warn(&op->dev, "invalid address\n");
+ 			return rc;
+ 		}
+ 
+@@ -3582,14 +3583,13 @@ static int __devinit xtenet_of_probe(struct of_device *ofdev, const struct of_de
+ 				0,
+ 				&r_connected_irq_struct);
+ 		if(rc == NO_IRQ) {
+-			dev_warn(&ofdev->dev, "no IRQ found.\n");
++			dev_warn(&op->dev, "no IRQ found.\n");
+ 			return rc;
+ 		}
+ 		pdata_struct.ll_dev_fifo_irq	= r_connected_irq_struct.start;
+ 		pdata_struct.dcr_host = 0x0;
+         } else if(of_match_node(xtenet_sdma_of_match, llink_connected_node)) {
+ 		/** Connected to a dma port, default to 405 type dma */
+-
+ 		pdata->dcr_host = 0;
+ 		if(rc) {
+ 			/* no address was found, might be 440, check for dcr reg */
+@@ -3599,7 +3599,7 @@ static int __devinit xtenet_of_probe(struct of_device *ofdev, const struct of_de
+ 			        r_connected_mem_struct.start = *dcrreg_property;
+ 				pdata->dcr_host = 0xFF;
+ 			} else {
+-				dev_warn(&ofdev->dev, "invalid address\n");
++				dev_warn(&op->dev, "invalid address\n");
+ 				return rc;
+ 			}			
+ 		}
+@@ -3612,41 +3612,40 @@ static int __devinit xtenet_of_probe(struct of_device *ofdev, const struct of_de
+ 				0,
+ 				&r_connected_irq_struct);
+ 		if(rc == NO_IRQ) {
+-			dev_warn(&ofdev->dev, "First IRQ not found.\n");
++			dev_warn(&op->dev, "First IRQ not found.\n");
+ 			return rc;
+ 		}
+ 		pdata_struct.ll_dev_dma_rx_irq	= r_connected_irq_struct.start;
+-
+ 		rc = of_irq_to_resource(
+ 				llink_connected_node,
+ 				1,
+ 				&r_connected_irq_struct);
+ 		if(rc == NO_IRQ) {
+-			dev_warn(&ofdev->dev, "Second IRQ not found.\n");
++			dev_warn(&op->dev, "Second IRQ not found.\n");
+ 			return rc;
+ 		}
+ 		pdata_struct.ll_dev_dma_tx_irq	= r_connected_irq_struct.start;
+ 
+ 		pdata_struct.ll_dev_fifo_irq	= NO_IRQ;
+         } else {
+-		dev_warn(&ofdev->dev, "Locallink connection not matched.\n");
++		dev_warn(&op->dev, "Locallink connection not matched.\n");
+ 		return rc;
+         }
+ 
+ 	of_node_put(llink_connected_node);
+-        mac_address = of_get_mac_address(ofdev->node);
++        mac_address = of_get_mac_address(op->dev.of_node);
+         if(mac_address) {
+             memcpy(pdata_struct.mac_addr, mac_address, 6);
+         } else {
+-            dev_warn(&ofdev->dev, "No MAC address found.\n");
++            dev_warn(&op->dev, "No MAC address found.\n");
+         }
+ 
+-	return xtenet_setup(&ofdev->dev, r_mem, r_irq, pdata);
++	return xtenet_setup(&op->dev, r_mem, r_irq, pdata);
+ }
+ 
+-static int __devexit xtenet_of_remove(struct of_device *dev)
++static int __devexit xtenet_of_remove(struct platform_device *op)
+ {
+-	return xtenet_remove(&dev->dev);
++	return xtenet_remove(&op->dev);
+ }
+ 
+ static struct of_device_id xtenet_of_match[] = {
+@@ -3660,10 +3659,13 @@ static struct of_device_id xtenet_of_match[] = {
+ MODULE_DEVICE_TABLE(of, xtenet_of_match);
+ 
+ static struct of_platform_driver xtenet_of_driver = {
+-	.name		= DRIVER_NAME,
+-	.match_table	= xtenet_of_match,
+ 	.probe		= xtenet_of_probe,
+ 	.remove		= __devexit_p(xtenet_of_remove),
++	.driver = {
++		.name = DRIVER_NAME,
++		.owner = THIS_MODULE,
++		.of_match_table = xtenet_of_match,
++	},
+ };
+ #endif
+ 
+-- 
+1.7.0.4
+

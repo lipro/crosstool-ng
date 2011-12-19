@@ -1,0 +1,49 @@
+From 4da0b7878a8233b39ccf146b8d0293eb162df3ba Mon Sep 17 00:00:00 2001
+From: Anirudha Sarangi <anirudh@xhd-lin64re49.(none)>
+Date: Thu, 18 Nov 2010 23:02:14 +0530
+Subject: [PATCH] Xilinx: Axi Ethernet Driver:Standard updates for new driver
+
+New configuration parameter is added in defconfig. New entries
+are made in Makefile. New entries are added in Kconfig.
+
+Signed-off-by: Anirudha Sarangi anirudh@xilinx.com
+---
+ drivers/net/Kconfig  |    8 ++++++++
+ drivers/net/Makefile |    2 ++
+ 2 files changed, 10 insertions(+), 0 deletions(-)
+
+diff --git a/drivers/net/Kconfig b/drivers/net/Kconfig
+index 544ac75..57a2316 100644
+--- a/drivers/net/Kconfig
++++ b/drivers/net/Kconfig
+@@ -2470,6 +2470,14 @@ config MV643XX_ETH
+ #	  This driver supports the Xilinx 10/100/1000 LocalLink TEMAC
+ #	  core used in Xilinx Spartan and Virtex FPGAs
+ 
++config XILINX_AXI_ETHERNET
++	tristate "Xilinx Axi Ethernet driver"
++	depends on MICROBLAZE
++	select PHYLIB
++	help
++	  This driver supports the Xilinx 10/100/1000 Axi Ethernet IP
++	  core used in Xilinx Spartan6 and Virtex6 FPGAs
++
+ config QLA3XXX
+ 	tristate "QLogic QLA3XXX Network Driver Support"
+ 	depends on PCI
+diff --git a/drivers/net/Makefile b/drivers/net/Makefile
+index 08e8fe9..8565fc8 100644
+--- a/drivers/net/Makefile
++++ b/drivers/net/Makefile
+@@ -152,6 +152,8 @@ obj-$(CONFIG_TSI108_ETH) += tsi108_eth.o
+ obj-$(CONFIG_MV643XX_ETH) += mv643xx_eth.o
+ ll_temac-objs := ll_temac_main.o ll_temac_mdio.o
+ obj-$(CONFIG_XILINX_LL_TEMAC) += ll_temac.o
++xilinx_axienet-objs := xilinx_axienet_main.o xilinx_axienet_mdio.o
++obj-$(CONFIG_XILINX_AXI_ETHERNET) += xilinx_axienet.o
+ obj-$(CONFIG_XILINX_EMACLITE) += xilinx_emaclite.o
+ obj-$(CONFIG_QLA3XXX) += qla3xxx.o
+ obj-$(CONFIG_QLCNIC) += qlcnic/
+-- 
+1.7.0.4
+

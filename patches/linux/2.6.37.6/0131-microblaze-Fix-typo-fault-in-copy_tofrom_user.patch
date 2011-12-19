@@ -1,0 +1,30 @@
+From 535c63b65813386df3227cff09af6134de55db73 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Tue, 16 Aug 2011 14:06:11 +0200
+Subject: [PATCH] microblaze: Fix typo fault in copy_tofrom_user
+
+Patch "microblaze: Simplify logic for unaligned byte copying"
+(sha1: d725eae48afd4210c78899a2e909d2c88b2c3d30) introduced
+bug because it doesn't counted if to/from address is aligned.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ arch/microblaze/lib/uaccess_old.S |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/arch/microblaze/lib/uaccess_old.S b/arch/microblaze/lib/uaccess_old.S
+index 6d216b1..142492e 100644
+--- a/arch/microblaze/lib/uaccess_old.S
++++ b/arch/microblaze/lib/uaccess_old.S
+@@ -166,7 +166,7 @@ __copy_tofrom_user:
+ 	beqid	r7, 0f /* zero size is not likely */
+ 	or	r3, r5, r6 /* find if is any to/from unaligned */
+ 	or	r3, r3, r7 /* find if count is unaligned */
+-	andi	r3, r7, 0x3 /* mask last 3 bits */
++	andi	r3, r3, 0x3 /* mask last 3 bits */
+ 	bneid	r3, bu1 /* if r3 is not zero then byte copying */
+ 	or	r3, r0, r0
+ 
+-- 
+1.7.0.4
+

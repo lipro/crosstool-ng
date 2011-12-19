@@ -1,0 +1,32 @@
+From fdc2fb3f369c823fc9f0a4994b4b14095315b419 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Sun, 2 Oct 2011 09:12:37 +0200
+Subject: [PATCH] microblaze: Remove NET_IP_ALIGN from system.h
+
+Use default value (which is the same) from
+include/linux/skbuff.h.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ arch/microblaze/include/asm/system.h |    7 -------
+ 1 files changed, 0 insertions(+), 7 deletions(-)
+
+diff --git a/arch/microblaze/include/asm/system.h b/arch/microblaze/include/asm/system.h
+index 955fca0..9a9c742 100644
+--- a/arch/microblaze/include/asm/system.h
++++ b/arch/microblaze/include/asm/system.h
+@@ -97,11 +97,4 @@ extern struct dentry *of_debugfs_root;
+ 
+ #define arch_align_stack(x) (x)
+ 
+-/*
+- * MicroBlaze doesn't handle unaligned accesses in hardware.
+- *
+- * Based on this we force the IP header alignment in network drivers.
+- */
+-#define NET_IP_ALIGN	2
+-
+ #endif /* _ASM_MICROBLAZE_SYSTEM_H */
+-- 
+1.7.0.4
+

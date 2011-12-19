@@ -1,0 +1,50 @@
+From 025eb506f561dae547e4129c7d9aebcbf9b4bf4c Mon Sep 17 00:00:00 2001
+From: John Williams <john.williams@petalogix.com>
+Date: Tue, 8 Nov 2011 17:00:57 +1000
+Subject: [PATCH] serial: add OF alias support for uartlite
+
+---
+ drivers/serial/uartlite.c |   20 ++++++++++++++++----
+ 1 files changed, 16 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/serial/uartlite.c b/drivers/serial/uartlite.c
+index 261472a..b62cbf1 100644
+--- a/drivers/serial/uartlite.c
++++ b/drivers/serial/uartlite.c
+@@ -611,7 +611,8 @@ static int __devinit
+ ulite_of_probe(struct platform_device *op, const struct of_device_id *match)
+ {
+ 	struct resource res;
+-	const unsigned int *id;
++	const unsigned int *idp;
++	int id;
+ 	int irq, rc;
+ 
+ 	dev_dbg(&op->dev, "%s(%p, %p)\n", __func__, op, match);
+@@ -627,9 +628,20 @@ ulite_of_probe(struct platform_device *op, const struct of_device_id *match)
+ 		return -ENODEV;
+ 	}
+ 
+-	id = of_get_property(op->dev.of_node, "port-number", NULL);
+-
+-	return ulite_assign(&op->dev, id ? be32_to_cpup(id) : -1, res.start, irq);
++	/* Look for a serialN alias */
++	id = of_alias_get_id(op->dev.of_node, "serial");
++	if(id < 0) {
++		dev_warn(&op->dev, "failed to get alias id, errno %d\n",id);
++		/* Fall back to old port-number property */
++		idp = of_get_property(op->dev.of_node, "port-number", NULL);
++		if(idp < 0) {
++			dev_warn(&op->dev, "failed to get port-number, errno %d\n",idp);
++			id=-1;
++		} else
++			id = be32_to_cpup(idp);
++	}
++			
++	return ulite_assign(&op->dev, id , res.start, irq);
+ }
+ 
+ static int __devexit ulite_of_remove(struct platform_device *op)
+-- 
+1.7.0.4
+

@@ -1,0 +1,38 @@
+From 33de6dcc53d18fdf3b3a2d57e96f3c719266b2b2 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Mon, 31 May 2010 21:16:30 +0200
+Subject: [PATCH] microblaze: Label MB 7.20.d as broken with WB cache
+
+MB version 7.20.d contains fault which is related with WB that's why
+error message will be shown.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ arch/microblaze/kernel/cpu/cache.c |    4 ++--
+ 1 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/arch/microblaze/kernel/cpu/cache.c b/arch/microblaze/kernel/cpu/cache.c
+index 109876e..8cf0828 100644
+--- a/arch/microblaze/kernel/cpu/cache.c
++++ b/arch/microblaze/kernel/cpu/cache.c
+@@ -624,7 +624,7 @@ void microblaze_cache_init(void)
+ 		if (cpuinfo.dcache_wb) {
+ 			INFO("wb_msr");
+ 			mbc = (struct scache *)&wb_msr;
+-			if (cpuinfo.ver_code < CPUVER_7_20_D) {
++			if (cpuinfo.ver_code <= CPUVER_7_20_D) {
+ 				/* MS: problem with signal handling - hw bug */
+ 				INFO("WB won't work properly");
+ 			}
+@@ -641,7 +641,7 @@ void microblaze_cache_init(void)
+ 		if (cpuinfo.dcache_wb) {
+ 			INFO("wb_nomsr");
+ 			mbc = (struct scache *)&wb_nomsr;
+-			if (cpuinfo.ver_code < CPUVER_7_20_D) {
++			if (cpuinfo.ver_code <= CPUVER_7_20_D) {
+ 				/* MS: problem with signal handling - hw bug */
+ 				INFO("WB won't work properly");
+ 			}
+-- 
+1.7.0.4
+

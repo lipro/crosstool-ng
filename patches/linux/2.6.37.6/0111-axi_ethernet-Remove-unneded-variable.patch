@@ -1,0 +1,45 @@
+From 64ea9cdc4b4ac48275e5d065bb1e69b17d6888b6 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Tue, 31 May 2011 10:48:43 +0200
+Subject: [PATCH] axi_ethernet: Remove unneded variable
+
+Remove bdstat variable from recv function.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ drivers/net/xilinx_axienet_main.c |    5 +----
+ 1 files changed, 1 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/net/xilinx_axienet_main.c b/drivers/net/xilinx_axienet_main.c
+index 05a82ee..bc06634 100755
+--- a/drivers/net/xilinx_axienet_main.c
++++ b/drivers/net/xilinx_axienet_main.c
+@@ -828,7 +828,6 @@ static void axienet_recv(struct net_device *ndev)
+ {
+ 	struct axienet_local *lp = netdev_priv(ndev);
+ 	struct sk_buff *skb, *new_skb;
+-	unsigned int bdstat;
+ 	struct axidma_bd *cur_p;
+ 	dma_addr_t tail_p;
+ 	int length;
+@@ -837,8 +836,7 @@ static void axienet_recv(struct net_device *ndev)
+ 	tail_p = lp->rx_bd_p + sizeof(*lp->rx_bd_v) * lp->rx_bd_ci;
+ 	cur_p = &lp->rx_bd_v[lp->rx_bd_ci];
+ 
+-	bdstat = cur_p->status;
+-	while ((bdstat & XAXIDMA_BD_STS_COMPLETE_MASK)) {
++	while ((cur_p->status & XAXIDMA_BD_STS_COMPLETE_MASK)) {
+ 		skb = (struct sk_buff *)(cur_p->sw_id_offset);
+ 		length = cur_p->app4 & 0x0000FFFF;
+ 
+@@ -892,7 +890,6 @@ static void axienet_recv(struct net_device *ndev)
+ 			lp->rx_bd_ci = 0;
+ 
+ 		cur_p = &lp->rx_bd_v[lp->rx_bd_ci];
+-		bdstat = cur_p->status;
+ 	}
+ 	axienet_dma_out32(lp, XAXIDMA_RX_TDESC_OFFSET, tail_p);
+ }
+-- 
+1.7.0.4
+

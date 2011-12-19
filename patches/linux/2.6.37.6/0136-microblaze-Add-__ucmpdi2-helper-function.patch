@@ -1,0 +1,62 @@
+From 77dfa9e86828f1155cc7d3434aec0e8df176c4b0 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Fri, 23 Sep 2011 08:46:24 +0200
+Subject: [PATCH] microblaze: Add __ucmpdi2() helper function
+
+Add missing __ucmpdi2 helper function.
+
+Error log:
+kernel/built-in.o: In function `print_graph_duration':
+: undefined reference to `__ucmpdi2'
+kernel/built-in.o: In function `print_graph_duration':
+: undefined reference to `__ucmpdi2'
+
+Based on MIPS code.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ arch/microblaze/lib/Makefile  |    1 +
+ arch/microblaze/lib/ucmpdi2.c |   20 ++++++++++++++++++++
+ 2 files changed, 21 insertions(+), 0 deletions(-)
+ create mode 100644 arch/microblaze/lib/ucmpdi2.c
+
+diff --git a/arch/microblaze/lib/Makefile b/arch/microblaze/lib/Makefile
+index 10c320a..c13067b 100644
+--- a/arch/microblaze/lib/Makefile
++++ b/arch/microblaze/lib/Makefile
+@@ -25,5 +25,6 @@ lib-y += lshrdi3.o
+ lib-y += modsi3.o
+ lib-y += muldi3.o
+ lib-y += mulsi3.o
++lib-y += ucmpdi2.o
+ lib-y += udivsi3.o
+ lib-y += umodsi3.o
+diff --git a/arch/microblaze/lib/ucmpdi2.c b/arch/microblaze/lib/ucmpdi2.c
+new file mode 100644
+index 0000000..63ca105
+--- /dev/null
++++ b/arch/microblaze/lib/ucmpdi2.c
+@@ -0,0 +1,20 @@
++#include <linux/module.h>
++
++#include "libgcc.h"
++
++word_type __ucmpdi2(unsigned long long a, unsigned long long b)
++{
++	const DWunion au = {.ll = a};
++	const DWunion bu = {.ll = b};
++
++	if ((unsigned int) au.s.high < (unsigned int) bu.s.high)
++		return 0;
++	else if ((unsigned int) au.s.high > (unsigned int) bu.s.high)
++		return 2;
++	if ((unsigned int) au.s.low < (unsigned int) bu.s.low)
++		return 0;
++	else if ((unsigned int) au.s.low > (unsigned int) bu.s.low)
++		return 2;
++	return 1;
++}
++EXPORT_SYMBOL(__ucmpdi2);
+-- 
+1.7.0.4
+

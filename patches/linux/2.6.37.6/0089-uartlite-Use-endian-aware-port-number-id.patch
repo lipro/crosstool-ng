@@ -1,0 +1,31 @@
+From 8b350b1642eb4a232599f6c45a1fb46c4ad14221 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Mon, 11 Apr 2011 11:12:31 +0200
+Subject: [PATCH] uartlite: Use endian aware port-number id
+
+Convert id from port-number property from big endian
+to cpu endian.
+It is causing the problem on little-endian Microblaze
+systems.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ drivers/serial/uartlite.c |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/drivers/serial/uartlite.c b/drivers/serial/uartlite.c
+index a8a129f..72fb403 100644
+--- a/drivers/serial/uartlite.c
++++ b/drivers/serial/uartlite.c
+@@ -626,7 +626,7 @@ ulite_of_probe(struct platform_device *op, const struct of_device_id *match)
+ 
+ 	id = of_get_property(op->dev.of_node, "port-number", NULL);
+ 
+-	return ulite_assign(&op->dev, id ? *id : -1, res.start, irq);
++	return ulite_assign(&op->dev, id ? be32_to_cpup(id) : -1, res.start, irq);
+ }
+ 
+ static int __devexit ulite_of_remove(struct platform_device *op)
+-- 
+1.7.0.4
+

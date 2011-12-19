@@ -1,0 +1,27 @@
+From 963c9f51f7a7e5b9940f55075a8bd2342ae8e80b Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Thu, 9 Jun 2011 15:24:22 +0200
+Subject: [PATCH] axi_ethernet: Remove duplicate macro
+
+Remove duplicate macro. It is defined in the same file.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ drivers/net/xilinx_axienet.h |    1 -
+ 1 files changed, 0 insertions(+), 1 deletions(-)
+
+diff --git a/drivers/net/xilinx_axienet.h b/drivers/net/xilinx_axienet.h
+index 736ddca..34e46dc 100755
+--- a/drivers/net/xilinx_axienet.h
++++ b/drivers/net/xilinx_axienet.h
+@@ -134,7 +134,6 @@
+ #define XAXIDMA_DFT_RX_THRESHOLD	01
+ #define XAXIDMA_DFT_RX_WAITBOUND	10
+ 
+-#define XAXIDMA_BD_CTRL_LENGTH_MASK	0x007FFFFF	/* Requested len */
+ #define XAXIDMA_BD_CTRL_TXSOF_MASK	0x08000000	/* First tx packet */
+ #define XAXIDMA_BD_CTRL_TXEOF_MASK	0x04000000	/* Last tx packet */
+ #define XAXIDMA_BD_CTRL_ALL_MASK	0x0C000000	/* All control bits */
+-- 
+1.7.0.4
+

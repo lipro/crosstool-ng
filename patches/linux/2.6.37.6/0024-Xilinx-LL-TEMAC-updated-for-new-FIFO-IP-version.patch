@@ -1,0 +1,29 @@
+From f63987b2a3b9f69d8eb830940d3825bdce56d1fe Mon Sep 17 00:00:00 2001
+From: John Linn <john.linn@xilinx.com>
+Date: Sat, 6 Jun 2009 14:53:44 -0600
+Subject: [PATCH] Xilinx: LL TEMAC: updated for new FIFO IP version
+
+Added a new version of the FIFO IP to help with MicroBlaze
+testing.
+
+Signed-off-by: John Linn <john.linn@xilinx.com>
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ drivers/net/xilinx_lltemac/xlltemac_main.c |    1 +
+ 1 files changed, 1 insertions(+), 0 deletions(-)
+
+diff --git a/drivers/net/xilinx_lltemac/xlltemac_main.c b/drivers/net/xilinx_lltemac/xlltemac_main.c
+index 13104be..636f18c 100644
+--- a/drivers/net/xilinx_lltemac/xlltemac_main.c
++++ b/drivers/net/xilinx_lltemac/xlltemac_main.c
+@@ -3243,6 +3243,7 @@ static u32 get_u32(struct of_device *ofdev, const char *s) {
+ static struct of_device_id xtenet_fifo_of_match[] = {
+ 	{ .compatible = "xlnx,xps-ll-fifo-1.00.a", },
+ 	{ .compatible = "xlnx,xps-ll-fifo-1.00.b", },
++	{ .compatible = "xlnx,xps-ll-fifo-1.01.a", },
+ 	{ /* end of list */ },
+ };
+ 
+-- 
+1.7.0.4
+

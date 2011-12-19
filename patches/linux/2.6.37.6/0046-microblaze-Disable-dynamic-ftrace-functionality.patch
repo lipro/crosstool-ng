@@ -1,0 +1,29 @@
+From 79552419749b967077c58561981ffb693b7ef5cb Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Thu, 7 Oct 2010 16:06:48 +1000
+Subject: [PATCH] microblaze: Disable dynamic ftrace functionality
+
+For the most cases static ftrace is enought. Dynamic
+ftrace work in the latest kernel.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ arch/microblaze/Kconfig |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/arch/microblaze/Kconfig b/arch/microblaze/Kconfig
+index 387d5ff..658bd48 100644
+--- a/arch/microblaze/Kconfig
++++ b/arch/microblaze/Kconfig
+@@ -4,7 +4,7 @@ config MICROBLAZE
+ 	select HAVE_FUNCTION_TRACER
+ 	select HAVE_FUNCTION_TRACE_MCOUNT_TEST
+ 	select HAVE_FUNCTION_GRAPH_TRACER
+-	select HAVE_DYNAMIC_FTRACE
++	#select HAVE_DYNAMIC_FTRACE
+ 	select HAVE_FTRACE_MCOUNT_RECORD
+ 	select USB_ARCH_HAS_EHCI
+ 	select ARCH_WANT_OPTIONAL_GPIOLIB
+-- 
+1.7.0.4
+

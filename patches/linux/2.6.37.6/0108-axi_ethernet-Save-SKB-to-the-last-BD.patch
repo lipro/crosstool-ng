@@ -1,0 +1,36 @@
+From 539c05bcb22d7ddc12e4b24adb128b670b98030d Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Mon, 30 May 2011 16:06:13 +0200
+Subject: [PATCH] axi_ethernet: Save SKB to the last BD
+
+Ensure that SKB is not freezed before all fragments are sent.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ drivers/net/xilinx_axienet_main.c |    3 +--
+ 1 files changed, 1 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/net/xilinx_axienet_main.c b/drivers/net/xilinx_axienet_main.c
+index 6053707..a9577d0 100755
+--- a/drivers/net/xilinx_axienet_main.c
++++ b/drivers/net/xilinx_axienet_main.c
+@@ -791,8 +791,6 @@ static int axienet_start_xmit(struct sk_buff *skb, struct net_device *ndev)
+ 	cur_p->cntrl = cur_p->cntrl | XAXIDMA_BD_CTRL_TXSOF_MASK;
+ 	cur_p->phys = dma_map_single(ndev->dev.parent, skb->data, skb->len,
+ 				     DMA_TO_DEVICE);
+-	cur_p->app4 = (unsigned long)skb;
+-
+ 	for (ii = 0; ii < num_frag; ii++) {
+ 
+ 		lp->tx_bd_tail++;
+@@ -808,6 +806,7 @@ static int axienet_start_xmit(struct sk_buff *skb, struct net_device *ndev)
+ 		cur_p->cntrl = frag->size;
+ 	}
+ 	cur_p->cntrl |= XAXIDMA_BD_CTRL_TXEOF_MASK;
++	cur_p->app4 = (unsigned long)skb;
+ 
+ 	tail_p = lp->tx_bd_p + sizeof(*lp->tx_bd_v) * lp->tx_bd_tail;
+ 	/* Start the transfer */
+-- 
+1.7.0.4
+

@@ -1,0 +1,27 @@
+From 2914ee23eb97ee4a3fc4b3d3a7175e56989c5798 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Fri, 30 Sep 2011 14:35:30 +0200
+Subject: [PATCH] axienet: Remove additional assignment.
+
+Assigment is done in eth_type_trans.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ drivers/net/xilinx_axienet_main.c |    1 -
+ 1 files changed, 0 insertions(+), 1 deletions(-)
+
+diff --git a/drivers/net/xilinx_axienet_main.c b/drivers/net/xilinx_axienet_main.c
+index 20ea0e1..9684dfd 100755
+--- a/drivers/net/xilinx_axienet_main.c
++++ b/drivers/net/xilinx_axienet_main.c
+@@ -836,7 +836,6 @@ static void axienet_recv(struct net_device *ndev)
+ 					DMA_FROM_DEVICE);
+ 
+ 		skb_put(skb, length);
+-		skb->dev = ndev;
+ 		skb->protocol = eth_type_trans(skb, ndev);
+ 		/*skb_checksum_none_assert(skb);*/
+ 		skb->ip_summed = CHECKSUM_NONE;
+-- 
+1.7.0.4
+

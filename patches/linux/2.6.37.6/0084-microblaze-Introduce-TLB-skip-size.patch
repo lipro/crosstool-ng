@@ -1,0 +1,80 @@
+From 93405755c2e267e62a05821bbed676dbe3b6fef7 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Mon, 4 Apr 2011 15:46:03 +0200
+Subject: [PATCH] microblaze: Introduce TLB skip size
+
+TLB skip size direct how many TLBs is skipped.
+Currently TLB0 and TLB1 are used for Linux kernel mapping
+that's why their are skipped.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ arch/microblaze/include/asm/mmu.h             |    1 +
+ arch/microblaze/kernel/hw_exception_handler.S |    7 ++++---
+ arch/microblaze/kernel/misc.S                 |    4 ++--
+ 3 files changed, 7 insertions(+), 5 deletions(-)
+
+diff --git a/arch/microblaze/include/asm/mmu.h b/arch/microblaze/include/asm/mmu.h
+index 8d6a654..5198de8 100644
+--- a/arch/microblaze/include/asm/mmu.h
++++ b/arch/microblaze/include/asm/mmu.h
+@@ -68,6 +68,7 @@ extern void _tlbia(void);		/* invalidate all TLB entries */
+  */
+ 
+ #  define MICROBLAZE_TLB_SIZE 64
++#  define MICROBLAZE_TLB_SKIP 2
+ 
+ /*
+  * TLB entries are defined by a "high" tag portion and a "low" data
+diff --git a/arch/microblaze/kernel/hw_exception_handler.S b/arch/microblaze/kernel/hw_exception_handler.S
+index 782680d..12a61d4 100644
+--- a/arch/microblaze/kernel/hw_exception_handler.S
++++ b/arch/microblaze/kernel/hw_exception_handler.S
+@@ -805,18 +805,19 @@ ex_handler_done:
+  * A common place to load the TLB.
+  */
+ 	tlb_index:
+-		.long	1 /* MS: storing last used tlb index */
++		/* MS: storing last used tlb index */
++		.long	(MICROBLAZE_TLB_SKIP - 1)
+ 	finish_tlb_load:
+ 		/* MS: load the last used TLB index. */
+ 		lwi	r5, r0, TOPHYS(tlb_index)
+ 		addik	r5, r5, 1 /* MS: inc tlb_index -> use next one */
+ 
+ /* MS: FIXME this is potential fault, because this is mask not count */
+-		andi	r5, r5, (MICROBLAZE_TLB_SIZE-1)
++		andi	r5, r5, MICROBLAZE_TLB_SIZE - 1
+ 		ori	r6, r0, 1
+ 		cmp	r31, r5, r6
+ 		blti	r31, ex12
+-		addik	r5, r6, 1
++		addik	r5, r6, MICROBLAZE_TLB_SKIP - 1
+ 	ex12:
+ 		/* MS: save back current TLB index */
+ 		swi	r5, r0, TOPHYS(tlb_index)
+diff --git a/arch/microblaze/kernel/misc.S b/arch/microblaze/kernel/misc.S
+index 206da3d..c9090d7 100644
+--- a/arch/microblaze/kernel/misc.S
++++ b/arch/microblaze/kernel/misc.S
+@@ -36,7 +36,7 @@ _tlbia_1:
+ 	nop
+ 	mts	rtlbhi, r0 /* flush: ensure V is clear */
+ 	nop
+-	addik	r11, r12, -2
++	addik	r11, r12, -MICROBLAZE_TLB_SKIP
+ 	bneid	r11, _tlbia_1 /* loop for all entries */
+ 	addik	r12, r12, -1
+ 	/* sync */
+@@ -75,7 +75,7 @@ early_console_reg_tlb_alloc:
+ 	 * Load a TLB entry for the UART, so that microblaze_progress() can use
+ 	 * the UARTs nice and early.  We use a 4k real==virtual mapping.
+ 	 */
+-	ori	r4, r0, MICROBLAZE_TLB_SIZE - 1
++	ori	r4, r0, 63
+ 	mts	rtlbx, r4 /* TLB slot 63 */
+ 
+ 	or	r4,r5,r0
+-- 
+1.7.0.4
+

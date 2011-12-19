@@ -1,0 +1,99 @@
+From 21f307167afcfd898221f7ff47ffd2d56e8953b5 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Thu, 10 Nov 2011 13:38:54 +0100
+Subject: [PATCH] microblaze: Remove eprintk macro
+
+eprintk macro was used for printing early_printk
+messages. Early console registration was changed
+that's why this is not needed.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ arch/microblaze/include/asm/setup.h |    6 ------
+ arch/microblaze/kernel/setup.c      |   20 ++++++++++----------
+ arch/microblaze/kernel/timer.c      |    2 +-
+ 3 files changed, 11 insertions(+), 17 deletions(-)
+
+diff --git a/arch/microblaze/include/asm/setup.h b/arch/microblaze/include/asm/setup.h
+index 105fea3..9f195c0 100644
+--- a/arch/microblaze/include/asm/setup.h
++++ b/arch/microblaze/include/asm/setup.h
+@@ -26,12 +26,6 @@ int setup_early_printk(char *opt);
+ void remap_early_printk(void);
+ void disable_early_printk(void);
+ 
+-#if defined(CONFIG_EARLY_PRINTK)
+-#define eprintk early_printk
+-#else
+-#define eprintk printk
+-#endif
+-
+ void heartbeat(void);
+ void setup_heartbeat(void);
+ 
+diff --git a/arch/microblaze/kernel/setup.c b/arch/microblaze/kernel/setup.c
+index 8746604..3a553c9 100644
+--- a/arch/microblaze/kernel/setup.c
++++ b/arch/microblaze/kernel/setup.c
+@@ -151,35 +151,35 @@ void __init machine_early_init(const char *cmdline, unsigned int ram,
+ 	/* setup kernel_tlb after BSS cleaning
+ 	 * Maybe worth to move to asm code */
+ 	kernel_tlb = tlb0 + tlb1;
+-	/* eprintk("TLB1 0x%08x, TLB0 0x%08x, tlb 0x%x\n", tlb0,
++	/* printk("TLB1 0x%08x, TLB0 0x%08x, tlb 0x%x\n", tlb0,
+ 							tlb1, kernel_tlb); */
+ 
+-	eprintk("Ramdisk addr 0x%08x, ", ram);
++	printk("Ramdisk addr 0x%08x, ", ram);
+ 	if (fdt)
+-		eprintk("FDT at 0x%08x\n", fdt);
++		printk("FDT at 0x%08x\n", fdt);
+ 	else
+-		eprintk("Compiled-in FDT at 0x%08x\n",
++		printk("Compiled-in FDT at 0x%08x\n",
+ 					(unsigned int)_fdt_start);
+ 
+ #ifdef CONFIG_MTD_UCLINUX
+-	eprintk("Found romfs @ 0x%08x (0x%08x)\n",
++	printk("Found romfs @ 0x%08x (0x%08x)\n",
+ 			romfs_base, romfs_size);
+-	eprintk("#### klimit %p ####\n", old_klimit);
++	printk("#### klimit %p ####\n", old_klimit);
+ 	BUG_ON(romfs_size < 0); /* What else can we do? */
+ 
+-	eprintk("Moved 0x%08x bytes from 0x%08x to 0x%08x\n",
++	printk("Moved 0x%08x bytes from 0x%08x to 0x%08x\n",
+ 			romfs_size, romfs_base, (unsigned)&_ebss);
+ 
+-	eprintk("New klimit: 0x%08x\n", (unsigned)klimit);
++	printk("New klimit: 0x%08x\n", (unsigned)klimit);
+ #endif
+ 
+ #if CONFIG_XILINX_MICROBLAZE0_USE_MSR_INSTR
+ 	if (msr)
+-		eprintk("!!!Your kernel has setup MSR instruction but "
++		printk("!!!Your kernel has setup MSR instruction but "
+ 				"CPU don't have it %x\n", msr);
+ #else
+ 	if (!msr)
+-		eprintk("!!!Your kernel not setup MSR instruction but "
++		printk("!!!Your kernel not setup MSR instruction but "
+ 				"CPU have it %x\n", msr);
+ #endif
+ 
+diff --git a/arch/microblaze/kernel/timer.c b/arch/microblaze/kernel/timer.c
+index 2fafa93..91804cd 100644
+--- a/arch/microblaze/kernel/timer.c
++++ b/arch/microblaze/kernel/timer.c
+@@ -280,7 +280,7 @@ void __init time_init(void)
+ 	timer_num = be32_to_cpup(of_get_property(timer,
+ 						"xlnx,one-timer-only", NULL));
+ 	if (timer_num) {
+-		eprintk(KERN_EMERG "Please enable two timers in HW\n");
++		printk(KERN_EMERG "Please enable two timers in HW\n");
+ 		BUG();
+ 	}
+ 
+-- 
+1.7.0.4
+
