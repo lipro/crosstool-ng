@@ -1,7 +1,23 @@
 #!/bin/sh
 set -e
 
+if [ "$1" = "nosubmodule" ]; then
+    SKIP_SUBMODULE=1
+elif [ -n "$1" ]; then
+    echo "$0: Illegal argument $1"
+    echo "USAGE: $0 [nosubmodule]"
+    exit 1
+fi
+
 printf "Running autoconf...\n"
 autoconf -Wall --force
+
+if [ -n "$SKIP_SUBMODULE" ]; then
+    echo "Skipping submodule setup"
+else
+    echo "Setting up submodules"
+    git submodule init
+    git submodule update
+fi
 
 printf "Done. You may now run:\n    ./configure\n"
