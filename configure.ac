@@ -1,7 +1,7 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
-AC_PREREQ([2.67])
+AC_PREREQ([2.64])
 #AC_INIT([crosstool-NG], [hg], [crossgcc@sourceware.org])
 AC_INIT([crosstool-NG], [m4_esyscmd_s([cat .version])], [crossgcc@sourceware.org])
 AC_CONFIG_AUX_DIR([scripts])
