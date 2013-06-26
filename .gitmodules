@@ -1,0 +1,3 @@
+[submodule "local_src/binutils"]
+	path = local_src/binutils
+	url = git://gitorious.org/mbref/binutils-microblaze.git
