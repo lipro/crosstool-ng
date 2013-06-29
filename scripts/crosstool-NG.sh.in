@@ -559,6 +559,15 @@ if [ -z "${CT_RESTART}" ]; then
     CT_DoExecLog DEBUG sed -i -e 's,@@grep@@,"'"${grep}"'",;' "${CT_PREFIX_DIR}/bin/${CT_TARGET}-ct-ng.config"
     bzip2 -c -9 .config >>"${CT_PREFIX_DIR}/bin/${CT_TARGET}-ct-ng.config"
 
+    if [ "${CT_TOOLCHAIN_PTXDIST_APPROP}" = "y" ]; then
+        CT_DoLog EXTRA "Installing PTXdist appropriability"
+        if [ -n "${CT_TOOLCHAIN_PTXDIST_APPROP_EXTENSION}" ]; then
+            echo "PTXCONF_PROJECT=\"${CT_TOOLCHAIN_PTXDIST_APPROP_EXTENSION} (crosstool-${CT_VERSION})\"" >>"${CT_PREFIX_DIR}/bin/ptxconfig"
+        else
+            echo "PTXCONF_PROJECT=\"crosstool-${CT_VERSION} (${CT_STAR_DATE_HUMAN})\"" >>"${CT_PREFIX_DIR}/bin/ptxconfig"
+        fi
+    fi
+
     CT_DoStep EXTRA "Dumping internal crosstool-NG configuration"
     CT_DoLog EXTRA "Building a toolchain for:"
     CT_DoLog EXTRA "  build  = ${CT_REAL_BUILD}"
