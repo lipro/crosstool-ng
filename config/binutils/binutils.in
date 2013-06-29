@@ -139,6 +139,14 @@ config BINUTILS_HAS_PLUGINS
 config BINUTILS_HAS_PKGVERSION_BUGURL
     bool
 
+config BINUTILS_REMOVE_USELESS_LA
+    bool
+    prompt "Remove some useless .la files"
+    default n
+    help
+      If set to Y some useless .la files will be removed from sys-root
+      directory that were installed in a wrong manner.
+
 # Force using the BFD linker if needed
 # This is the case for some C libraries (eg. glibc and
 # eglibc at least) and affected components can select this

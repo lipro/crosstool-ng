@@ -370,6 +370,16 @@ do_binutils_for_target() {
         CT_DoLog EXTRA "Installing binutils' libraries (${targets[*]}) for target"
         CT_DoExecLog ALL make DESTDIR="${CT_SYSROOT_DIR}" "${install_targets[@]}"
 
+        if [ "${CT_BINUTILS_REMOVE_USELESS_LA}" = "y" ]; then
+            CT_DoLog EXTRA "Remove some useless .la files"
+            for lib in libbfd; do
+                libfiles=`(find ${CT_SYSROOT_DIR} -name ${lib}.la) 2>/dev/null`
+                for libfile in ${libfiles}; do
+                    CT_DoExecLog ALL rm -f ${libfile}
+                done
+            done
+        fi
+
         CT_Popd
         CT_EndStep
     fi
