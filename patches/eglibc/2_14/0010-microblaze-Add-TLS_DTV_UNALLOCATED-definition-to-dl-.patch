@@ -1,0 +1,40 @@
+From f024f1b791018c484d25941d69cc064ed7b57ec2 Mon Sep 17 00:00:00 2001
+From: David Holsgrove <david.holsgrove@petalogix.com>
+Date: Thu, 26 Jan 2012 09:38:24 +1000
+Subject: [PATCH 10/41] microblaze: Add TLS_DTV_UNALLOCATED definition to dl-tls.h
+
+Signed-off-by: David Holsgrove <david.holsgrove@petalogix.com>
+---
+ sysdeps/microblaze/dl-tls.h |    7 ++++---
+ 1 files changed, 4 insertions(+), 3 deletions(-)
+
+diff --git a/sysdeps/microblaze/dl-tls.h b/sysdeps/microblaze/dl-tls.h
+index e0324a7..e9adc5b 100644
+--- a/sysdeps/microblaze/dl-tls.h
++++ b/sysdeps/microblaze/dl-tls.h
+@@ -1,4 +1,4 @@
+-/* Thread-local storage handling in the ELF dynamic linker.  ARM version.
++/* Thread-local storage handling in the ELF dynamic linker.  Microblaze version.
+    Copyright (C) 2005 Free Software Foundation, Inc.
+    This file is part of the GNU C Library.
+ 
+@@ -17,7 +17,6 @@
+    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
+    02111-1307 USA.  */
+ 
+-
+ /* Type used for the representation of TLS information in the GOT.  */
+ typedef struct
+ {
+@@ -25,5 +24,7 @@ typedef struct
+   unsigned long int ti_offset;
+ } tls_index;
+ 
+-
+ extern void *__tls_get_addr (tls_index *ti);
++
++/* Value used for dtv entries for which the allocation is delayed.  */
++#define TLS_DTV_UNALLOCATED	((void *) -1l)
+-- 
+1.7.1
+

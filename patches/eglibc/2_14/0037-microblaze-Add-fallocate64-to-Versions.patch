@@ -1,0 +1,45 @@
+From 00b92db7acf300e5c6531f7ad754e535c4408129 Mon Sep 17 00:00:00 2001
+From: David Holsgrove <david.holsgrove@petalogix.com>
+Date: Mon, 8 Oct 2012 18:04:28 +1000
+Subject: [PATCH 37/41] microblaze: Add fallocate64 to Versions
+
+fallocate64 was a local only symbol in libc, need ot add to Versions
+in line with other archs to export as global for resolving reference
+at link time
+
+Signed-off-by: David Holsgrove <david.holsgrove@petalogix.com>
+---
+ sysdeps/unix/sysv/linux/microblaze/Versions |   12 +++++++++++-
+ 1 files changed, 11 insertions(+), 1 deletions(-)
+
+diff --git a/sysdeps/unix/sysv/linux/microblaze/Versions b/sysdeps/unix/sysv/linux/microblaze/Versions
+index 0799bf3..cf363fa 100644
+--- a/sysdeps/unix/sysv/linux/microblaze/Versions
++++ b/sysdeps/unix/sysv/linux/microblaze/Versions
+@@ -18,7 +18,7 @@ libc {
+     glob64;
+ 
+     # New rlimit interface
+-    getrlimit; setrlimit; getrlimit64;
++    getrlimit; setrlimit; getrlimit64; setrlimit64;
+ 
+     # r*
+     readdir64; readdir64_r;
+@@ -29,4 +29,14 @@ libc {
+     # v*
+     versionsort64;
+   }
++  GLIBC_2.3.3 {
++    posix_fadvise64; posix_fallocate64;
++    setcontext; getcontext; swapcontext; makecontext;
++  }
++  GLIBC_2.3.4 {
++    setcontext; getcontext; swapcontext; makecontext;
++  }
++  GLIBC_2.11 {
++    fallocate64;
++  }
+ }
+-- 
+1.7.1
+

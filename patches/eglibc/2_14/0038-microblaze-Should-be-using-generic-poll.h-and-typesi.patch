@@ -1,0 +1,133 @@
+From c3dfe21d4c018eefd69284014a970fd6d0302706 Mon Sep 17 00:00:00 2001
+From: David Holsgrove <david.holsgrove@petalogix.com>
+Date: Tue, 9 Oct 2012 16:20:44 +1000
+Subject: [PATCH 38/41] microblaze: Should be using generic poll.h and typesizes.h
+
+Signed-off-by: David Holsgrove <david.holsgrove@petalogix.com>
+---
+ sysdeps/unix/sysv/linux/microblaze/bits/poll.h     |   40 ------------
+ .../unix/sysv/linux/microblaze/bits/typesizes.h    |   65 --------------------
+ 2 files changed, 0 insertions(+), 105 deletions(-)
+ delete mode 100644 sysdeps/unix/sysv/linux/microblaze/bits/poll.h
+ delete mode 100644 sysdeps/unix/sysv/linux/microblaze/bits/typesizes.h
+
+diff --git a/sysdeps/unix/sysv/linux/microblaze/bits/poll.h b/sysdeps/unix/sysv/linux/microblaze/bits/poll.h
+deleted file mode 100644
+index 468e93c..0000000
+--- a/sysdeps/unix/sysv/linux/microblaze/bits/poll.h
++++ /dev/null
+@@ -1,40 +0,0 @@
+-/* The GNU C Library is free software; you can redistribute it and/or
+-   modify it under the terms of the GNU Lesser General Public
+-   License as published by the Free Software Foundation; either
+-   version 2.1 of the License, or (at your option) any later version.
+-
+-   The GNU C Library is distributed in the hope that it will be useful,
+-   but WITHOUT ANY WARRANTY; without even the implied warranty of
+-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+-   Lesser General Public License for more details.
+-
+-   You should have received a copy of the GNU Lesser General Public
+-   License along with the GNU C Library; if not, write to the Free
+-   Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
+-   02111-1307 USA.  */
+-
+-#ifndef _SYS_POLL_H
+-# error "Never use <bits/poll.h> directly; include <sys/poll.h> instead."
+-#endif
+-
+-/* Event types that can be polled for.  These bits may be set in `events'
+-   to indicate the interesting event types; they will appear in `revents'
+-   to indicate the status of the file descriptor.  */
+-#define POLLIN		0x001		/* There is data to read.  */
+-#define POLLPRI		0x002		/* There is urgent data to read.  */
+-#define POLLOUT		0x004		/* Writing now will not block.  */
+-
+-#ifdef __USE_XOPEN
+-/* These values are defined in XPG4.2.  */
+-# define POLLRDNORM	0x040		/* Normal data may be read.  */
+-# define POLLRDBAND	0x080		/* Priority data may be read.  */
+-# define POLLWRNORM	POLLOUT		/* Writing now will not block.  */
+-# define POLLWRBAND	0x100		/* Priority data may be written.  */
+-#endif
+-
+-/* Event types always implicitly polled for.  These bits need not be set in
+-   `events', but they will appear in `revents' to indicate the status of
+-   the file descriptor.  */
+-#define POLLERR		0x008		/* Error condition.  */
+-#define POLLHUP		0x010		/* Hung up.  */
+-#define POLLNVAL	0x020		/* Invalid polling request.  */
+diff --git a/sysdeps/unix/sysv/linux/microblaze/bits/typesizes.h b/sysdeps/unix/sysv/linux/microblaze/bits/typesizes.h
+deleted file mode 100644
+index 55d92b9..0000000
+--- a/sysdeps/unix/sysv/linux/microblaze/bits/typesizes.h
++++ /dev/null
+@@ -1,65 +0,0 @@
+-/* bits/typesizes.h -- underlying types for *_t.  Generic version.
+-   Copyright (C) 2002, 2003 Free Software Foundation, Inc.
+-   This file is part of the GNU C Library.
+-
+-   The GNU C Library is free software; you can redistribute it and/or
+-   modify it under the terms of the GNU Lesser General Public
+-   License as published by the Free Software Foundation; either
+-   version 2.1 of the License, or (at your option) any later version.
+-
+-   The GNU C Library is distributed in the hope that it will be useful,
+-   but WITHOUT ANY WARRANTY; without even the implied warranty of
+-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+-   Lesser General Public License for more details.
+-
+-   You should have received a copy of the GNU Lesser General Public
+-   License along with the GNU C Library; if not, write to the Free
+-   Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
+-   02111-1307 USA.  */
+-
+-#ifndef _BITS_TYPES_H
+-# error "Never include <bits/typesizes.h> directly; use <sys/types.h> instead."
+-#endif
+-
+-#ifndef	_BITS_TYPESIZES_H
+-#define	_BITS_TYPESIZES_H	1
+-
+-/* See <bits/types.h> for the meaning of these macros.  This file exists so
+-   that <bits/types.h> need not vary across different GNU platforms.  */
+-
+-#define __DEV_T_TYPE		__UQUAD_TYPE
+-#define __UID_T_TYPE		__U32_TYPE
+-#define __GID_T_TYPE		__U32_TYPE
+-#define __INO_T_TYPE		__ULONGWORD_TYPE
+-#define __INO64_T_TYPE		__UQUAD_TYPE
+-#define __MODE_T_TYPE		__U32_TYPE
+-#define __NLINK_T_TYPE		__UWORD_TYPE
+-#define __OFF_T_TYPE		__SLONGWORD_TYPE
+-#define __OFF64_T_TYPE		__SQUAD_TYPE
+-#define __PID_T_TYPE		__S32_TYPE
+-#define __RLIM_T_TYPE		__ULONGWORD_TYPE
+-#define __RLIM64_T_TYPE		__UQUAD_TYPE
+-#define	__BLKCNT_T_TYPE		__SLONGWORD_TYPE
+-#define	__BLKCNT64_T_TYPE	__SQUAD_TYPE
+-#define	__FSBLKCNT_T_TYPE	__ULONGWORD_TYPE
+-#define	__FSBLKCNT64_T_TYPE	__UQUAD_TYPE
+-#define	__FSFILCNT_T_TYPE	__ULONGWORD_TYPE
+-#define	__FSFILCNT64_T_TYPE	__UQUAD_TYPE
+-#define	__ID_T_TYPE		__U32_TYPE
+-#define __CLOCK_T_TYPE		__SLONGWORD_TYPE
+-#define __TIME_T_TYPE		__SLONGWORD_TYPE
+-#define __USECONDS_T_TYPE	__U32_TYPE
+-#define __SUSECONDS_T_TYPE	__SLONGWORD_TYPE
+-#define __DADDR_T_TYPE		__S32_TYPE
+-#define __SWBLK_T_TYPE		__SLONGWORD_TYPE
+-#define __KEY_T_TYPE		__S32_TYPE
+-#define __CLOCKID_T_TYPE	__S32_TYPE
+-#define __TIMER_T_TYPE		void *
+-#define __BLKSIZE_T_TYPE	__SLONGWORD_TYPE
+-#define __FSID_T_TYPE		struct { int __val[2]; }
+-#define __SSIZE_T_TYPE		__SWORD_TYPE
+-
+-/* Number of descriptors that can fit in an `fd_set'.  */
+-#define	__FD_SETSIZE		1024
+-
+-#endif /* bits/typesizes.h */
+-- 
+1.7.1
+
