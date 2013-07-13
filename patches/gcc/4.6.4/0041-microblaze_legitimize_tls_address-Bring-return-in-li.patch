@@ -1,0 +1,81 @@
+From cce1d5e13961d28b6febff58bf3ead30efe2830e Mon Sep 17 00:00:00 2001
+From: David Holsgrove <david.holsgrove@petalogix.com>
+Date: Thu, 26 Jan 2012 08:50:05 +1000
+Subject: [PATCH 41/79] microblaze_legitimize_tls_address: Bring return in line with other archs
+
+prevents ICE while building eglibc string;
+
+strerror_l.c:72:8: internal compiler error: in microblaze_legitimize_tls_address, at config/microblaze/microblaze.c:622
+
+Signed-off-by: David Holsgrove <david.holsgrove@petalogix.com>
+---
+ gcc/config/microblaze/microblaze.c |   36 ++++++++++++++++++++++++++++--------
+ 1 files changed, 28 insertions(+), 8 deletions(-)
+
+diff --git a/gcc/config/microblaze/microblaze.c b/gcc/config/microblaze/microblaze.c
+index c9cdd32..1b5b840 100755
+--- a/gcc/config/microblaze/microblaze.c
++++ b/gcc/config/microblaze/microblaze.c
+@@ -595,16 +595,38 @@ rtx
+ microblaze_legitimize_tls_address(rtx x, rtx reg)
+ {
+   rtx dest, insns, ret, eqv, addend;
+-  unsigned int model = SYMBOL_REF_TLS_MODEL (x);
++  enum tls_model model;
++  model = SYMBOL_REF_TLS_MODEL (x);
+ 
+   switch (model)
+     {
++       case TLS_MODEL_GLOBAL_DYNAMIC:
++	   insns = microblaze_call_tls_get_addr (x, reg, &ret, TLS_GD);
++	   dest = gen_reg_rtx (Pmode);
++	   emit_libcall_block (insns, dest, ret, x);
++	   break;
++
++       case TLS_MODEL_LOCAL_DYNAMIC:
++	   insns = microblaze_call_tls_get_addr (x, reg, &ret, TLS_LDM);
++
++	   /* Attach a unique REG_EQUIV, to allow the RTL optimizers to
++	      share the LDM result with other LD model accesses.  */
++	   eqv = gen_rtx_UNSPEC (Pmode, gen_rtvec (1, const0_rtx),
++				UNSPEC_TLS);
++	   dest = gen_reg_rtx (Pmode);
++	   emit_libcall_block (insns, dest, ret, eqv);
++
++	   /* Load the addend.  */
++           addend = gen_rtx_UNSPEC (Pmode, gen_rtvec (2, x, GEN_INT (TLS_DTPREL)),
++			       UNSPEC_TLS);
++	   addend = force_reg (SImode, gen_rtx_CONST (SImode, addend));
++	   dest = gen_rtx_PLUS (Pmode, dest, addend);
++	   break;
+        case TLS_MODEL_INITIAL_EXEC:
+            insns = microblaze_call_tls_get_addr (x, reg, &ret, TLS_GD);
+            dest = gen_reg_rtx (Pmode);
+            emit_libcall_block (insns, dest, ret, x);
+-           return dest;
+-         break;
++           break;
+ 
+        case TLS_MODEL_LOCAL_EXEC:
+            insns = microblaze_call_tls_get_addr (x, reg, &ret, TLS_LDM);
+@@ -620,14 +642,12 @@ microblaze_legitimize_tls_address(rtx x, rtx reg)
+            addend = gen_rtx_UNSPEC (Pmode, gen_rtvec (2, x, GEN_INT (TLS_DTPREL)),
+ 			       UNSPEC_TLS);
+            addend = force_reg (SImode, gen_rtx_CONST (SImode, addend));
+-           return gen_rtx_PLUS (Pmode, dest, addend);
+-
+-         break;
++           dest = gen_rtx_PLUS (Pmode, dest, addend);
++           break;
+ 
+        default:
+-	abort();
++	gcc_unreachable ();
+     }
+-
+   return dest;
+ }
+ 
+-- 
+1.7.1
+

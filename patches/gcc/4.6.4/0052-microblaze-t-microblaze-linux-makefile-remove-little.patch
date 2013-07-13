@@ -1,0 +1,30 @@
+From 64af8ac126551dfa41772c2069e83d0e0ea7a848 Mon Sep 17 00:00:00 2001
+From: David Holsgrove <david.holsgrove@petalogix.com>
+Date: Thu, 12 Apr 2012 13:07:52 +1000
+Subject: [PATCH 52/79] microblaze: t-microblaze-linux makefile, remove little-endian combo
+
+as we will be building microblaze / microblazeel toolchains separately
+
+Signed-off-by: David Holsgrove <david.holsgrove@petalogix.com>
+---
+ gcc/config/microblaze/t-microblaze-linux |    6 ++----
+ 1 files changed, 2 insertions(+), 4 deletions(-)
+
+diff --git a/gcc/config/microblaze/t-microblaze-linux b/gcc/config/microblaze/t-microblaze-linux
+index aa00f04..fa2c594 100644
+--- a/gcc/config/microblaze/t-microblaze-linux
++++ b/gcc/config/microblaze/t-microblaze-linux
+@@ -1,8 +1,6 @@
+-MULTILIB_OPTIONS = mxl-barrel-shift mno-xl-soft-mul mxl-multiply-high mlittle-endian
+-MULTILIB_DIRNAMES = bs m mh le
++MULTILIB_OPTIONS = mxl-barrel-shift mno-xl-soft-mul mxl-multiply-high
++MULTILIB_DIRNAMES = bs m mh
+ MULTILIB_EXCEPTIONS = *mxl-barrel-shift/mxl-multiply-high mxl-multiply-high
+-MULTILIB_EXCEPTIONS += *mxl-barrel-shift/mxl-multiply-high/mlittle-endian
+-MULTILIB_EXCEPTIONS += mxl-multiply-high/mlittle-endian
+ 
+ # Extra files
+ microblaze-c.o: $(srcdir)/config/microblaze/microblaze-c.c \
+-- 
+1.7.1
+

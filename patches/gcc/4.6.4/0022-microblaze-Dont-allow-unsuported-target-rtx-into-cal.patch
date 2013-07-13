@@ -1,0 +1,53 @@
+From 9112a15b22c54aec8c1ba63aa726a8a451eb6a7c Mon Sep 17 00:00:00 2001
+From: Edgar E. Iglesias <edgar.iglesias@gmail.com>
+Date: Fri, 20 Apr 2012 01:48:27 +0200
+Subject: [PATCH 22/79] microblaze: Dont allow unsuported target rtx into call_internal1
+
+Fix it by adding a simplified call_insn_operand, call_insn_simple_operand
+that only accepts the supported rtx code types.
+
+Signed-off-by: Edgar E. Iglesias <edgar.iglesias@gmail.com>
+---
+ gcc/config/microblaze/microblaze.md |    3 ++-
+ gcc/config/microblaze/predicates.md |    4 ++++
+ 2 files changed, 6 insertions(+), 1 deletions(-)
+
+diff --git a/gcc/config/microblaze/microblaze.md b/gcc/config/microblaze/microblaze.md
+index 478946f..86c4bcd 100755
+--- a/gcc/config/microblaze/microblaze.md
++++ b/gcc/config/microblaze/microblaze.md
+@@ -2103,7 +2103,7 @@
+   (set_attr "length"	"4")])
+ 
+ (define_insn "call_internal1"
+-  [(call (mem (match_operand:SI 0 "call_insn_operand" "ri"))
++  [(call (mem (match_operand:SI 0 "call_insn_simple_operand" "ri"))
+ 	 (match_operand:SI 1 "" "i"))
+   (clobber (reg:SI R_SR))]
+   ""
+@@ -2119,6 +2119,7 @@
+     else if (GET_CODE (target) == REG)
+         return "brald\tr15,%0\;%#";	
+     else {
++        debug_rtx(target);
+         fprintf (stderr,"Unsupported call insn\n");
+         return NULL;
+     }
+diff --git a/gcc/config/microblaze/predicates.md b/gcc/config/microblaze/predicates.md
+index ea2f1f0..f565149 100644
+--- a/gcc/config/microblaze/predicates.md
++++ b/gcc/config/microblaze/predicates.md
+@@ -49,6 +49,10 @@
+ (define_predicate "call_insn_operand"
+   (match_test "CALL_INSN_OP (op)"))
+ 
++(define_predicate "call_insn_simple_operand"
++  (and (match_test "CALL_INSN_OP (op)")
++       (match_test "GET_CODE (op) == REG || GET_CODE (op) == SYMBOL_REF || GET_CODE (op) == CONST_INT")))
++
+ ;; Return if OPERAND is valid as a source operand for a move instruction.
+ (define_predicate "move_operand"
+   (and (
+-- 
+1.7.1
+

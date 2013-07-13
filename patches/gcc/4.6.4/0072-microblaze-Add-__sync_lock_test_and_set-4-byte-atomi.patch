@@ -1,0 +1,55 @@
+From 987cc6faf7ba1321c6cc38fd14f02128431de738 Mon Sep 17 00:00:00 2001
+From: David Holsgrove <david.holsgrove@petalogix.com>
+Date: Wed, 1 Aug 2012 16:32:53 +1000
+Subject: [PATCH 72/79] microblaze: Add __sync_lock_test_and_set 4 byte atomic builtin
+
+Signed-off-by: David Holsgrove <david.holsgrove@petalogix.com>
+---
+ gcc/config/microblaze/microblaze.md |    1 +
+ gcc/config/microblaze/sync.md       |   21 +++++++++++++++++++++
+ 2 files changed, 22 insertions(+), 0 deletions(-)
+
+diff --git a/gcc/config/microblaze/microblaze.md b/gcc/config/microblaze/microblaze.md
+index c481f35..1a73301 100755
+--- a/gcc/config/microblaze/microblaze.md
++++ b/gcc/config/microblaze/microblaze.md
+@@ -42,6 +42,7 @@
+   (UNSPEC_CMPU		    105)    ;; unsigned compare
+   (UNSPEC_TLS           106)    ;; jump table
+   (UNSPEC_SYNC_CAS      107)    ;; Represent an atomic compare swap.
++  (UNSPEC_SYNC_XCHG     108)    ;; Represent an atomic exchange.
+ ])
+ 
+ 
+diff --git a/gcc/config/microblaze/sync.md b/gcc/config/microblaze/sync.md
+index 5cb5dd9..1092d9c 100644
+--- a/gcc/config/microblaze/sync.md
++++ b/gcc/config/microblaze/sync.md
+@@ -42,3 +42,24 @@
+     return "";
+   }
+ )
++
++(define_insn "sync_lock_test_and_setsi"
++  [(set (match_operand:SI 0 "register_operand" "=&d")        	;; retval
++	(match_operand:SI 1 "nonimmediate_operand" "+Q"))	;; mem
++   (set (match_dup 1)
++	(unspec
++	  [(match_operand:SI 2 "register_operand" "d")]		;; value
++	  UNSPEC_SYNC_XCHG))
++   (clobber (match_scratch:SI 3 "=&d"))]			;; scratch
++  ""
++  {
++    output_asm_insn ("addc \tr0,r0,r0", operands);
++    output_asm_insn ("lwx  \t%0,%y1,r0", operands);
++    output_asm_insn ("addic\t%3,r0,0", operands);
++    output_asm_insn ("bnei \t%3,.-8", operands);
++    output_asm_insn ("swx  \t%2,%y1,r0", operands);
++    output_asm_insn ("addic\t%3,r0,0", operands);
++    output_asm_insn ("bnei \t%3,.-20", operands);
++    return "";
++  }
++)
+-- 
+1.7.1
+

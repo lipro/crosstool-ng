@@ -1,0 +1,67 @@
+From 1635ce6ccc63f85c45b3e586c42e561c7067b47f Mon Sep 17 00:00:00 2001
+From: David Holsgrove <david.holsgrove@petalogix.com>
+Date: Fri, 9 Dec 2011 14:40:10 +1000
+Subject: [PATCH 17/79] Add microblaze_legitimate_pic_operand method to prevent ICE
+
+insn contains an invalid address
+
+Signed-off-by: David Holsgrove <david.holsgrove@petalogix.com>
+---
+ gcc/config/microblaze/microblaze.c |   27 +++++++++++++++++++++++++++
+ gcc/config/microblaze/microblaze.h |    2 +-
+ 2 files changed, 28 insertions(+), 1 deletions(-)
+
+diff --git a/gcc/config/microblaze/microblaze.c b/gcc/config/microblaze/microblaze.c
+index 6a915e9..7e8ea07 100644
+--- a/gcc/config/microblaze/microblaze.c
++++ b/gcc/config/microblaze/microblaze.c
+@@ -591,6 +591,33 @@ microblaze_legitimate_address_p (enum machine_mode mode, rtx x, bool strict)
+   return microblaze_classify_address (&addr, x, mode, strict);
+ }
+ 
++int
++microblaze_valid_pic_const (rtx x)
++{
++  switch (GET_CODE (x))
++    {
++    case CONST:
++    case CONST_INT:
++    case CONST_DOUBLE:
++      return true;
++    default:
++      return false;
++    }
++}
++
++int
++microblaze_legitimate_pic_operand (rtx x)
++{
++  struct microblaze_address_info addr;
++
++  if (pic_address_needs_scratch (x))
++    return 0;
++  if (!microblaze_valid_pic_const(x))
++    return 0;
++
++  return 1;
++}
++
+ 
+ /* Try machine-dependent ways of modifying an illegitimate address
+    to be legitimate.  If we find one, return the new, valid address.
+diff --git a/gcc/config/microblaze/microblaze.h b/gcc/config/microblaze/microblaze.h
+index f716dfe..0582bb3 100644
+--- a/gcc/config/microblaze/microblaze.h
++++ b/gcc/config/microblaze/microblaze.h
+@@ -562,7 +562,7 @@ typedef struct microblaze_args
+ 
+ /* Define this, so that when PIC, reload won't try to reload invalid
+    addresses which require two reload registers.  */
+-#define LEGITIMATE_PIC_OPERAND_P(X)  (!pic_address_needs_scratch (X))
++#define LEGITIMATE_PIC_OPERAND_P(X)  microblaze_legitimate_pic_operand (X)
+ 
+ /* At present, GAS doesn't understand li.[sd], so don't allow it
+    to be generated at present.  */
+-- 
+1.7.1
+

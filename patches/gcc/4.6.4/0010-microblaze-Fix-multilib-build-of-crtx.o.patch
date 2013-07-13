@@ -1,0 +1,29 @@
+From d7af1f2ebb495152413991fbfa393fc2cff775e1 Mon Sep 17 00:00:00 2001
+From: Edgar E. Iglesias <edgar.iglesias@gmail.com>
+Date: Tue, 18 Oct 2011 22:39:46 +0200
+Subject: [PATCH 10/79] microblaze: Fix multilib build of crtx.o
+
+Pass MULTILIB_CFLAGS to the crt*.o compilation.
+
+Signed-off-by: Edgar E. Iglesias <edgar.iglesias@gmail.com>
+---
+ gcc/config/microblaze/t-microblaze |    4 ++--
+ 1 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/gcc/config/microblaze/t-microblaze b/gcc/config/microblaze/t-microblaze
+index 021dbbe..d926b1f 100644
+--- a/gcc/config/microblaze/t-microblaze
++++ b/gcc/config/microblaze/t-microblaze
+@@ -27,7 +27,7 @@ dp-bit.c: $(srcdir)/config/fp-bit.c
+ 
+ # Assemble startup files
+ $(T)crti$(objext): $(srcdir)/config/microblaze/crti.s
+-	$(GCC_FOR_TARGET) -c $(srcdir)/config/microblaze/crti.s -o $(T)crti$(objext)
++	$(GCC_FOR_TARGET) $(MULTILIB_CFLAGS) -c $(srcdir)/config/microblaze/crti.s -o $(T)crti$(objext)
+ 
+ $(T)crtn$(objext): $(srcdir)/config/microblaze/crtn.s
+-	$(GCC_FOR_TARGET) -c $(srcdir)/config/microblaze/crtn.s -o $(T)crtn$(objext)
++	$(GCC_FOR_TARGET) $(MULTILIB_CFLAGS) -c $(srcdir)/config/microblaze/crtn.s -o $(T)crtn$(objext)
+-- 
+1.7.1
+
