@@ -1,0 +1,29 @@
+From 7722a5bb0171d415e1ebbd7d4be4213203342de1 Mon Sep 17 00:00:00 2001
+From: David Holsgrove <david.holsgrove@petalogix.com>
+Date: Tue, 29 May 2012 18:03:40 +1000
+Subject: [PATCH 15/17] microblaze: Add missing declarations for xil_printf to stdio.h
+
+for inclusion in toolchain and use in c++ apps
+
+Signed-off-by: David Holsgrove <david.holsgrove@petalogix.com>
+---
+ newlib/libc/include/stdio.h |    3 +++
+ 1 files changed, 3 insertions(+), 0 deletions(-)
+
+diff --git a/newlib/libc/include/stdio.h b/newlib/libc/include/stdio.h
+index 2912eaf..edbe193 100644
+--- a/newlib/libc/include/stdio.h
++++ b/newlib/libc/include/stdio.h
+@@ -228,6 +228,9 @@ int	_EXFUN(sprintf, (char *, const char *, ...)
+ int	_EXFUN(remove, (const char *));
+ int	_EXFUN(rename, (const char *, const char *));
+ #endif
++void    _EXFUN(xil_printf, (const char*, ...));
++void    _EXFUN(putnum, (unsigned int ));
++void    _EXFUN(print, (char* ));
+ #if !defined(__STRICT_ANSI__) || defined(__USE_XOPEN2K)
+ #ifdef _COMPILING_NEWLIB
+ int	_EXFUN(fseeko, (FILE *, _off_t, int));
+-- 
+1.7.1
+

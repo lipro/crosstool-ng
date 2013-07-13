@@ -1,0 +1,131 @@
+From 5a82561f31737fa0dd8c8717f34672de4b8255a7 Mon Sep 17 00:00:00 2001
+From: Edgar E. Iglesias <edgar.iglesias@gmail.com>
+Date: Mon, 26 Sep 2011 12:08:44 +0200
+Subject: [PATCH 05/17] microblaze: Add little-endian support
+
+Signed-off-by: Edgar E. Iglesias <edgar.iglesias@gmail.com>
+---
+ config.sub                           |    9 +++++----
+ libgloss/configure                   |    2 +-
+ libgloss/configure.in                |    2 +-
+ newlib/configure.host                |    6 +++---
+ newlib/libc/include/machine/ieeefp.h |    4 ++++
+ 5 files changed, 14 insertions(+), 9 deletions(-)
+
+diff --git a/config.sub b/config.sub
+index f9fcdc8..ced5558 100755
+--- a/config.sub
++++ b/config.sub
+@@ -154,7 +154,7 @@ case $os in
+ 	-convergent* | -ncr* | -news | -32* | -3600* | -3100* | -hitachi* |\
+ 	-c[123]* | -convex* | -sun | -crds | -omron* | -dg | -ultra | -tti* | \
+ 	-harris | -dolphin | -highlevel | -gould | -cbm | -ns | -masscomp | \
+-	-apple | -axis | -knuth | -cray | -microblaze)
++	-apple | -axis | -knuth | -cray | -microblaze*)
+ 		os=
+ 		basic_machine=$1
+ 		;;
+@@ -260,7 +260,7 @@ case $basic_machine in
+ 	| ip2k | iq2000 \
+ 	| lm32 \
+ 	| m32c | m32r | m32rle | m68000 | m68k | m88k \
+-	| maxq | mb | microblaze | mcore | mep | metag \
++	| maxq | mb | microblaze | microblazeel | mcore | mep | metag \
+ 	| mips | mipsbe | mipseb | mipsel | mipsle \
+ 	| mips16 \
+ 	| mips64 | mips64el \
+@@ -370,7 +370,8 @@ case $basic_machine in
+ 	| lm32-* \
+ 	| m32c-* | m32r-* | m32rle-* \
+ 	| m68000-* | m680[012346]0-* | m68360-* | m683?2-* | m68k-* \
+-	| m88110-* | m88k-* | maxq-* | mcore-* | metag-* | microblaze-* \
++	| m88110-* | m88k-* | maxq-* | mcore-* | metag-* \
++	| microblaze-* | microblazeel-* \
+ 	| mips-* | mipsbe-* | mipseb-* | mipsel-* | mipsle-* \
+ 	| mips16-* \
+ 	| mips64-* | mips64el-* \
+@@ -770,7 +771,7 @@ case $basic_machine in
+ 		basic_machine=ns32k-utek
+ 		os=-sysv
+ 		;;
+-	microblaze)
++	microblaze*)
+ 		basic_machine=microblaze-xilinx
+ 		;;
+ 	mingw32)
+diff --git a/libgloss/configure b/libgloss/configure
+index e897d3a..c9fe499 100755
+--- a/libgloss/configure
++++ b/libgloss/configure
+@@ -2529,7 +2529,7 @@ case "${target}" in
+ 	subdirs="$subdirs moxie"
+ 
+ 	;;
+-  microblaze-*-*)
++  microblaze*-*-*)
+ 	subdirs="$subdirs microblaze"
+ 
+ 	;;
+diff --git a/libgloss/configure.in b/libgloss/configure.in
+index a1eb47c..f37a8a7 100644
+--- a/libgloss/configure.in
++++ b/libgloss/configure.in
+@@ -103,7 +103,7 @@ case "${target}" in
+   moxie-*-*)
+ 	AC_CONFIG_SUBDIRS([moxie])
+ 	;;
+-  microblaze-*-*)
++  microblaze*-*-*)
+ 	AC_CONFIG_SUBDIRS([microblaze])
+ 	;;
+   mt-*-*)
+diff --git a/newlib/configure.host b/newlib/configure.host
+index 9661f69..ff7ecf9 100644
+--- a/newlib/configure.host
++++ b/newlib/configure.host
+@@ -195,7 +195,7 @@ case "${host_cpu}" in
+ 	;;
+   mcore)
+ 	;;
+-  microblaze)
++  microblaze*)
+ 	machine_dir=microblaze
+ 	;;
+   mep)
+@@ -447,7 +447,7 @@ case "${host}" in
+ 	default_newlib_io_long_long="yes"
+ 	newlib_cflags="${newlib_cflags} -DMISSING_SYSCALL_NAMES"
+ 	;;
+-  microblaze-*-*)
++  microblaze*-*-*)
+ 	machine_dir=microblaze
+ 	;;
+   mips*-dec-*)
+@@ -653,7 +653,7 @@ case "${host}" in
+   mcore-*-*)
+ 	syscall_dir=syscalls
+ 	;;
+-  microblaze-*-*)
++  microblaze*-*-*)
+    	default_newlib_io_long_long="yes"
+  	newlib_cflags="${newlib_cflags} -DMISSING_SYSCALL_NAMES -DSMALL_MEMORY -D_REENT_SMALL"
+ 	;;
+diff --git a/newlib/libc/include/machine/ieeefp.h b/newlib/libc/include/machine/ieeefp.h
+index 5554c65..ebfb4b3 100644
+--- a/newlib/libc/include/machine/ieeefp.h
++++ b/newlib/libc/include/machine/ieeefp.h
+@@ -339,7 +339,11 @@
+ #endif
+ 
+ #ifdef __MICROBLAZE__
++#ifndef __MICROBLAZEEL__
+ #define __IEEE_BIG_ENDIAN
++#else
++#define __IEEE_LITTLE_ENDIAN
++#endif
+ #endif
+ 
+ #ifdef __RX__
+-- 
+1.7.1
+
