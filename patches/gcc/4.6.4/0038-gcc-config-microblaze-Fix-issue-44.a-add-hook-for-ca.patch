@@ -1,0 +1,27 @@
+From 03ef6b59e326163f13af68628486db3eb355b0d8 Mon Sep 17 00:00:00 2001
+From: Gopi <gopi@linux69.(none)>
+Date: Tue, 16 Nov 2010 16:19:00 +0530
+Subject: [PATCH 38/79] gcc/config/microblaze Fix issue 44.a, add hook for cannot_force_const_mem
+
+Don't allow TLS symbols to be placed in data memory as a strategy to
+convert non-const operands to const operands. The expand_move will then
+be able to legitimize such tls references.
+---
+ gcc/config/microblaze/microblaze-protos.h |    1 +
+ 1 files changed, 1 insertions(+), 0 deletions(-)
+
+diff --git a/gcc/config/microblaze/microblaze-protos.h b/gcc/config/microblaze/microblaze-protos.h
+index fb42755..d1bd06a 100755
+--- a/gcc/config/microblaze/microblaze-protos.h
++++ b/gcc/config/microblaze/microblaze-protos.h
+@@ -38,6 +38,7 @@ extern void microblaze_expand_conditional_branch (enum machine_mode, rtx *);
+ extern void microblaze_expand_conditional_branch_sf (rtx *); 
+ extern int microblaze_can_use_return_insn (void);
+ extern int microblaze_const_double_ok (rtx, enum machine_mode);
++extern bool microblaze_cannot_force_const_mem (rtx);
+ extern void print_operand (FILE *, rtx, int);
+ extern void print_operand_address (FILE *, rtx);
+ extern void init_cumulative_args (CUMULATIVE_ARGS *,tree, rtx);
+-- 
+1.7.1
+

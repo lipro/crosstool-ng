@@ -1,0 +1,29 @@
+From ce1361abdc01c1aac80ac1725f6dd4658634e1df Mon Sep 17 00:00:00 2001
+From: Edgar E. Iglesias <edgar.iglesias@gmail.com>
+Date: Tue, 15 May 2012 12:18:30 +0200
+Subject: [PATCH 57/79] microblaze: Predefine linux macros for the linux toolchain
+
+Signed-off-by: Edgar E. Iglesias <edgar.iglesias@gmail.com>
+---
+ gcc/config/microblaze/linux.h |    8 ++++++++
+ 1 files changed, 8 insertions(+), 0 deletions(-)
+
+diff --git a/gcc/config/microblaze/linux.h b/gcc/config/microblaze/linux.h
+index 3593d27..5d11f04 100644
+--- a/gcc/config/microblaze/linux.h
++++ b/gcc/config/microblaze/linux.h
+@@ -40,3 +40,11 @@
+   %{mbig-endian:-EB} \
+   %{mlittle-endian:-EL}"
+ 
++/* For the microblaze-*-linux* subtarget.  */
++#undef TARGET_OS_CPP_BUILTINS
++#define TARGET_OS_CPP_BUILTINS()                \
++  do                                            \
++    {                                           \
++      LINUX_TARGET_OS_CPP_BUILTINS();           \
++    }                                           \
++  while (0)
+-- 
+1.7.1
+

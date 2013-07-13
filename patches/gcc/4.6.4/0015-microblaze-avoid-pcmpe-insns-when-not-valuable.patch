@@ -1,0 +1,50 @@
+From 5def77f7b915afc8901d9315fbea8754423d5b9f Mon Sep 17 00:00:00 2001
+From: Edgar E. Iglesias <edgar.iglesias@gmail.com>
+Date: Sat, 19 Nov 2011 05:37:28 +0100
+Subject: [PATCH 15/79] microblaze: avoid pcmpe insns when not valuable
+
+Fore pure in and qeuality comparisions, xor is better,
+Xor is a one cycle insn as pcmp.
+
+Pattern insns will stll be used when you nee to
+conditionally set something to one or zero, e.g
+
+if (a)
+  return 1;
+else
+  return 0;
+
+Signed-off-by: Edgar E. Iglesias <edgar.iglesias@gmail.com>
+---
+ gcc/config/microblaze/microblaze.c |   15 ++-------------
+ 1 files changed, 2 insertions(+), 13 deletions(-)
+
+diff --git a/gcc/config/microblaze/microblaze.c b/gcc/config/microblaze/microblaze.c
+index 36c0305..6a915e9 100644
+--- a/gcc/config/microblaze/microblaze.c
++++ b/gcc/config/microblaze/microblaze.c
+@@ -2835,19 +2835,8 @@ microblaze_emit_compare (enum machine_mode mode, rtx cmp, enum rtx_code *cmp_cod
+ 
+   if (code == EQ || code == NE)
+     {
+-      if (TARGET_PATTERN_COMPARE && GET_CODE(cmp_op1) == REG) 
+-        {
+-          if (code == EQ) 
+-	    emit_insn (gen_seq_internal_pat (comp_reg, cmp_op0, cmp_op1));
+-	  else
+-	    {    
+-	      emit_insn (gen_sne_internal_pat (comp_reg, cmp_op0, cmp_op1));
+-	      *cmp_code = EQ;
+-	    }
+-        }
+-      else
+-	/* Use xor for equal/not-equal comparison.  */
+-	emit_insn (gen_xorsi3 (comp_reg, cmp_op0, cmp_op1));
++      /* Use xor for equal/not-equal comparison.  */
++      emit_insn (gen_xorsi3 (comp_reg, cmp_op0, cmp_op1));
+     }
+   else if (code == GT || code == GTU || code == LE || code == LEU)
+     {
+-- 
+1.7.1
+

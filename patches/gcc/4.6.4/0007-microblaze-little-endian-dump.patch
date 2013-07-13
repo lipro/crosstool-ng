@@ -1,0 +1,266 @@
+From 41b8b8af95382085ee415f4781aef26a56546efd Mon Sep 17 00:00:00 2001
+From: Edgar E. Iglesias <edgar.iglesias@gmail.com>
+Date: Wed, 21 Sep 2011 23:16:21 +0200
+Subject: [PATCH 07/79] microblaze: little endian dump
+
+Needs to get split into different commits.
+
+Signed-off-by: Edgar E. Iglesias <edgar.iglesias@gmail.com>
+---
+ config.sub                                       |    9 ++++---
+ gcc/config.gcc                                   |   26 +++++++++++++++++++++-
+ gcc/config/microblaze/linux.h                    |    4 ++-
+ gcc/config/microblaze/microblaze-c.c             |   10 ++++++++
+ gcc/config/microblaze/microblaze.h               |   21 ++++++++++++++---
+ gcc/config/microblaze/microblaze.md              |   14 ++++++------
+ gcc/config/microblaze/microblaze.opt             |    8 ++++++
+ gcc/testsuite/gcc.c-torture/execute/20101011-1.c |    3 ++
+ 8 files changed, 78 insertions(+), 17 deletions(-)
+
+diff --git a/config.sub b/config.sub
+index 204218c..3ce3b8c 100755
+--- a/config.sub
++++ b/config.sub
+@@ -154,7 +154,7 @@ case $os in
+ 	-convergent* | -ncr* | -news | -32* | -3600* | -3100* | -hitachi* |\
+ 	-c[123]* | -convex* | -sun | -crds | -omron* | -dg | -ultra | -tti* | \
+ 	-harris | -dolphin | -highlevel | -gould | -cbm | -ns | -masscomp | \
+-	-apple | -axis | -knuth | -cray | -microblaze)
++	-apple | -axis | -knuth | -cray | -microblaze*)
+ 		os=
+ 		basic_machine=$1
+ 		;;
+@@ -260,7 +260,7 @@ case $basic_machine in
+ 	| ip2k | iq2000 \
+ 	| lm32 \
+ 	| m32c | m32r | m32rle | m68000 | m68k | m88k \
+-	| maxq | mb | microblaze | mcore | mep | metag \
++	| maxq | mb | microblaze | microblazeel | mcore | mep | metag \
+ 	| mips | mipsbe | mipseb | mipsel | mipsle \
+ 	| mips16 \
+ 	| mips64 | mips64el \
+@@ -356,7 +356,8 @@ case $basic_machine in
+ 	| lm32-* \
+ 	| m32c-* | m32r-* | m32rle-* \
+ 	| m68000-* | m680[012346]0-* | m68360-* | m683?2-* | m68k-* \
+-	| m88110-* | m88k-* | maxq-* | mcore-* | metag-* | microblaze-* \
++	| m88110-* | m88k-* | maxq-* | mcore-* | metag-* \
++	| microblaze-* | microblazeel-* \
+ 	| mips-* | mipsbe-* | mipseb-* | mipsel-* | mipsle-* \
+ 	| mips16-* \
+ 	| mips64-* | mips64el-* \
+@@ -753,7 +754,7 @@ case $basic_machine in
+ 		basic_machine=ns32k-utek
+ 		os=-sysv
+ 		;;
+-        microblaze)
++	microblaze*)
+ 		basic_machine=microblaze-xilinx
+ 		;;
+ 	mingw32)
+diff --git a/gcc/config.gcc b/gcc/config.gcc
+index 4e5bbfe..eadd5bc 100644
+--- a/gcc/config.gcc
++++ b/gcc/config.gcc
+@@ -1841,6 +1841,14 @@ mep-*-*)
+ 	use_gcc_stdint=wrap
+ 	;;
+ microblaze*-linux*)
++	case $target in
++	microblazeel-*)
++		tm_defines="${tm_defines} TARGET_BIG_ENDIAN_DEFAULT=0"
++		;;
++	microblaze-*)
++		tm_defines="${tm_defines} TARGET_BIG_ENDIAN_DEFAULT=4321"
++		;;
++	esac
+ 	tm_file="${tm_file} dbxelf.h gnu-user.h linux.h microblaze/linux.h"
+ 	c_target_objs="${c_target_objs} microblaze-c.o"
+ 	cxx_target_objs="${cxx_target_objs} microblaze-c.o"
+@@ -1848,13 +1856,29 @@ microblaze*-linux*)
+         extra_parts="crtbegin.o crtbeginS.o crtend.o crtendS.o crtbeginT.o"
+ 	;;
+ microblaze*-*-elf)
++	case $target in
++	microblazeel-*)
++		tm_defines="${tm_defines} TARGET_BIG_ENDIAN_DEFAULT=0"
++		;;
++	microblaze-*)
++		tm_defines="${tm_defines} TARGET_BIG_ENDIAN_DEFAULT=4321"
++		;;
++	esac
+ 	tm_file="${tm_file} dbxelf.h newlib-stdint.h"
+ 	c_target_objs="${c_target_objs} microblaze-c.o"
+ 	cxx_target_objs="${cxx_target_objs} microblaze-c.o"
+ 	tmake_file="${tmake_file} microblaze/t-microblaze"
+         ;;
+ microblaze*-*-*)
+-        tm_file="${tm_file} dbxelf.h"
++	case $target in
++	microblazeel-*)
++		tm_defines="${tm_defines} TARGET_BIG_ENDIAN_DEFAULT=0"
++		;;
++	microblaze-*)
++		tm_defines="${tm_defines} TARGET_BIG_ENDIAN_DEFAULT=4321"
++		;;
++	esac
++ tm_file="${tm_file} dbxelf.h"
+ 	c_target_objs="${c_target_objs} microblaze-c.o"
+ 	cxx_target_objs="${cxx_target_objs} microblaze-c.o"
+         tmake_file="${tmake_file} microblaze/t-microblaze"
+diff --git a/gcc/config/microblaze/linux.h b/gcc/config/microblaze/linux.h
+index 8b59d29..07f908c 100644
+--- a/gcc/config/microblaze/linux.h
++++ b/gcc/config/microblaze/linux.h
+@@ -33,5 +33,7 @@
+     %{!static: \
+       %{rdynamic:-export-dynamic} \
+       -dynamic-linker %(dynamic_linker)} \
+-    %{static:-static}}"
++    %{static:-static}} \
++  %{mbig-endian:-EB} \
++  %{mlittle-endian:-EL}"
+ 
+diff --git a/gcc/config/microblaze/microblaze-c.c b/gcc/config/microblaze/microblaze-c.c
+index 32c38da..d0c8ec2 100644
+--- a/gcc/config/microblaze/microblaze-c.c
++++ b/gcc/config/microblaze/microblaze-c.c
+@@ -41,6 +41,16 @@ microblaze_cpp_define (cpp_reader *pfile)
+   builtin_assert ("cpu=microblaze");
+   builtin_assert ("machine=microblaze");
+   builtin_define ("__MICROBLAZE__");
++  if (TARGET_LITTLE_ENDIAN)
++    {
++      builtin_define ("_LITTLE_ENDIAN");
++      builtin_define ("__MICROBLAZEEL__");
++    }
++  else
++    {
++      builtin_define ("_BIG_ENDIAN");
++      builtin_define ("__MICROBLAZEEB__");
++    }
+   if (!TARGET_SOFT_MUL) 
+     {
+       if (!flag_iso)
+diff --git a/gcc/config/microblaze/microblaze.h b/gcc/config/microblaze/microblaze.h
+index 8e75426..72f9395 100644
+--- a/gcc/config/microblaze/microblaze.h
++++ b/gcc/config/microblaze/microblaze.h
+@@ -46,8 +46,17 @@ extern enum pipeline_type microblaze_pipe;
+ 
+ #define OBJECT_FORMAT_ELF
+ 
++#if TARGET_BIG_ENDIAN_DEFAULT
++#define TARGET_ENDIAN_DEFAULT    0
++#define TARGET_ENDIAN_OPTION     "mbig-endian"
++#else
++#define TARGET_ENDIAN_DEFAULT    MASK_LITTLE_ENDIAN
++#define TARGET_ENDIAN_OPTION     "mlittle-endian"
++#endif
++
+ /* Default target_flags if no switches are specified  */
+-#define TARGET_DEFAULT      (MASK_SOFT_MUL | MASK_SOFT_DIV | MASK_SOFT_FLOAT)
++#define TARGET_DEFAULT      (MASK_SOFT_MUL | MASK_SOFT_DIV | MASK_SOFT_FLOAT \
++                             | TARGET_ENDIAN_DEFAULT)
+ 
+ /* The default is to not support PIC.  */
+ #define TARGET_SUPPORTS_PIC 0
+@@ -80,12 +89,16 @@ extern enum pipeline_type microblaze_pipe;
+ #define TARGET_ASM_SPEC ""
+ 
+ #define ASM_SPEC "\
+-%(target_asm_spec)"
++%(target_asm_spec) \
++%{mbig-endian:-EB} \
++%{mlittle-endian:-EL}"
+ 
+ /* Extra switches sometimes passed to the linker.  */
+ /* -xl-mode-xmdstub translated to -Zxl-mode-xmdstub -- deprecated.  */
+ 
+ #define LINK_SPEC "%{shared:-shared} -N -relax \
++  %{mbig-endian:-EB} \
++  %{mlittle-endian:-EL} \
+   %{Zxl-mode-xmdstub:-defsym _TEXT_START_ADDR=0x800} \
+   %{mxl-mode-xmdstub:-defsym _TEXT_START_ADDR=0x800} \
+   %{mxl-gp-opt:%{G*}} %{!mxl-gp-opt: -G 0} \
+@@ -186,8 +199,8 @@ extern enum pipeline_type microblaze_pipe;
+ /* Target machine storage layout */
+ 
+ #define BITS_BIG_ENDIAN 0
+-#define BYTES_BIG_ENDIAN 1
+-#define WORDS_BIG_ENDIAN 1
++#define BYTES_BIG_ENDIAN (TARGET_LITTLE_ENDIAN == 0)
++#define WORDS_BIG_ENDIAN (BYTES_BIG_ENDIAN)
+ #define BITS_PER_UNIT           8
+ #define BITS_PER_WORD           32
+ #define UNITS_PER_WORD          4
+diff --git a/gcc/config/microblaze/microblaze.md b/gcc/config/microblaze/microblaze.md
+index 6c2086e..c6ea5f4 100644
+--- a/gcc/config/microblaze/microblaze.md
++++ b/gcc/config/microblaze/microblaze.md
+@@ -896,14 +896,14 @@
+   ""
+   { 
+      if (which_alternative == 0)
+-       output_asm_insn ("addk\t%D0,r0,%1", operands);
++       output_asm_insn ("addk\t%L0,r0,%1", operands);
+      else
+-       output_asm_insn ("lw%i1\t%D0,%1", operands);
++       output_asm_insn ("lw%i1\t%L0,%1", operands);
+ 
+-     output_asm_insn ("add\t%0,%D0,%D0", operands);
+-     output_asm_insn ("addc\t%0,r0,r0", operands);
+-     output_asm_insn ("beqi\t%0,.+8", operands);
+-     return "addi\t%0,r0,0xffffffff";
++     output_asm_insn ("add\t%M0,%L0,%L0", operands);
++     output_asm_insn ("addc\t%M0,r0,r0", operands);
++     output_asm_insn ("beqi\t%M0,.+8", operands);
++     return "addi\t%M0,r0,0xffffffff";
+   }
+   [(set_attr "type"	"multi,multi,multi")
+   (set_attr "mode"	"DI")
+@@ -961,7 +961,7 @@
+       case 0:
+         return "addk\t%0,%1\n\taddk\t%D0,%d1";
+       case 1:
+-	return "addik\t%0,r0,%h1\n\taddik\t%D0,r0,%j1 #li => la";
++	return "addik\t%M0,r0,%h1\n\taddik\t%L0,r0,%j1 #li => la";
+       case 2:
+ 	  return "addk\t%0,r0,r0\n\taddk\t%D0,r0,r0";
+       case 3:
+diff --git a/gcc/config/microblaze/microblaze.opt b/gcc/config/microblaze/microblaze.opt
+index 97f3161..f84d9d1 100644
+--- a/gcc/config/microblaze/microblaze.opt
++++ b/gcc/config/microblaze/microblaze.opt
+@@ -55,6 +55,14 @@ mmemcpy
+ Target Mask(MEMCPY)
+ Don't optimize block moves, use memcpy
+ 
++mbig-endian
++Target Report RejectNegative InverseMask(LITTLE_ENDIAN)
++Assume target CPU is configured as big endian
++
++mlittle-endian
++Target Report RejectNegative Mask(LITTLE_ENDIAN)
++Assume target CPU is configured as little endian
++
+ mxl-soft-mul
+ Target Mask(SOFT_MUL)
+ Use the soft multiply emulation (default)
+diff --git a/gcc/testsuite/gcc.c-torture/execute/20101011-1.c b/gcc/testsuite/gcc.c-torture/execute/20101011-1.c
+index 7180e68..8523e4d 100644
+--- a/gcc/testsuite/gcc.c-torture/execute/20101011-1.c
++++ b/gcc/testsuite/gcc.c-torture/execute/20101011-1.c
+@@ -22,6 +22,9 @@
+   /* Not all Linux kernels deal correctly the breakpoints generated by
+      MIPS16 divisions by zero.  They show up as a SIGTRAP instead.  */
+ # define DO_TEST 0
++#elif defined (__MICROBLAZE__)
++/* We cannot rely on division by zero generating a trap. */
++# define DO_TEST 0
+ #else
+ # define DO_TEST 1
+ #endif
+-- 
+1.7.1
+

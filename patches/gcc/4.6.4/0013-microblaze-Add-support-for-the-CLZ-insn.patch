@@ -1,0 +1,86 @@
+From 314b6ceaa53b43654d4eba7d30ad7deb9ccf5cb3 Mon Sep 17 00:00:00 2001
+From: Edgar E. Iglesias <edgar.iglesias@gmail.com>
+Date: Fri, 4 Nov 2011 01:40:31 +0100
+Subject: [PATCH 13/79] microblaze: Add support for the CLZ insn
+
+Will be used if pattern-compare is enabled and the targeted
+core is newer than v8.10.a.
+
+Signed-off-by: Edgar E. Iglesias <edgar.iglesias@gmail.com>
+---
+ gcc/config/microblaze/microblaze.c  |   10 ++++++++++
+ gcc/config/microblaze/microblaze.h  |    4 ++++
+ gcc/config/microblaze/microblaze.md |   10 ++++++++++
+ 3 files changed, 24 insertions(+), 0 deletions(-)
+
+diff --git a/gcc/config/microblaze/microblaze.c b/gcc/config/microblaze/microblaze.c
+index 3f179e1..36c0305 100644
+--- a/gcc/config/microblaze/microblaze.c
++++ b/gcc/config/microblaze/microblaze.c
+@@ -143,6 +143,9 @@ int microblaze_section_threshold = -1;
+    delay slots.  -mcpu=v3.00.a or v4.00.a turns this on.  */
+ int microblaze_no_unsafe_delay;
+ 
++/* Set to one if the targeted core has the CLZ insn.  */
++int microblaze_has_clz = 0;
++
+ /* Which CPU pipeline do we use. We haven't really standardized on a CPU 
+    version having only a particular type of pipeline. There can still be 
+    options on the CPU to scale pipeline features up or down. :( 
+@@ -1370,6 +1373,13 @@ microblaze_option_override (void)
+ 		 "-mxl-multiply-high can be used only with -mcpu=v6.00.a or greater");
+     }
+ 
++  ver = MICROBLAZE_VERSION_COMPARE (microblaze_select_cpu, "v8.10.a");
++  microblaze_has_clz = 1;
++  if (ver < 0)
++    {
++        /* MicroBlaze prior to 8.10.a didn't have clz.  */
++        microblaze_has_clz = 0;
++    }
+   if (TARGET_MULTIPLY_HIGH && TARGET_SOFT_MUL)
+     error ("-mxl-multiply-high requires -mno-xl-soft-mul");
+ 
+diff --git a/gcc/config/microblaze/microblaze.h b/gcc/config/microblaze/microblaze.h
+index 8b796b8..6d08442 100644
+--- a/gcc/config/microblaze/microblaze.h
++++ b/gcc/config/microblaze/microblaze.h
+@@ -42,6 +42,7 @@ extern int microblaze_section_threshold;
+ extern int microblaze_dbx_regno[];
+ 
+ extern int microblaze_no_unsafe_delay;
++extern int microblaze_has_clz;
+ extern enum pipeline_type microblaze_pipe;
+ 
+ #define OBJECT_FORMAT_ELF
+@@ -58,6 +59,9 @@ extern enum pipeline_type microblaze_pipe;
+ #define TARGET_DEFAULT      (MASK_SOFT_MUL | MASK_SOFT_DIV | MASK_SOFT_FLOAT \
+                              | TARGET_ENDIAN_DEFAULT)
+ 
++/* Do we have CLZ?  */
++#define TARGET_HAS_CLZ      (TARGET_PATTERN_COMPARE && microblaze_has_clz)
++
+ /* The default is to not support PIC.  */
+ #define TARGET_SUPPORTS_PIC 0
+ 
+diff --git a/gcc/config/microblaze/microblaze.md b/gcc/config/microblaze/microblaze.md
+index c94942e..3c3805f 100644
+--- a/gcc/config/microblaze/microblaze.md
++++ b/gcc/config/microblaze/microblaze.md
+@@ -2263,3 +2263,13 @@
+   [(set_attr "type" "multi")
+    (set_attr "length" "12")])
+ 
++;; This insn gives the count of leading number of zeros for the second
++;; operand and stores the result in first operand.
++(define_insn "clzsi2"
++  [(set (match_operand:SI 0 "register_operand" "=r")
++        (clz:SI (match_operand:SI 1 "register_operand" "r")))]
++  "TARGET_HAS_CLZ"
++  "clz\t%0,%1"
++  [(set_attr "type"     "arith")
++  (set_attr "mode"      "none")
++  (set_attr "length"    "4")])
+-- 
+1.7.1
+

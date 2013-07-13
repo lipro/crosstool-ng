@@ -1,0 +1,48 @@
+From 969ffc34459dc50f64a78c17dcd84577e60f0bcf Mon Sep 17 00:00:00 2001
+From: Gopi <gopi@linux69.(none)>
+Date: Thu, 22 Apr 2010 18:31:30 +0530
+Subject: [PATCH 31/79] Define PIC_OFFSET_TABLE_REGNUM always (to support TLS without PIC). This is ok as r20 appearst to be a fixed register always.
+
+Add functions for LEGITIMATE_CONSTANT_P and LEGITIMATE_PIC_OPERAND_P
+---
+ gcc/config/microblaze/microblaze.h |   10 +++++++---
+ 1 files changed, 7 insertions(+), 3 deletions(-)
+
+diff --git a/gcc/config/microblaze/microblaze.h b/gcc/config/microblaze/microblaze.h
+index b1e0249..d4138c0 100755
+--- a/gcc/config/microblaze/microblaze.h
++++ b/gcc/config/microblaze/microblaze.h
+@@ -349,9 +349,14 @@ extern char microblaze_hard_regno_mode_ok[][FIRST_PSEUDO_REGISTER];
+ 
+ #define NO_FUNCTION_CSE                 1
+ 
++#if 0
++/* REVISIT : Appears that PIC_ADDR_REGNUM is always a fixed register */
+ #define PIC_OFFSET_TABLE_REGNUM         \
+         (flag_pic ? (GP_REG_FIRST + MB_ABI_PIC_ADDR_REGNUM) : \
+         INVALID_REGNUM)
++#else
++#define PIC_OFFSET_TABLE_REGNUM   (GP_REG_FIRST + MB_ABI_PIC_ADDR_REGNUM)
++#endif
+ 
+ enum reg_class
+ {
+@@ -567,13 +572,12 @@ typedef struct microblaze_args
+ 
+ /* Define this, so that when PIC, reload won't try to reload invalid
+    addresses which require two reload registers.  */
+-#define LEGITIMATE_PIC_OPERAND_P(X)  microblaze_legitimate_pic_operand (X)
++#define LEGITIMATE_PIC_OPERAND_P(X)  (legitimate_pic_operand_p(X))
+ 
+ /* At present, GAS doesn't understand li.[sd], so don't allow it
+    to be generated at present.  */
+ #define LEGITIMATE_CONSTANT_P(X)				\
+-  (GET_CODE (X) != CONST_DOUBLE					\
+-    || microblaze_const_double_ok (X, GET_MODE (X)))
++   (legitimate_const_operand_p(X))
+ 
+ #define CASE_VECTOR_MODE			(SImode)
+ 
+-- 
+1.7.1
+

@@ -1,0 +1,26 @@
+From 08a33033fc4e945021e3df5cbdbbe8da40e01c6d Mon Sep 17 00:00:00 2001
+From: Edgar E. Iglesias <edgar.iglesias@gmail.com>
+Date: Fri, 13 Apr 2012 14:12:18 +0200
+Subject: [PATCH 51/79] microblaze: Treat -fpic as -fPIC
+
+Signed-off-by: Edgar E. Iglesias <edgar.iglesias@gmail.com>
+---
+ gcc/config/microblaze/microblaze.c |    2 ++
+ 1 files changed, 2 insertions(+), 0 deletions(-)
+
+diff --git a/gcc/config/microblaze/microblaze.c b/gcc/config/microblaze/microblaze.c
+index b04633c..ad4096e 100755
+--- a/gcc/config/microblaze/microblaze.c
++++ b/gcc/config/microblaze/microblaze.c
+@@ -1752,6 +1752,8 @@ microblaze_option_override (void)
+ 
+   if (flag_pic)
+     {
++      /* Make sure it's 2, we only support one kind of PIC.  */
++      flag_pic = 2;
+       if (!TARGET_SUPPORTS_PIC)
+         {
+           error ("-fPIC/-fpic not supported for this target");
+-- 
+1.7.1
+

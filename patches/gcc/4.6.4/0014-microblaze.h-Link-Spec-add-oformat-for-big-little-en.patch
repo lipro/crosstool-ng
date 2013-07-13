@@ -1,0 +1,28 @@
+From ebc1afdeb20e763ffb3d1dd9474fa813df8169f1 Mon Sep 17 00:00:00 2001
+From: David Holsgrove <david.holsgrove@petalogix.com>
+Date: Thu, 10 Nov 2011 14:02:39 +1000
+Subject: [PATCH 14/79] microblaze.h: Link Spec - add oformat for big/little endian to resolve issue
+
+Signed-off-by: David Holsgrove <david.holsgrove@petalogix.com>
+---
+ gcc/config/microblaze/microblaze.h |    4 ++--
+ 1 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/gcc/config/microblaze/microblaze.h b/gcc/config/microblaze/microblaze.h
+index 6d08442..f716dfe 100644
+--- a/gcc/config/microblaze/microblaze.h
++++ b/gcc/config/microblaze/microblaze.h
+@@ -104,8 +104,8 @@ extern enum pipeline_type microblaze_pipe;
+ /* -xl-mode-xmdstub translated to -Zxl-mode-xmdstub -- deprecated.  */
+ 
+ #define LINK_SPEC "%{shared:-shared} -N -relax \
+-  %{mbig-endian:-EB} \
+-  %{mlittle-endian:-EL} \
++  %{mbig-endian:-EB --oformat=elf32-microblaze} \
++  %{mlittle-endian:-EL --oformat=elf32-microblazeel} \
+   %{Zxl-mode-xmdstub:-defsym _TEXT_START_ADDR=0x800} \
+   %{mxl-mode-xmdstub:-defsym _TEXT_START_ADDR=0x800} \
+   %{mxl-gp-opt:%{G*}} %{!mxl-gp-opt: -G 0} \
+-- 
+1.7.1
+
