@@ -1,0 +1,30 @@
+From 76f23b478873551036dd4f6ddd00cb413fa45941 Mon Sep 17 00:00:00 2001
+From: David Holsgrove <david.holsgrove@petalogix.com>
+Date: Thu, 19 Jan 2012 16:29:54 +1000
+Subject: [PATCH 04/41] eglibc no longer uses test for HAVE_TLS_SUPPORT
+
+Signed-off-by: David Holsgrove <david.holsgrove@petalogix.com>
+---
+ sysdeps/microblaze/nptl/tls.h |    6 ------
+ 1 files changed, 0 insertions(+), 6 deletions(-)
+
+diff --git a/sysdeps/microblaze/nptl/tls.h b/sysdeps/microblaze/nptl/tls.h
+index 8886254..a5c846d 100644
+--- a/sysdeps/microblaze/nptl/tls.h
++++ b/sysdeps/microblaze/nptl/tls.h
+@@ -42,12 +42,6 @@ typedef union dtv
+ # include <tcb-offsets.h>
+ #endif /* __ASSEMBLER__ */
+ 
+-
+-/* We require TLS support in the tools.  */
+-#ifndef HAVE_TLS_SUPPORT
+-# error "TLS support is required."
+-#endif
+-
+ /* Signal that TLS support is available.  */
+ # define USE_TLS	1
+ 
+-- 
+1.7.1
+

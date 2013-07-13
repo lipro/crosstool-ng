@@ -1,0 +1,211 @@
+From af133b52ce67586d38c2130e118b2ec8632c5527 Mon Sep 17 00:00:00 2001
+From: David Holsgrove <david.holsgrove@petalogix.com>
+Date: Mon, 21 May 2012 11:41:38 +1000
+Subject: [PATCH 33/41] microblaze: Add backtrace support for microblaze
+
+Seperate backtrace_linux.c for specific kernel data structure access.
+
+Added backtrace_linux to the makefile.
+
+Signed-off-by: David Holsgrove <david.holsgrove@petalogix.com>
+Signed-off-by: Nathan Rossi <nathan.rossi@petalogix.com>
+---
+ sysdeps/unix/sysv/linux/microblaze/Makefile        |    2 +-
+ sysdeps/unix/sysv/linux/microblaze/backtrace.c     |  117 ++++++++++++++++++++
+ .../unix/sysv/linux/microblaze/backtrace_linux.c   |   49 ++++++++
+ 3 files changed, 167 insertions(+), 1 deletions(-)
+ create mode 100644 sysdeps/unix/sysv/linux/microblaze/backtrace.c
+ create mode 100644 sysdeps/unix/sysv/linux/microblaze/backtrace_linux.c
+
+diff --git a/sysdeps/unix/sysv/linux/microblaze/Makefile b/sysdeps/unix/sysv/linux/microblaze/Makefile
+index c9fda5d..64487a6 100644
+--- a/sysdeps/unix/sysv/linux/microblaze/Makefile
++++ b/sysdeps/unix/sysv/linux/microblaze/Makefile
+@@ -9,5 +9,5 @@ install-bin += lddlibc4
+ endif
+ 
+ ifeq ($(subdir),resource)
+-sysdep_routines += oldgetrlimit64
++sysdep_routines += oldgetrlimit64 backtrace_linux
+ endif
+diff --git a/sysdeps/unix/sysv/linux/microblaze/backtrace.c b/sysdeps/unix/sysv/linux/microblaze/backtrace.c
+new file mode 100644
+index 0000000..7af1fb5
+--- /dev/null
++++ b/sysdeps/unix/sysv/linux/microblaze/backtrace.c
+@@ -0,0 +1,117 @@
++
++#include <stdio.h>
++#include <string.h>
++#include <sysdep.h>
++#include <signal.h>
++#include <execinfo.h>
++
++extern int __backtrace_lookup_prev_stack_frame_sighandler(
++				unsigned long fp, unsigned long pc,
++				unsigned long *pprev_fp, unsigned long *pprev_pc,
++				unsigned long *retaddr);
++
++inline long get_frame_size(unsigned long instr)
++{
++	return abs((short signed)(instr & 0xFFFF));
++}
++
++static unsigned long *find_frame_creation(unsigned long *pc)
++{
++	int i;
++
++	/* NOTE: Distance to search is arbitrary
++	 *	 250 works well for most things,
++	 *	 750 picks up things like tcp_recvmsg(),
++	 *	1000 needed for fat_fill_super()
++	 */
++	for (i = 0; i < 1000; i++, pc--) {
++		unsigned long instr;
++		unsigned long frame_size;
++
++		instr = *pc;
++
++		/* addik r1, r1, foo ? */
++		if ((instr & 0xFFFF0000) != 0x30210000)
++			continue;	/* No */
++
++		frame_size = get_frame_size(instr);
++		if ((frame_size < 8) || (frame_size & 3)) {
++			return NULL;
++		}
++		return pc;
++	}
++
++	return NULL;
++}
++
++static int lookup_prev_stack_frame(unsigned long fp, unsigned long pc,
++				unsigned long *pprev_fp, unsigned long *pprev_pc,
++				unsigned long *retaddr)
++{
++	unsigned long *prologue = NULL;
++
++	int is_signalhandler = __backtrace_lookup_prev_stack_frame_sighandler(
++			fp, pc, pprev_fp, pprev_pc, retaddr);
++
++	if (!is_signalhandler) {
++		prologue = find_frame_creation((unsigned long *)pc);
++
++		if (prologue) {
++			long frame_size = get_frame_size(*prologue);
++			*pprev_fp = fp + frame_size;
++			if (*retaddr != 0) {
++				*pprev_pc = *retaddr;
++			} else {
++				*pprev_pc = *(unsigned long *)fp;
++			}
++			*retaddr = 0;
++			if ((!(*pprev_pc) || ((*pprev_pc) & 3))) {
++				prologue=0;
++			}
++		} else {
++			*pprev_pc = 0;
++			*pprev_fp = fp;
++			*retaddr = 0;
++		}
++	}
++	return (!(*pprev_pc) || ((*pprev_pc) & 3)) ? -1 : 0;
++}
++
++int __backtrace(void **array, int size)
++{
++	unsigned long pc, fp;
++	unsigned long ppc, pfp;
++	unsigned long retaddr; /* Return address(r15) is required in the signal
++							  handler case, since the return address of the
++							  function which causes the signal may not be
++							  recorded in the stack */
++	int count;
++	int rc = 0;
++
++	__asm__ __volatile__(
++"mfs %0, rpc"
++: "=r"(pc)
++);
++
++	__asm__ __volatile__(
++"add %0, r1, r0"
++: "=r"(fp)
++);
++
++	array[0]=(void *)pc;
++	retaddr = 0;
++	for (count=1; count < size; count++) {
++		rc = lookup_prev_stack_frame(fp, pc, &pfp, &ppc, &retaddr);
++
++		fp=pfp;
++		pc=ppc;
++		array[count]=(void *)pc;
++		if (rc) {
++			return count;
++		}
++	}
++	return count;
++}
++
++weak_alias (__backtrace, backtrace)
++libc_hidden_def (__backtrace)
+diff --git a/sysdeps/unix/sysv/linux/microblaze/backtrace_linux.c b/sysdeps/unix/sysv/linux/microblaze/backtrace_linux.c
+new file mode 100644
+index 0000000..c29db67
+--- /dev/null
++++ b/sysdeps/unix/sysv/linux/microblaze/backtrace_linux.c
+@@ -0,0 +1,49 @@
++#include <stddef.h>
++#include <asm/sigcontext.h>
++#include <linux/signal.h>
++#include <asm-generic/ucontext.h>
++#include <asm/unistd.h>
++
++int __backtrace_lookup_prev_stack_frame_sighandler(
++				unsigned long fp, unsigned long pc,
++				unsigned long *pprev_fp, unsigned long *pprev_pc,
++				unsigned long *retaddr)
++{
++	unsigned long *tramp = 0;
++	struct ucontext *uc;
++
++	if (*retaddr == 0) {
++		/*fprintf(stderr, "working out sig-handler (pc = %08x)\n", pc);*/
++		/* In this case, the pc pointer should be accessible */
++		/* Kernel insert the a tramp between the signal handler frame and the
++		   caller frame in signal handling This is how the kernel add the tramp
++		   between frames:
++		   err |= __put_user(0x31800000 | __NR_rt_sigreturn ,
++		   frame->tramp + 0); // addi r12, r0, __NR_sigreturn
++		   err |= __put_user(0xb9cc0008, frame->tramp + 1); // brki r14, 0x8
++		   regs->r15 = ((unsigned long)frame->tramp)-8;
++		*/
++		tramp = (unsigned long *)pc;
++		tramp += 2;
++		if ((*tramp == (0x31800000 | __NR_rt_sigreturn)) && (*(tramp+1) == 0xb9cc0008)) {
++			//*pprev_fp = (unsigned long)(tramp + 2);
++			/* Signal handler function argument is:
++			   (int sig_num, siginfo_t * info, void * ucontext)
++			   the uncontext is the 3rd argument
++			*/
++			unsigned long ucptr = ((unsigned long)tramp) - sizeof(struct ucontext);
++			/*fprintf(stderr, "tramp = %08x\n", tramp);*/
++			/*fprintf(stderr, "ucptr = %08x\n", ucptr);*/
++			uc = (struct ucontext *)ucptr;
++			*pprev_pc = uc->uc_mcontext.regs.pc;
++			/* Need to record the return address since the return address of the
++			   function which causes this signal may not be recorded in the stack
++			*/
++			*pprev_fp = uc->uc_mcontext.regs.r1;
++			*retaddr = uc->uc_mcontext.regs.r15;
++			/* it is a signal handler */
++			return 1;
++		}
++	}
++	return 0;
++}
+-- 
+1.7.1
+

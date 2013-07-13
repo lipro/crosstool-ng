@@ -1,0 +1,49 @@
+From 5b9d6a0e85e9de2eb3e9ca5920735ad2adfe2b07 Mon Sep 17 00:00:00 2001
+From: David Holsgrove <david.holsgrove@petalogix.com>
+Date: Fri, 10 Feb 2012 15:56:13 +1000
+Subject: [PATCH 20/41] microblaze: Add return from DO_CALL(vfork,0) in vfork.S
+
+Signed-off-by: David Holsgrove <david.holsgrove@petalogix.com>
+---
+ nptl/sysdeps/unix/sysv/linux/microblaze/vfork.S |   14 ++++++--------
+ 1 files changed, 6 insertions(+), 8 deletions(-)
+
+diff --git a/nptl/sysdeps/unix/sysv/linux/microblaze/vfork.S b/nptl/sysdeps/unix/sysv/linux/microblaze/vfork.S
+index ca99596..bd7a46d 100644
+--- a/nptl/sysdeps/unix/sysv/linux/microblaze/vfork.S
++++ b/nptl/sysdeps/unix/sysv/linux/microblaze/vfork.S
+@@ -17,6 +17,7 @@
+ #define _ERRNO_H	1
+ #include <bits/errno.h>
+ #include <kernel-features.h>
++#include <tcb-offsets.h>
+ 
+ /* Clone the calling process, but without copying the whole address space.
+    The calling process is suspended until the new process exits or is
+@@ -26,18 +27,15 @@
+ ENTRY (__vfork)
+ 
+ #ifdef __NR_vfork
+-
+ 	DO_CALL (vfork, 0)
+-#if 0
+-	/* REVISIT */
+-	PSEUDO_RET
+-#endif
+ #else
+ 	DO_CALL (fork, 0)
+-#if 0
+-	PSEUDO_RET
+-#endif
+ #endif
++	addik	r12,r0,-4095
++	cmpu	r12,r12,r3
++	bgei	r12,SYSCALL_ERROR_LABEL
++	rtsd	r15,8
++	nop
+ 
+ PSEUDO_END (__vfork)
+ libc_hidden_def (__vfork)
+-- 
+1.7.1
+

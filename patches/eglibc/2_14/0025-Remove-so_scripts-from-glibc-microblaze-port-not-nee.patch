@@ -1,0 +1,38 @@
+From 4189661ed5e24d42a931dc35b583d15534558274 Mon Sep 17 00:00:00 2001
+From: David Holsgrove <david.holsgrove@petalogix.com>
+Date: Thu, 1 Mar 2012 16:20:06 +1000
+Subject: [PATCH 25/41] Remove so_scripts from glibc microblaze port - not needed
+
+Signed-off-by: David Holsgrove <david.holsgrove@petalogix.com>
+---
+ so_scripts/libc.so       |    5 -----
+ so_scripts/libpthread.so |    5 -----
+ 2 files changed, 0 insertions(+), 10 deletions(-)
+ delete mode 100644 so_scripts/libc.so
+ delete mode 100644 so_scripts/libpthread.so
+
+diff --git a/so_scripts/libc.so b/so_scripts/libc.so
+deleted file mode 100644
+index b525e69..0000000
+--- a/so_scripts/libc.so
++++ /dev/null
+@@ -1,5 +0,0 @@
+-/* GNU ld script
+-   Use the shared library, but some functions are only in
+-   the static library, so try that secondarily.  */
+-OUTPUT_FORMAT(elf32-microblaze)
+-GROUP ( libc.so.6 libc_nonshared.a )
+diff --git a/so_scripts/libpthread.so b/so_scripts/libpthread.so
+deleted file mode 100644
+index f7c49aa..0000000
+--- a/so_scripts/libpthread.so
++++ /dev/null
+@@ -1,5 +0,0 @@
+-/* GNU ld script
+-   Use the shared library, but some functions are only in
+-   the static library, so try that secondarily.  */
+-OUTPUT_FORMAT(elf32-microblaze)
+-GROUP ( libpthread.so.0 libpthread_nonshared.a )
+-- 
+1.7.1
+

@@ -1,0 +1,81 @@
+From cd834b45d570b33e62a861b74abdf4e52fdecdb7 Mon Sep 17 00:00:00 2001
+From: David Holsgrove <david.holsgrove@petalogix.com>
+Date: Fri, 27 Apr 2012 14:24:55 +1000
+Subject: [PATCH 29/41] microblaze: shm - fix INTERNAL_SYSCALL and shmat return value
+
+Remove raddr - its not set during microblaze shmat syscall
+
+Signed-off-by: David Holsgrove <david.holsgrove@petalogix.com>
+---
+ sysdeps/unix/sysv/linux/microblaze/shmat.c  |   15 +++++++++------
+ sysdeps/unix/sysv/linux/microblaze/shmctl.c |    2 +-
+ sysdeps/unix/sysv/linux/microblaze/sysdep.h |    7 ++++---
+ 3 files changed, 14 insertions(+), 10 deletions(-)
+
+diff --git a/sysdeps/unix/sysv/linux/microblaze/shmat.c b/sysdeps/unix/sysv/linux/microblaze/shmat.c
+index e429015..8b419e8 100644
+--- a/sysdeps/unix/sysv/linux/microblaze/shmat.c
++++ b/sysdeps/unix/sysv/linux/microblaze/shmat.c
+@@ -36,8 +36,8 @@ shmat (shmid, shmaddr, shmflg)
+      const void *shmaddr;
+      int shmflg;
+ {
+-  void *__unbounded result;
+-  void *__unbounded raddr;
++  INTERNAL_SYSCALL_DECL(err);
++  unsigned long resultvar;
+ 
+ #if __BOUNDED_POINTERS__
+   size_t length = ~0;
+@@ -48,9 +48,12 @@ shmat (shmid, shmaddr, shmflg)
+     length = shmds.shm_segsz;
+ #endif
+ 
+-  result = (void *__unbounded) INLINE_SYSCALL (shmat, 3, shmid, __ptrvalue ((void *) shmaddr), shmflg);
+-  if ((unsigned long) result <= -(unsigned long) SHMLBA)
+-    result = raddr;
++  resultvar = INTERNAL_SYSCALL (shmat, err, 3, shmid, __ptrvalue ((void *) shmaddr), shmflg);
++  if (INTERNAL_SYSCALL_ERROR_P (resultvar, err))
++    {
++      __set_errno (INTERNAL_SYSCALL_ERRNO (resultvar, err));
++      return (void *) -1l;
++    }
+ 
+-  return BOUNDED_N (result, length);
++  return BOUNDED_N (resultvar, length);
+ }
+diff --git a/sysdeps/unix/sysv/linux/microblaze/shmctl.c b/sysdeps/unix/sysv/linux/microblaze/shmctl.c
+index 66881df..9b29812 100644
+--- a/sysdeps/unix/sysv/linux/microblaze/shmctl.c
++++ b/sysdeps/unix/sysv/linux/microblaze/shmctl.c
+@@ -29,7 +29,7 @@
+ #include <shlib-compat.h>
+ #include <bp-checks.h>
+ 
+-#include "kernel-features.h"
++#include <kernel-features.h>
+ 
+ struct __old_shmid_ds
+ {
+diff --git a/sysdeps/unix/sysv/linux/microblaze/sysdep.h b/sysdeps/unix/sysv/linux/microblaze/sysdep.h
+index e419ace..544c064 100644
+--- a/sysdeps/unix/sysv/linux/microblaze/sysdep.h
++++ b/sysdeps/unix/sysv/linux/microblaze/sysdep.h
+@@ -159,10 +159,11 @@ SYSCALL_ERROR_LABEL_DCL:					\
+    call.  */
+ #undef INLINE_SYSCALL
+ #define INLINE_SYSCALL(name, nr, args...)				\
+-  ({ unsigned int _sys_result = INTERNAL_SYSCALL (name, , nr, args);	\
+-     if (__builtin_expect (INTERNAL_SYSCALL_ERROR_P (_sys_result, ), 0))\
++  ({ INTERNAL_SYSCALL_DECL (sc_err); \
++     unsigned int _sys_result = INTERNAL_SYSCALL (name, sc_err, nr, args);	\
++     if (INTERNAL_SYSCALL_ERROR_P (_sys_result, sc_err))\
+        {								\
+-	 __set_errno (INTERNAL_SYSCALL_ERRNO (_sys_result, ));		\
++	 __set_errno (INTERNAL_SYSCALL_ERRNO (_sys_result, sc_err));		\
+ 	 _sys_result = (unsigned int) -1;				\
+        }								\
+      (int) _sys_result; })
+-- 
+1.7.1
+
