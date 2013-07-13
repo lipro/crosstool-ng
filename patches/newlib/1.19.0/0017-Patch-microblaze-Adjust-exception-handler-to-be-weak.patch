@@ -1,0 +1,35 @@
+From bdcca2bd1e671045077b7b32755795b44b62dd7f Mon Sep 17 00:00:00 2001
+From: nagaraju <nmekala@xilix.com>
+Date: Wed, 8 May 2013 10:15:47 +0530
+Subject: [PATCH 17/17] [Patch, microblaze]: Adjust exception handler to be weak
+
+User can override exception handler if required.
+Change prompted by SVC handler attribute addition in gcc
+
+Signed-off-by:nagaraju <nmekala@xilix.com>
+---
+ libgloss/microblaze/_exception_handler.S |    8 +++++---
+ 1 files changed, 5 insertions(+), 3 deletions(-)
+
+diff --git a/libgloss/microblaze/_exception_handler.S b/libgloss/microblaze/_exception_handler.S
+index 2224c92..59385ad 100644
+--- a/libgloss/microblaze/_exception_handler.S
++++ b/libgloss/microblaze/_exception_handler.S
+@@ -30,9 +30,11 @@
+ */
+ 
+ 	.text
+-	.globl _exception_handler    # Exception Handler Label 
+ 	.align 2
++	.weakext _exception_handler
++	.ent _exception_handler
++	.type _exception_handler, @function
+ 	
+ 	_exception_handler:
+-	rtsd    r17, 0
+-	nop
++	addi r11,r11,8
++	bra r11
+-- 
+1.7.1
+

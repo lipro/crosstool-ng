@@ -1,0 +1,26 @@
+From 761f71f34b9d36a1526cf8ebb07e1905b94ade24 Mon Sep 17 00:00:00 2001
+From: David Holsgrove <david.holsgrove@petalogix.com>
+Date: Fri, 14 Oct 2011 15:14:09 +1000
+Subject: [PATCH 08/17] libgloss/microblaze/Makefile: rename libgloss.a to libxil.a
+
+Signed-off-by: David Holsgrove <david.holsgrove@petalogix.com>
+---
+ libgloss/microblaze/Makefile.in |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/libgloss/microblaze/Makefile.in b/libgloss/microblaze/Makefile.in
+index fd7e590..3872376 100644
+--- a/libgloss/microblaze/Makefile.in
++++ b/libgloss/microblaze/Makefile.in
+@@ -76,7 +76,7 @@ OBJCOPY = `if [ -f ${objroot}/../binutils/objcopy ] ; \
+ 	else t='$(program_transform_name)'; echo objcopy | sed -e $$t ; fi`
+ 
+ CRT = crt0.o crt1.o crt2.o crt3.o crt4.o crtinit.o pgcrtinit.o sim-crtinit.o sim-pgcrtinit.o
+-LIB = libgloss.a
++LIB = libxil.a
+ OBJS = fstat.o getpid.o isatty.o kill.o lseek.o open.o print.o putnum.o sbrk.o stat.o unlink.o write.o read.o close.o moddi3.o timer.o xil_printf.o errno.o _exception_handler.o _hw_exception_handler.o _interrupt_handler.o _program_clean.o _program_init.o xil_malloc.o xil_sbrk.o setjmp.o longjmp.o
+ SCRIPTS	= xilinx.ld
+ 
+-- 
+1.7.1
+

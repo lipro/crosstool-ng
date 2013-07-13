@@ -1,0 +1,42 @@
+From b3c766f8e5f64b6b41cb39b20e1c74bd737988fb Mon Sep 17 00:00:00 2001
+From: Edgar E. Iglesias <edgar.iglesias@gmail.com>
+Date: Thu, 5 Jan 2012 01:48:17 +0100
+Subject: [PATCH 11/17] microblaze: Provide __init and __fini in linux-crt0.S
+
+This allows the linux version to replace the GCC provided
+crti.S which writes to the stack protection registers
+(a privileged operation).
+
+Signed-off-by: Edgar E. Iglesias <edgar.iglesias@gmail.com>
+---
+ libgloss/microblaze/linux-crt0.S |   17 +++++++++++++++++
+ 1 files changed, 17 insertions(+), 0 deletions(-)
+
+diff --git a/libgloss/microblaze/linux-crt0.S b/libgloss/microblaze/linux-crt0.S
+index 39ce8a8..8650bb5 100644
+--- a/libgloss/microblaze/linux-crt0.S
++++ b/libgloss/microblaze/linux-crt0.S
+@@ -39,3 +39,20 @@ _start:
+         addik   r5, r3, 0
+ 	.size _start, . - _start
+         .end _start
++
++	/* Replacement for the GCC provided crti.S. This one avoids the
++	   setup of stack protection regs (which result in privilieged
++	   insn exceptions when running in user-space).  */
++        .section .init, "ax"
++	.global __init
++	.align 2
++__init:
++	addik   r1, r1, -8
++	sw      r15, r0, r1
++
++	.section .fini, "ax"
++	.global __fini
++	.align 2
++__fini:
++	addik   r1, r1, -8
++	sw      r15, r0, r1
+-- 
+1.7.1
+

@@ -1,0 +1,2581 @@
+From 7de888fb4d6858569c148d90421aca57b68baa4c Mon Sep 17 00:00:00 2001
+From: David Holsgrove <david.holsgrove@petalogix.com>
+Date: Wed, 12 Oct 2011 12:35:21 +1000
+Subject: [PATCH 02/17] Import of CVS repo as of 2011_10_12
+
+Signed-off-by: David Holsgrove <david.holsgrove@petalogix.com>
+---
+ config/ChangeLog                          |    4 +
+ config/picflag.m4                         |   95 +++++++
+ configure                                 |    2 +-
+ configure.ac                              |    2 +-
+ libgloss/ChangeLog                        |   20 ++
+ libgloss/arm/arm.h                        |    9 +
+ libgloss/arm/crt0.S                       |   37 ++-
+ libgloss/iq2000/sim.ld                    |    2 +-
+ libgloss/rx/crt0.S                        |   25 ++-
+ newlib/ChangeLog                          |  114 ++++++++
+ newlib/libc/include/process.h             |   13 +-
+ newlib/libc/include/sys/unistd.h          |    3 +
+ newlib/libc/machine/arm/Makefile.am       |    2 +-
+ newlib/libc/machine/arm/Makefile.in       |   18 +-
+ newlib/libc/machine/arm/memcpy-stub.c     |   38 +++
+ newlib/libc/machine/arm/memcpy.S          |  423 +++++++++++++++++++++++++++++
+ newlib/libc/misc/ffs.c                    |    4 +-
+ newlib/libc/posix/regexec.c               |    2 +
+ newlib/libc/stdio/vasiprintf.c            |    2 +
+ newlib/libc/stdio/vasprintf.c             |    2 +
+ newlib/libc/stdio/vfscanf.c               |    2 +
+ newlib/libc/stdio/vsiprintf.c             |    2 +
+ newlib/libc/stdio/vsniprintf.c            |    2 +
+ newlib/libc/stdio/vsnprintf.c             |    2 +
+ newlib/libc/stdio/vsprintf.c              |    2 +
+ newlib/libc/stdlib/putenv_r.c             |    2 +-
+ newlib/libc/stdlib/setenv_r.c             |    2 +-
+ newlib/libc/string/bcmp.c                 |    5 +-
+ newlib/libc/string/bcopy.c                |    3 +-
+ newlib/libc/string/bzero.c                |    6 +-
+ newlib/libc/string/index.c                |    5 +-
+ newlib/libc/string/rindex.c               |    3 +-
+ newlib/libc/string/strcasecmp.c           |    6 +-
+ newlib/libc/string/strcasestr.c           |    1 +
+ newlib/libc/string/strncasecmp.c          |    6 +-
+ newlib/libc/string/wcwidth.c              |    3 +
+ newlib/libc/sys/arm/arm.h                 |   62 +++++
+ newlib/libc/sys/arm/crt0.S                |  298 ++++++++++++++++-----
+ newlib/libc/sys/rtems/crt0.c              |  159 +++++-------
+ newlib/libc/sys/rtems/include/limits.h    |    6 +
+ newlib/libc/time/mktime.c                 |   53 +++--
+ newlib/libc/time/mktm_r.c                 |   10 +-
+ newlib/libc/time/strptime.c               |    1 +
+ newlib/testsuite/lib/flags.exp            |    8 +-
+ newlib/testsuite/newlib.string/memcpy-1.c |  160 +++++++++++
+ src-release                               |    2 +-
+ 46 files changed, 1390 insertions(+), 238 deletions(-)
+ create mode 100644 config/picflag.m4
+ create mode 100644 newlib/libc/machine/arm/memcpy-stub.c
+ create mode 100644 newlib/libc/machine/arm/memcpy.S
+ create mode 100644 newlib/libc/sys/arm/arm.h
+ create mode 100644 newlib/testsuite/newlib.string/memcpy-1.c
+
+diff --git a/config/ChangeLog b/config/ChangeLog
+index 3bb95f9..cd8a7ef 100644
+--- a/config/ChangeLog
++++ b/config/ChangeLog
+@@ -1,3 +1,7 @@
++2011-08-22  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
++
++	* picflag.m4: New file.
++
+ 2011-07-18  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
+ 
+ 	* elf.m4 (target_elf): Remove *-netware*.
+diff --git a/config/picflag.m4 b/config/picflag.m4
+new file mode 100644
+index 0000000..f6f1b44
+--- /dev/null
++++ b/config/picflag.m4
+@@ -0,0 +1,95 @@
++# _GCC_PICFLAG(FLAG, DISPATCH)
++# ----------------------------
++# Store PIC flag corresponding to DISPATCH triplet in FLAG.
++# Explit use of -fpic in CFLAGS corresponding to FLAG overrides default.
++AC_DEFUN([_GCC_PICFLAG], [
++
++case "${$2}" in
++    # PIC is the default on some targets or must not be used.
++    *-*-darwin*)
++	# PIC is the default on this platform
++	# Common symbols not allowed in MH_DYLIB files
++	$1=-fno-common
++	;;
++    alpha*-dec-osf5*)
++	# PIC is the default.
++	;;
++    hppa*64*-*-hpux*)
++	# PIC is the default for 64-bit PA HP-UX.
++	;;
++    i[[34567]]86-*-cygwin* | i[[34567]]86-*-mingw* | x86_64-*-mingw*)
++	;;
++    i[[34567]]86-*-interix3*)
++	# Interix 3.x gcc -fpic/-fPIC options generate broken code.
++	# Instead, we relocate shared libraries at runtime.
++	;;
++    i[[34567]]86-*-nto-qnx*)
++	# QNX uses GNU C++, but need to define -shared option too, otherwise
++	# it will coredump.
++	$1='-fPIC -shared'
++	;;
++    i[[34567]]86-pc-msdosdjgpp*)
++	# DJGPP does not support shared libraries at all.
++	;;
++    ia64*-*-hpux*)
++	# On IA64 HP-UX, PIC is the default but the pic flag
++	# sets the default TLS model and affects inlining.
++	$1=-fPIC
++	;;
++    mips-sgi-irix6*)
++	# PIC is the default.
++	;;
++    rs6000-ibm-aix* | powerpc-ibm-aix*)
++	# All AIX code is PIC.
++	;;
++
++    # Some targets support both -fPIC and -fpic, but prefer the latter.
++    # FIXME: Why?
++    i[[34567]]86-*-* | x86_64-*-*)
++	$1=-fpic
++	;;
++    m68k-*-*)
++	$1=-fpic
++	;;
++    s390*-*-*)
++	$1=-fpic
++	;;
++    # FIXME: Override -fPIC default in libgcc only? 
++    sh-*-linux* | sh[[2346lbe]]*-*-linux*)
++	$1=-fpic
++	;;
++    # FIXME: Simplify to sh*-*-netbsd*?
++    sh-*-netbsdelf* | shl*-*-netbsdelf* | sh5-*-netbsd* | sh5l*-*-netbsd* | \
++      sh64-*-netbsd* | sh64l*-*-netbsd*)
++	$1=-fpic
++	;;
++    # Default to -fPIC unless specified otherwise.
++    *)
++	$1=-fPIC
++	;;
++esac
++
++# If the user explicitly uses -fpic/-fPIC, keep that.
++case "${m4_bpatsubsts($1, PICFLAG, CFLAGS)}" in
++    *-fpic*)
++	$1=-fpic
++	;;
++    *-fPIC*)
++	$1=-fPIC
++	;;
++esac
++])
++
++# GCC_PICFLAG
++# -----------
++# Store host PIC flag in PICFLAG.
++AC_DEFUN([GCC_PICFLAG], [
++  AC_REQUIRE([AC_CANONICAL_HOST])
++  _GCC_PICFLAG([PICFLAG], [host])])
++
++# GCC_PICFLAG_FOR_TARGET
++# ----------------------
++# Store target PIC flag in PICFLAG_FOR_TARGET.
++AC_DEFUN([GCC_PICFLAG_FOR_TARGET], [
++  AC_REQUIRE([AC_CANONICAL_TARGET])
++  _GCC_PICFLAG([PICFLAG_FOR_TARGET], [target])])
+diff --git a/configure b/configure
+index 5366d71..eb69f28 100755
+--- a/configure
++++ b/configure
+@@ -3584,7 +3584,7 @@ case "${target}" in
+     fi
+     ;;
+   tic6x-*-*)
+-    noconfigdirs="$noconfigdirs gdb sim"
++    noconfigdirs="$noconfigdirs sim"
+     ;;
+   tilepro-*-* | tilegx-*-*)
+     noconfigdirs="$noconfigdirs sim"
+diff --git a/configure.ac b/configure.ac
+index 4cf1160..337e11d 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -1020,7 +1020,7 @@ case "${target}" in
+     fi
+     ;;
+   tic6x-*-*)
+-    noconfigdirs="$noconfigdirs gdb sim"
++    noconfigdirs="$noconfigdirs sim"
+     ;;
+   tilepro-*-* | tilegx-*-*)
+     noconfigdirs="$noconfigdirs sim"
+diff --git a/libgloss/ChangeLog b/libgloss/ChangeLog
+index 2b24466..88c3c49 100644
+--- a/libgloss/ChangeLog
++++ b/libgloss/ChangeLog
+@@ -1,3 +1,23 @@
++2011-10-07  Nick Clifton  <nickc@redhat.com>
++
++	* rx/crt0.S: Initialise the PID address register.
++	(__pid_base): Define weakly.
++
++2011-09-29  Matthew Gretton-Dann  <matthew.gretton-dann@arm.com>
++
++	* arm/crt0.s: Support 0 heap base response from HeapInfo syscall.
++
++2011-09-29  Bin Cheng  <bin.cheng@arm.com>
++
++	* arm/arm.h (HAVE_CALL_INDIRECT): Define.
++        * arm/crt0.S (indirect_call): New macro.  Encodes indirect
++	function calls.  Does not use blx for pre-armv5 targets.
++
++2011-08-19  Nick Clifton  <nickc@redhat.com>
++
++	* iq2000/sim.ld (.gcc_except_table): Include .gcc_except_table.foo
++	sections as well.
++
+ 2011-08-08  Mike Stump <mikestump@comcast.net>
+ 
+ 	* Makefile.in: Make stmp-bsp and install consistent with
+diff --git a/libgloss/arm/arm.h b/libgloss/arm/arm.h
+index e8c9d25..26a1ff1 100644
+--- a/libgloss/arm/arm.h
++++ b/libgloss/arm/arm.h
+@@ -50,4 +50,13 @@
+ # define THUMB_V7M_V6M
+ #endif
+ 
++/* Defined if this target supports the BLX Rm instruction.  */
++#if  !defined(__ARM_ARCH_2__)   \
++  && !defined(__ARM_ARCH_3__)	\
++  && !defined(__ARM_ARCH_3M__)	\
++  && !defined(__ARM_ARCH_4__)	\
++  && !defined(__ARM_ARCH_4T__)
++# define HAVE_CALL_INDIRECT
++#endif
++
+ #endif /* _LIBGLOSS_ARM_H */
+diff --git a/libgloss/arm/crt0.S b/libgloss/arm/crt0.S
+index c98cd2c..101041e 100644
+--- a/libgloss/arm/crt0.S
++++ b/libgloss/arm/crt0.S
+@@ -34,6 +34,16 @@
+ \name:
+ .endm
+ #endif
++
++.macro indirect_call reg
++#ifdef HAVE_CALL_INDIRECT
++	blx \reg
++#else
++	mov	lr, pc
++	mov	pc, \reg
++#endif
++.endm
++
+ 	.align 	0
+ 
+ 	FUNC_START	_mainCRTStartup
+@@ -76,6 +86,17 @@
+ 	AngelSWIAsm	AngelSWI_ARM
+ #endif
+ 	ldr	r0, .LC0	/*  point at values read */
++
++	ldr     r1, [r0, #0]
++	cmp     r1, #0
++	bne     .LC32
++	/* If the heap base value [r0, #0] is 0 then the heap base is actually 
++	   at the end of program data (i.e. __end__). See:
++           http://infocenter.arm.com/help/topic/com.arm.doc.dui0471-/Bacbefaa.html
++	   for more information.  */
++	ldr     r1, .LC31
++	str     r1, [r0, #0]
++.LC32:	
+ 	ldr	r1, [r0, #8]
+ 	ldr	r2, [r0, #12]
+ 	/*  We skip setting sp/sl if 0 returned from semihosting. 
+@@ -213,22 +234,12 @@ __change_mode:
+ 	ldr	r3, .Lhwinit
+ 	cmp	r3, #0
+ 	beq	.LC24
+-#if defined(__thumb__) || defined(__thumb2__)
+-	blx   r3
+-#else
+-	mov	lr, pc
+-	mov	pc, r3
+-#endif
++	indirect_call r3
+ .LC24:	
+ 	ldr	r3, .Lswinit
+ 	cmp	r3, #0
+ 	beq	.LC25
+-#if defined(__thumb__) || defined(__thumb2__)
+-	blx   r3
+-#else
+-	mov	lr, pc
+-	mov	pc, r3
+-#endif
++	indirect_call r3
+ 
+ .LC25:	
+ 	movs	r0, #0		/*  no arguments  */
+@@ -437,6 +448,8 @@ change_back:
+ .LC30:
+ 	.word	CommandLine
+ 	.word	255
++.LC31:
++	.word	__end__
+ 
+ /*  Workspace for Angel calls.  */
+ 	.data
+diff --git a/libgloss/iq2000/sim.ld b/libgloss/iq2000/sim.ld
+index 5f59d02..50da49e 100644
+--- a/libgloss/iq2000/sim.ld
++++ b/libgloss/iq2000/sim.ld
+@@ -156,7 +156,7 @@ SECTIONS
+     LONG (0);
+     PROVIDE (__eh_frame_end = .);
+   }
+-  .gcc_except_table : { *(.gcc_except_table) }
++  .gcc_except_table : { *(.gcc_except_table)  *(.gcc_except_table.*) }
+   .hash          : { *(.hash)		}
+   .dynsym        : { *(.dynsym)		}
+   .dynstr        : { *(.dynstr)		}
+diff --git a/libgloss/rx/crt0.S b/libgloss/rx/crt0.S
+index 26955f9..2227423 100644
+--- a/libgloss/rx/crt0.S
++++ b/libgloss/rx/crt0.S
+@@ -1,4 +1,4 @@
+-/* Copyright (c) 2008, 2009 Red Hat Incorporated.
++/* Copyright (c) 2008, 2009, 2011 Red Hat Incorporated.
+    All rights reserved.
+ 
+    Redistribution and use in source and binary forms, with or without
+@@ -50,11 +50,20 @@ _start:
+ 	mov	#__bsssize, r3
+ 	sstr.l
+ 
+-	/* Initialise the small data area pointer.
+-	   The register used here must agree with the definition of
+-	   GP_BASE_REGNUM in gcc/config/rx/rx.h.  */
++	/* Initialize data pointer register(s).
++           Note: The registers used here should agree with the definition of
++	   GP_BASE_REGNUM in gcc/config/rx/rx.h.
++           Note: We are assuming that -mint-register has not been used when
++	   compiling the application.  */
++#ifdef _RX_PID
++	/* Initialise the constant data pointer and small data pointers.  */
++	mov	#__pid_base, r13
++	mov	#__gp, r12
++#else
++	/* Initialise the small data area pointer.  */
+ 	mov	#__gp, r13
+-
++#endif
++	
+ 	bsr.a	__rx_init
+ 
+ #ifdef PROFILE_SUPPORT	/* Defined in gcrt0.S.  */
+@@ -129,6 +138,12 @@ __rx_init:
+ __rx_fini:
+ 	bsr.a	_rx_run_fini_array
+ 
++        .section .rodata
++        .balign 4
++        .global __pid_base
++	.weak   __pid_base
++__pid_base:   
++
+         .section .sdata
+         .balign 4
+         .global __gp
+diff --git a/newlib/ChangeLog b/newlib/ChangeLog
+index 5d20531..e9d808c 100644
+--- a/newlib/ChangeLog
++++ b/newlib/ChangeLog
+@@ -1,3 +1,117 @@
++2011-10-11  Steven Abner <pheonix@zoomtown.com>
++
++	* libc/time/mktm_r.c: (__tzcalc_limits) Fix Julian day calculation.
++	* libc/time/mktime.c: (mktime) Fix tm_yday, tm_mday updating when
++	timezone causes roll over.
++
++2011-10-10  Nick Clifton  <nickc@redhat.com>
++
++	* libc/sys/arm/crt0.S: Synchronise with libgloss version.
++	* libc/sys/arm/arm.h: Imported from libgloss.
++
++2011-10-04  Greta Yorsh  <Greta.Yorsh@arm.com>
++
++	* testsuite/newlib.string/memcpy-1.c: New test.
++
++2011-10-04  Nick Clifton  <nickc@redhat.com>
++
++	* libc/machine/arm/memcpy.S: Fix unaligned access copying.
++
++2011-09-29  Greta Yorsh  <Greta.Yorsh@arm.com>
++
++	* libc/machine/arm/memcpy.S: New file.  Contains a hand coded
++	memcpy function optimized for the cortex-a15.
++	* libc/machine/arm/memcpy-stub.c: New file.
++	* libc/machine/arm/Makefile.am (lib_a_SOURCES): Add memcpy-stub.c,
++	memcpy.S.
++	* libc/machine/arm/Makefile.in: Regenerate.
++
++2011-09-08  Jeff Johnston  <jjohnstn@redhat.com>
++
++	* testsuite/lib/flags.exp: Add logic to add the
++	srcdir include directory to compile flags.
++
++2011-08-26  Steven Abner  <pheonix@zoomtown.com>
++
++	* libc/time/mktm_r.c (_mktm_r): Fix previous fix.
++
++2011-08-24  Corinna Vinschen  <vinschen@redhat.com>
++
++	* libc/time/mktm_r.c (_mktm_r): Fix computing tm_year.
++
++2011-08-23  Ralf Corsépius  <ralf.corsepius@rtems.org>
++
++	* libc/stdlib/putenv_r.c: Use "strchr" instead of obsolete "index".
++	* libc/stdlib/setenv_r.c: Use "memcpy" instead of obsolete "bcopy".
++
++2011-08-23  Ralf Corsépius  <ralf.corsepius@rtems.org>
++
++	* libc/misc/ffs.c, libc/string/bcmp.c, libc/string/bcopy.c,
++	libc/string/bzero.c, libc/string/index.c, libc/string/rindex.c,
++	libc/string/strcasecmp.c, libc/string/strncasecmp.c:
++	Let synopsis reference "#include <strings.h>".
++
++2011-08-23  Ralf Corsépius  <ralf.corsepius@rtems.org>
++
++	* libc/posix/regexec.c: Define "nope" only #ifndef NDEBUG.
++	* libc/stdio/vfscanf.c: Define "state" only #ifdef _MB_CAPABLE.
++	* libc/string/wcwidth.c: Include <wctypes.h> for "iswprint" and
++	"iswcntrl".
++
++2011-08-23  Ralf Corsépius  <ralf.corsepius@rtems.org>
++
++	* libc/sys/rtems/include/limits.h: Compute SSIZE_MAX based on
++	__SIZE_MAX__, __SIZEOF_SIZE_T__ and __CHAR_BIT__.
++
++2011-08-22  Ralf Corsépius <ralf.corsepius@rtems.org>
++
++	* libc/string/index.c: Include <strings.h> for "index".
++	* libc/string/rindex.c: Include <strings.h> for "rindex".
++	* libc/string/strcasecmp.c: Include <strings.h> for "strcasecmp".
++	Don't include <string.h>.
++	* libc/string/strncasecmp.c: Include <strings.h> for "strncasecmp".
++	Don't include <string.h>.
++	* libc/string/bzero.c: Include <strings.h> for "bzero".
++	Don't include <string.h>
++	* libc/misc/ffs.c: Include <strings.h> for "ffs".
++	Don't include <_ansi.h>.
++
++2011-08-19  Ralf Corsépius <ralf.corsepius@rtems.org>
++
++	* libc/sys/rtems/crt0.c: Rework RTEMS_STUB macro.
++	Include <unistd.h>.
++	Remove C++-style comments.
++	Remove hppa, a29k.
++	Add clock_gettime, gettimeofday, sched_yield.
++
++2011-08-19  Ralf Corsépius <ralf.corsepius@rtems.org>
++
++	* libc/stdio/vasiprintf.c: Include "local.h" for "_svfiprintf_r".
++	* libc/stdio/vasprintf.c Include "local.h" for "_svfprintf_r".
++	* libc/stdio/vsiprintf.c: Include "local.h" for "_svfiprintf_r".
++	* libc/stdio/vsniprintf.c: Include "local.h" for "_svfiprintf_r".
++	* libc/stdio/vsnprintf.c: Include "local.h" for "_svfprintf_r"
++	* libc/stdio/vsprintf.c: Include "local.h" for "_svfprintf_r"
++
++2011-08-19  Ralf Corsépius <ralf.corsepius@rtems.org>
++
++	* libc/string/bcmp.c: Include <strings.h> for "bcmp".
++	* libc/string/bcopy.c: Include <strings.h> for "bcopy".
++	* libc/string/strcasestr.c: Include <strings.h> for "strncasecmp".
++	* libc/time/strptime.c: Include <strings.h> for "strncasecmp".
++
++2011-08-19  Corinna Vinschen  <vinschen@redhat.com>
++
++	* libc/include/process.h: Remove exec family function declarations.
++	Add comment.
++	* libc/include/sys/unistd.h (execlpe): Declare for Cygwin.
++
++2011-08-19  Craig Howland  <howland@LGSInnovations.com>
++
++	* libc/time/mktime.c (validate_structure): Account for tm_mon possibly
++	being given as negative.
++	(mktime): Set tm_isdst=0 when !daylight.
++
+ 2011-08-01  Sebastian Huber <sebastian.huber@embedded-brains.de>
+ 
+ 	* libc/include/sys/types.h: XML and RTEMS define
+diff --git a/newlib/libc/include/process.h b/newlib/libc/include/process.h
+index a73564a..fe6ec16 100644
+--- a/newlib/libc/include/process.h
++++ b/newlib/libc/include/process.h
+@@ -1,4 +1,5 @@
+-/* process.h.  This file comes with MSDOS and WIN32 systems.  */
++/* process.h.  Define spawn family of functions as provided by Cygwin.
++   The original file of this name is a MS/DOS invention. */
+ 
+ #ifndef __PROCESS_H_
+ #define __PROCESS_H_
+@@ -7,15 +8,7 @@
+ extern "C" {
+ #endif
+ 
+-int execl(const char *path, const char *argv0, ...);
+-int execle(const char *path, const char *argv0, ... /*, char * const *envp */);
+-int execlp(const char *path, const char *argv0, ...);
+-int execlpe(const char *path, const char *argv0, ... /*, char * const *envp */);
+-
+-int execv(const char *path, char * const *argv);
+-int execve(const char *path, char * const *argv, char * const *envp);
+-int execvp(const char *path, char * const *argv);
+-int execvpe(const char *path, char * const *argv, char * const *envp);
++/* For the exec functions, include unistd.h. */
+ 
+ int spawnl(int mode, const char *path, const char *argv0, ...);
+ int spawnle(int mode, const char *path, const char *argv0, ... /*, char * const *envp */);
+diff --git a/newlib/libc/include/sys/unistd.h b/newlib/libc/include/sys/unistd.h
+index 2763a0d..900faa7 100644
+--- a/newlib/libc/include/sys/unistd.h
++++ b/newlib/libc/include/sys/unistd.h
+@@ -46,6 +46,9 @@ int	_EXFUN(euidaccess, (const char *__path, int __mode));
+ int     _EXFUN(execl, (const char *__path, const char *, ... ));
+ int     _EXFUN(execle, (const char *__path, const char *, ... ));
+ int     _EXFUN(execlp, (const char *__file, const char *, ... ));
++#if defined(__CYGWIN__)
++int     _EXFUN(execlpe, (const char *__file, const char *, ... ));
++#endif
+ int     _EXFUN(execv, (const char *__path, char * const __argv[] ));
+ int     _EXFUN(execve, (const char *__path, char * const __argv[], char * const __envp[] ));
+ int     _EXFUN(execvp, (const char *__file, char * const __argv[] ));
+diff --git a/newlib/libc/machine/arm/Makefile.am b/newlib/libc/machine/arm/Makefile.am
+index 19639b5..9c3400b 100644
+--- a/newlib/libc/machine/arm/Makefile.am
++++ b/newlib/libc/machine/arm/Makefile.am
+@@ -8,7 +8,7 @@ AM_CCASFLAGS = $(INCLUDES)
+ 
+ noinst_LIBRARIES = lib.a
+ 
+-lib_a_SOURCES = setjmp.S access.c strlen.c strcmp.c strcpy.c
++lib_a_SOURCES = setjmp.S access.c strlen.c strcmp.c strcpy.c memcpy.S memcpy-stub.c
+ lib_a_CCASFLAGS=$(AM_CCASFLAGS)
+ lib_a_CFLAGS = $(AM_CFLAGS)
+ 
+diff --git a/newlib/libc/machine/arm/Makefile.in b/newlib/libc/machine/arm/Makefile.in
+index ba99dba..101cdb4 100644
+--- a/newlib/libc/machine/arm/Makefile.in
++++ b/newlib/libc/machine/arm/Makefile.in
+@@ -54,7 +54,8 @@ lib_a_AR = $(AR) $(ARFLAGS)
+ lib_a_LIBADD =
+ am_lib_a_OBJECTS = lib_a-setjmp.$(OBJEXT) lib_a-access.$(OBJEXT) \
+ 	lib_a-strlen.$(OBJEXT) lib_a-strcmp.$(OBJEXT) \
+-	lib_a-strcpy.$(OBJEXT)
++	lib_a-strcpy.$(OBJEXT) lib_a-memcpy.$(OBJEXT) \
++	lib_a-memcpy-stub.$(OBJEXT)
+ lib_a_OBJECTS = $(am_lib_a_OBJECTS)
+ DEFAULT_INCLUDES = -I.@am__isrc@
+ depcomp =
+@@ -99,6 +100,7 @@ MAINT = @MAINT@
+ MAKEINFO = @MAKEINFO@
+ MKDIR_P = @MKDIR_P@
+ NEWLIB_CFLAGS = @NEWLIB_CFLAGS@
++NO_INCLUDE_LIST = @NO_INCLUDE_LIST@
+ OBJEXT = @OBJEXT@
+ PACKAGE = @PACKAGE@
+ PACKAGE_BUGREPORT = @PACKAGE_BUGREPORT@
+@@ -174,7 +176,7 @@ AUTOMAKE_OPTIONS = cygnus
+ INCLUDES = $(NEWLIB_CFLAGS) $(CROSS_CFLAGS) $(TARGET_CFLAGS)
+ AM_CCASFLAGS = $(INCLUDES)
+ noinst_LIBRARIES = lib.a
+-lib_a_SOURCES = setjmp.S access.c strlen.c strcmp.c strcpy.c
++lib_a_SOURCES = setjmp.S access.c strlen.c strcmp.c strcpy.c memcpy.S memcpy-stub.c
+ lib_a_CCASFLAGS = $(AM_CCASFLAGS)
+ lib_a_CFLAGS = $(AM_CFLAGS)
+ ACLOCAL_AMFLAGS = -I ../../.. -I ../../../..
+@@ -243,6 +245,12 @@ lib_a-setjmp.o: setjmp.S
+ lib_a-setjmp.obj: setjmp.S
+ 	$(CCAS) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(lib_a_CCASFLAGS) $(CCASFLAGS) -c -o lib_a-setjmp.obj `if test -f 'setjmp.S'; then $(CYGPATH_W) 'setjmp.S'; else $(CYGPATH_W) '$(srcdir)/setjmp.S'; fi`
+ 
++lib_a-memcpy.o: memcpy.S
++	$(CCAS) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(lib_a_CCASFLAGS) $(CCASFLAGS) -c -o lib_a-memcpy.o `test -f 'memcpy.S' || echo '$(srcdir)/'`memcpy.S
++
++lib_a-memcpy.obj: memcpy.S
++	$(CCAS) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(lib_a_CCASFLAGS) $(CCASFLAGS) -c -o lib_a-memcpy.obj `if test -f 'memcpy.S'; then $(CYGPATH_W) 'memcpy.S'; else $(CYGPATH_W) '$(srcdir)/memcpy.S'; fi`
++
+ .c.o:
+ 	$(COMPILE) -c $<
+ 
+@@ -273,6 +281,12 @@ lib_a-strcpy.o: strcpy.c
+ lib_a-strcpy.obj: strcpy.c
+ 	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(lib_a_CFLAGS) $(CFLAGS) -c -o lib_a-strcpy.obj `if test -f 'strcpy.c'; then $(CYGPATH_W) 'strcpy.c'; else $(CYGPATH_W) '$(srcdir)/strcpy.c'; fi`
+ 
++lib_a-memcpy-stub.o: memcpy-stub.c
++	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(lib_a_CFLAGS) $(CFLAGS) -c -o lib_a-memcpy-stub.o `test -f 'memcpy-stub.c' || echo '$(srcdir)/'`memcpy-stub.c
++
++lib_a-memcpy-stub.obj: memcpy-stub.c
++	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(lib_a_CFLAGS) $(CFLAGS) -c -o lib_a-memcpy-stub.obj `if test -f 'memcpy-stub.c'; then $(CYGPATH_W) 'memcpy-stub.c'; else $(CYGPATH_W) '$(srcdir)/memcpy-stub.c'; fi`
++
+ ID: $(HEADERS) $(SOURCES) $(LISP) $(TAGS_FILES)
+ 	list='$(SOURCES) $(HEADERS) $(LISP) $(TAGS_FILES)'; \
+ 	unique=`for i in $$list; do \
+diff --git a/newlib/libc/machine/arm/memcpy-stub.c b/newlib/libc/machine/arm/memcpy-stub.c
+new file mode 100644
+index 0000000..536b869
+--- /dev/null
++++ b/newlib/libc/machine/arm/memcpy-stub.c
+@@ -0,0 +1,38 @@
++/*
++ * Copyright (c) 2011 ARM Ltd
++ * All rights reserved.
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions
++ * are met:
++ * 1. Redistributions of source code must retain the above copyright
++ *    notice, this list of conditions and the following disclaimer.
++ * 2. Redistributions in binary form must reproduce the above copyright
++ *    notice, this list of conditions and the following disclaimer in the
++ *    documentation and/or other materials provided with the distribution.
++ * 3. The name of the company may not be used to endorse or promote
++ *    products derived from this software without specific prior written
++ *    permission.
++ *
++ * THIS SOFTWARE IS PROVIDED BY ARM LTD ``AS IS'' AND ANY EXPRESS OR IMPLIED
++ * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
++ * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
++ * IN NO EVENT SHALL ARM LTD BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
++ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
++ * TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
++ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
++ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
++ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
++ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++ */
++
++/* The sole purpose of this file is to include the plain memcpy provided in newlib.  
++   An optimized version of memcpy is provided in the assembly file memcpy.S in this directory. */
++#if (defined (__OPTIMIZE_SIZE__) || defined (PREFER_SIZE_OVER_SPEED) || \
++     (!(defined (__ARM_ARCH_7A__))))
++
++#include "../../string/memcpy.c"
++
++#else
++        /* Do nothing. See memcpy.S in this directory. */
++#endif
+diff --git a/newlib/libc/machine/arm/memcpy.S b/newlib/libc/machine/arm/memcpy.S
+new file mode 100644
+index 0000000..e408ed0
+--- /dev/null
++++ b/newlib/libc/machine/arm/memcpy.S
+@@ -0,0 +1,423 @@
++/*
++ * Copyright (c) 2011 ARM Ltd
++ * All rights reserved.
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions
++ * are met:
++ * 1. Redistributions of source code must retain the above copyright
++ *    notice, this list of conditions and the following disclaimer.
++ * 2. Redistributions in binary form must reproduce the above copyright
++ *    notice, this list of conditions and the following disclaimer in the
++ *    documentation and/or other materials provided with the distribution.
++ * 3. The name of the company may not be used to endorse or promote
++ *    products derived from this software without specific prior written
++ *    permission.
++ *
++ * THIS SOFTWARE IS PROVIDED BY ARM LTD ``AS IS'' AND ANY EXPRESS OR IMPLIED
++ * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
++ * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
++ * IN NO EVENT SHALL ARM LTD BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
++ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
++ * TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
++ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
++ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
++ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
++ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++ */
++
++#if (defined (__OPTIMIZE_SIZE__) || defined (PREFER_SIZE_OVER_SPEED) || \
++     (!(defined (__ARM_ARCH_7A__))))
++
++        /* Do nothing here. See memcpy-stub.c in the same directory. */
++
++#else
++	/* Prototype: void *memcpy (void *dst, const void *src, size_t count).  */
++
++        /* Use the version of memcpy implemented using LDRD and STRD.
++           This version is tuned for Cortex-A15.
++           This might not be the best for other ARMv7-A CPUs,
++           but there is no predefine to distinguish between
++           different CPUs in the same architecture,
++           and this version is better than the plain memcpy provided in newlib.
++
++           Therefore, we use this version for all ARMv7-A CPUS.  */
++
++        /* To make the same code compile for both ARM and Thumb instruction
++	   sets, switch to unified syntax at the beginning of this function.
++           However, by using the same code, we may be missing optimization
++	   opportunities.  For instance, in LDRD/STRD instructions, the first
++	   destination register must be even and the second consecutive in
++	   ARM state, but not in Thumb state.  */
++
++        .syntax         unified
++
++#if defined (__thumb__)
++        .thumb
++        .thumb_func
++#endif
++
++        .global memcpy
++        .type   memcpy, %function
++memcpy:
++
++       /* Assumes that n >= 0, and dst, src are valid pointers.
++          If there is at least 8 bytes to copy, use LDRD/STRD.
++          If src and dst are misaligned with different offsets,
++          first copy byte by byte until dst is aligned,
++          and then copy using LDRD/STRD and shift if needed.
++          When less than 8 left, copy a word and then byte by byte.  */
++
++       /* Save registers (r0 holds the return value):
++          optimized push {r0, r4, r5, lr}.
++          To try and improve performance, stack layout changed,
++          i.e., not keeping the stack looking like users expect
++          (highest numbered register at highest address).  */
++        push {r0, lr}
++        strd r4, r5, [sp, #-8]!
++
++       /* TODO: Add debug frame directives.
++          We don't need exception unwind directives, because the code below
++	  does not throw any exceptions and does not call any other functions.
++          Generally, newlib functions like this lack debug information for
++	  assembler source.  */
++
++        /* Get copying of tiny blocks out of the way first.  */
++        /* Is there at least 4 bytes to copy?  */
++        subs    r2, r2, #4
++        blt     copy_less_than_4                 /* If n < 4.  */
++
++        /* Check word alignment.  */
++        ands    ip, r0, #3                       /* ip = last 2 bits of dst.  */
++        bne     dst_not_word_aligned             /* If dst is not word-aligned.  */
++
++        /* Get here if dst is word-aligned.  */
++        ands    ip, r1, #3                      /* ip = last 2 bits of src.  */
++        bne     src_not_word_aligned            /* If src is not word-aligned.  */
++word_aligned:
++        /* Get here if source and dst both are word-aligned.
++           The number of bytes remaining to copy is r2+4.  */
++
++        /* Is there is at least 64 bytes to copy?  */
++        subs    r2, r2, #60
++        blt     copy_less_than_64                /* If r2 + 4 < 64.  */
++
++        /* First, align the destination buffer to 8-bytes,
++           to make sure double loads and stores don't cross cache line boundary,
++           as they are then more expensive even if the data is in the cache
++           (require two load/store issue cycles instead of one).
++           If only one of the buffers is not 8-bytes aligned,
++           then it's more important to align dst than src,
++           because there is more penalty for stores
++           than loads that cross cacheline boundary.
++           This check and realignment are only worth doing
++           if there is a lot to copy.  */
++
++        /* Get here if dst is word aligned,
++           i.e., the 2 least significant bits are 0.
++           If dst is not 2w aligned (i.e., the 3rd bit is not set in dst),
++           then copy 1 word (4 bytes).  */
++        ands    r3, r0, #4
++        beq     11f                  /* If dst already two-word aligned.  */
++        ldr     r3, [r1], #4
++        str     r3, [r0], #4
++        subs    r2, r2, #4
++        blt     copy_less_than_64
++
++11:
++        /* TODO: Align to cacheline (useful for PLD optimization).  */
++
++        /* Every loop iteration copies 64 bytes.  */
++1:
++        .irp    offset, #0, #8, #16, #24, #32, #40, #48, #56
++        ldrd    r4, r5, [r1, \offset]
++        strd    r4, r5, [r0, \offset]
++        .endr
++
++        add     r0, r0, #64
++        add     r1, r1, #64
++        subs    r2, r2, #64
++        bge     1b                            /* If there is more to copy.  */
++
++copy_less_than_64:
++
++        /* Get here if less than 64 bytes to copy, -64 <= r2 < 0.
++           Restore the count if there is more than 7 bytes to copy.  */
++        adds    r2, r2, #56
++        blt     copy_less_than_8
++
++        /* Copy 8 bytes at a time.  */
++2:
++        ldrd    r4, r5, [r1], #8
++        strd    r4, r5, [r0], #8
++        subs    r2, r2, #8
++        bge     2b                            /* If there is more to copy.  */
++
++copy_less_than_8:
++
++        /* Get here if less than 8 bytes to copy, -8 <= r2 < 0.
++           Check if there is more to copy.  */
++        cmn     r2, #8
++        beq     return                          /* If r2 + 8 == 0.  */
++
++        /* Restore the count if there is more than 3 bytes to copy.  */
++        adds    r2, r2, #4
++        blt     copy_less_than_4
++
++        /* Copy 4 bytes.  */
++        ldr     r3, [r1], #4
++        str     r3, [r0], #4
++
++copy_less_than_4:
++        /* Get here if less than 4 bytes to copy, -4 <= r2 < 0.  */
++
++        /* Restore the count, check if there is more to copy.  */
++        adds    r2, r2, #4
++        beq     return                          /* If r2 == 0.  */
++
++        /* Get here with r2 is in {1,2,3}={01,10,11}.  */
++        /* Logical shift left r2, insert 0s, update flags.  */
++        lsls    r2, r2, #31
++
++        /* Copy byte by byte.
++           Condition ne means the last bit of r2 is 0.
++           Condition cs means the second to last bit of r2 is set,
++           i.e., r2 is 1 or 3.  */
++        itt     ne
++        ldrbne  r3, [r1], #1
++        strbne  r3, [r0], #1
++
++        itttt   cs
++        ldrbcs  r4, [r1], #1
++        ldrbcs  r5, [r1]
++        strbcs  r4, [r0], #1
++        strbcs  r5, [r0]
++
++return:
++        /* Restore registers: optimized pop {r0, r4, r5, pc}   */
++        ldrd r4, r5, [sp], #8
++        pop {r0, pc}           /* This is the only return point of memcpy.  */
++
++#ifndef __ARM_FEATURE_UNALIGNED
++
++       /* The following assembly macro implements misaligned copy in software.
++          Assumes that dst is word aligned, src is at offset "pull" bits from
++	  word, push = 32 - pull, and the number of bytes that remain to copy
++	  is r2 + 4, r2 >= 0.  */
++
++       /* In the code below, r2 is the number of bytes that remain to be
++	  written.  The number of bytes read is always larger, because we have
++	  partial words in the shift queue.  */
++
++        .macro  miscopy pull push shiftleft shiftright
++
++        /* Align src to the previous word boundary.  */
++        bic     r1, r1, #3
++
++        /* Initialize the shift queue.  */
++        ldr     r5, [r1], #4                   /* Load a word from source.  */
++
++        subs    r2, r2, #4
++        blt     6f          /* Go to misaligned copy of less than 8 bytes.  */
++
++       /* Get here if there is more than 8 bytes to copy.
++          The number of bytes to copy is r2+8, r2 >= 0.  */
++
++       /* Save registers: push { r6, r7 }.
++          We need additional registers for LDRD and STRD, because in ARM state
++          the first destination register must be even and the second
++	  consecutive.  */
++       strd     r6, r7, [sp, #-8]!
++
++       subs     r2, r2, #56
++       blt      4f         /* Go to misaligned copy of less than 64 bytes.  */
++
++3:
++       /* Get here if there is more than 64 bytes to copy.
++          The number of bytes to copy is r2+64, r2 >= 0.  */
++
++       /* Copy 64 bytes in every iteration.
++          Use a partial word from the shift queue.  */
++        .irp    offset, #0, #8, #16, #24, #32, #40, #48, #56
++        mov     r6, r5, \shiftleft #\pull
++        ldrd    r4, r5, [r1, \offset]
++        orr     r6, r6, r4, \shiftright #\push
++        mov     r7, r4, \shiftleft #\pull
++        orr     r7, r7, r5, \shiftright #\push
++        strd    r6, r7, [r0, \offset]
++        .endr
++
++        add     r1, r1, #64
++        add     r0, r0, #64
++        subs    r2, r2, #64
++        bge     3b
++
++4:
++       /* Get here if there is less than 64 bytes to copy (-64 <= r2 < 0)
++	  and they are misaligned.  */
++
++       /* Restore the count if there is more than 7 bytes to copy.  */
++        adds    r2, r2, #56
++
++       /* If less than 8 bytes to copy,
++          restore registers saved for this loop: optimized poplt { r6, r7 }. */
++        itt     lt
++        ldrdlt  r6, r7, [sp], #8
++        blt     6f          /* Go to misaligned copy of less than 8 bytes.  */
++
++5:
++        /* Copy 8 bytes at a time.
++           Use a partial word from the shift queue.  */
++        mov     r6, r5, \shiftleft #\pull
++        ldrd    r4, r5, [r1], #8
++        orr     r6, r6, r4, \shiftright #\push
++        mov     r7, r4, \shiftleft #\pull
++        orr     r7, r7, r5, \shiftright #\push
++        strd    r6, r7, [r0], #8
++
++        subs    r2, r2, #8
++        bge     5b                        /* If there is more to copy.  */
++
++        /* Restore registers saved for this loop: optimized pop { r6, r7 }.  */
++        ldrd    r6, r7, [sp], #8
++
++6:
++        /* Get here if there less than 8 bytes to copy (-8 <= r2 < 0)
++           and they are misaligned.  */
++
++        /* Check if there is more to copy.  */
++        cmn     r2, #8
++        beq     return
++
++        /* Check if there is less than 4 bytes to copy.  */
++        cmn     r2, #4
++
++        itt     lt
++        /* Restore src offset from word-align.  */
++        sublt   r1, r1, #(\push / 8)
++        blt     copy_less_than_4
++
++        /* Use a partial word from the shift queue.  */
++        mov     r3, r5, \shiftleft #\pull
++        /* Load a word from src, but without writeback
++           (this word is not fully written to dst).  */
++        ldr     r5, [r1]
++
++        /* Restore src offset from word-align.  */
++        add     r1, r1, #(\pull / 8)
++
++        /* Shift bytes to create one dst word and store it.  */
++        orr     r3, r3, r5, \shiftright #\push
++        str     r3, [r0], #4
++
++        /* Use single byte copying of the remaining bytes.  */
++        b       copy_less_than_4
++
++        .endm
++
++#endif /* not __ARM_FEATURE_UNALIGNED  */
++
++dst_not_word_aligned:
++
++       /* Get here when dst is not aligned and ip has the last 2 bits of dst,
++          i.e., ip is the offset of dst from word.
++          The number of bytes that remains to copy is r2 + 4,
++          i.e., there are at least 4 bytes to copy.
++          Write a partial word (0 to 3 bytes), such that dst becomes
++	  word-aligned.  */
++
++       /* If dst is at ip bytes offset from a word (with 0 < ip < 4),
++          then there are (4 - ip) bytes to fill up to align dst to the next
++	  word.  */
++        rsb     ip, ip, #4                        /* ip = #4 - ip.  */
++        cmp     ip, #2
++
++       /* Copy byte by byte with conditionals.  */
++        itt     gt
++        ldrbgt  r3, [r1], #1
++        strbgt  r3, [r0], #1
++
++        itt     ge
++        ldrbge  r4, [r1], #1
++        strbge  r4, [r0], #1
++
++        ldrb    lr, [r1], #1
++        strb    lr, [r0], #1
++
++       /* Update the count.
++          ip holds the number of bytes we have just copied.  */
++        subs    r2, r2, ip                        /* r2 = r2 - ip.  */
++        blt     copy_less_than_4                  /* If r2 < ip.  */
++
++       /* Get here if there are more than 4 bytes to copy.
++          Check if src is aligned.  If beforehand src and dst were not word
++	  aligned but congruent (same offset), then now they are both
++	  word-aligned, and we can copy the rest efficiently (without
++	  shifting).  */
++        ands    ip, r1, #3                    /* ip = last 2 bits of src.  */
++        beq     word_aligned                  /* If r1 is word-aligned.  */
++
++src_not_word_aligned:
++       /* Get here when src is not word-aligned, but dst is word-aligned.
++          The number of bytes that remains to copy is r2+4.  */
++
++#ifdef __ARM_FEATURE_UNALIGNED
++       /* Copy word by word using LDR when alignment can be done in hardware,
++          i.e., SCTLR.A is set, supporting unaligned access in LDR and STR.  */
++        subs    r2, r2, #60
++        blt     8f
++
++7:
++        /* Copy 64 bytes in every loop iteration.  */
++        .irp    offset, #0, #4, #8, #12, #16, #20, #24, #28, #32, #36, #40, #44, #48, #52, #56, #60
++        ldr     r3, [r1, \offset]
++        str     r3, [r0, \offset]
++        .endr
++
++        add     r0, r0, #64
++        add     r1, r1, #64
++        subs    r2, r2, #64
++        bge     7b
++
++8:
++        /* Get here if less than 64 bytes to copy, -64 <= r2 < 0.
++           Check if there is more than 3 bytes to copy.  */
++        adds    r2, r2, #60
++        blt     copy_less_than_4
++
++9:      
++       /* Get here if there is less than 64 but at least 4 bytes to copy,
++          where the number of bytes to copy is r2+4.  */
++        ldr     r3, [r1], #4
++        str     r3, [r0], #4
++        subs    r2, r2, #4
++        bge     9b
++
++        b       copy_less_than_4
++
++#else /* not __ARM_FEATURE_UNALIGNED  */
++
++       /* ip has last 2 bits of src,
++          i.e., ip is the offset of src from word, and ip > 0.
++          Compute shifts needed to copy from src to dst.  */
++        cmp     ip, #2
++        beq     miscopy_16_16             /* If ip == 2.  */
++        bge     miscopy_24_8              /* If ip == 3.  */
++
++        /* Get here if ip == 1.  */
++
++        /* Endian independent macros for shifting bytes within registers.  */
++
++#ifndef __ARMEB__
++miscopy_8_24:   miscopy pull=8 push=24 shiftleft=lsr shiftright=lsl
++miscopy_16_16:  miscopy pull=16 push=16 shiftleft=lsr shiftright=lsl
++miscopy_24_8:   miscopy pull=24 push=8 shiftleft=lsr shiftright=lsl
++#else  /* not __ARMEB__ */
++miscopy_8_24:   miscopy pull=8 push=24 shiftleft=lsl shiftright=lsr
++miscopy_16_16:  miscopy pull=16 push=16 shiftleft=lsl shiftright=lsr
++miscopy_24_8:   miscopy pull=24 push=8 shiftleft=lsl shiftright=lsr
++#endif  /* not __ARMEB__ */
++
++#endif  /* not __ARM_FEATURE_UNALIGNED  */
++
++#endif  /* memcpy */
+diff --git a/newlib/libc/misc/ffs.c b/newlib/libc/misc/ffs.c
+index 292ffab..7fc38c8 100644
+--- a/newlib/libc/misc/ffs.c
++++ b/newlib/libc/misc/ffs.c
+@@ -6,9 +6,11 @@ INDEX
+ 	ffs
+ 
+ ANSI_SYNOPSIS
++	#include <strings.h>
+ 	int ffs(int <[word]>);
+ 
+ TRAD_SYNOPSIS
++	#include <strings.h>
+ 	int ffs(<[word]>);
+ 
+ DESCRIPTION
+@@ -24,7 +26,7 @@ PORTABILITY
+ 
+ No supporting OS subroutines are required.  */
+ 
+-#include <_ansi.h>
++#include <strings.h>
+ 
+ int
+ _DEFUN(ffs, (word),
+diff --git a/newlib/libc/posix/regexec.c b/newlib/libc/posix/regexec.c
+index 957ce3b..98f5ef6 100644
+--- a/newlib/libc/posix/regexec.c
++++ b/newlib/libc/posix/regexec.c
+@@ -58,7 +58,9 @@ static char sccsid[] = "@(#)regexec.c	8.3 (Berkeley) 3/20/94";
+ #include "utils.h"
+ #include "regex2.h"
+ 
++#ifndef NDEBUG
+ static int nope = 0;		/* for use in asserts; shuts lint up */
++#endif
+ 
+ /* macros for manipulating states, small version */
+ #define	states	long
+diff --git a/newlib/libc/stdio/vasiprintf.c b/newlib/libc/stdio/vasiprintf.c
+index 671bbdb..15310cc 100644
+--- a/newlib/libc/stdio/vasiprintf.c
++++ b/newlib/libc/stdio/vasiprintf.c
+@@ -26,6 +26,8 @@ static char sccsid[] = "%W% (Berkeley) %G%";
+ #include <limits.h>
+ #include <stdarg.h>
+ 
++#include "local.h"
++
+ #ifndef _REENT_ONLY
+ 
+ int
+diff --git a/newlib/libc/stdio/vasprintf.c b/newlib/libc/stdio/vasprintf.c
+index 525c696..b89f4db 100644
+--- a/newlib/libc/stdio/vasprintf.c
++++ b/newlib/libc/stdio/vasprintf.c
+@@ -26,6 +26,8 @@ static char sccsid[] = "%W% (Berkeley) %G%";
+ #include <limits.h>
+ #include <stdarg.h>
+ 
++#include "local.h"
++
+ #ifndef _REENT_ONLY
+ 
+ int
+diff --git a/newlib/libc/stdio/vfscanf.c b/newlib/libc/stdio/vfscanf.c
+index 42ebacd..32a132a 100644
+--- a/newlib/libc/stdio/vfscanf.c
++++ b/newlib/libc/stdio/vfscanf.c
+@@ -453,7 +453,9 @@ _DEFUN(__SVFSCANF_R, (rptr, fp, fmt0, ap),
+   wchar_t wc;                   /* wchar to use to read format string */
+   wchar_t *wcp;                 /* handy wide character pointer */
+   size_t mbslen;                /* length of converted multibyte sequence */
++#ifdef _MB_CAPABLE
+   mbstate_t state;              /* value to keep track of multibyte state */
++#endif
+ 
+   #define CCFN_PARAMS	_PARAMS((struct _reent *, const char *, char **, int))
+   u_long (*ccfn)CCFN_PARAMS=0;	/* conversion function (strtol/strtoul) */
+diff --git a/newlib/libc/stdio/vsiprintf.c b/newlib/libc/stdio/vsiprintf.c
+index 05d009d..150b4e7 100644
+--- a/newlib/libc/stdio/vsiprintf.c
++++ b/newlib/libc/stdio/vsiprintf.c
+@@ -26,6 +26,8 @@ static char sccsid[] = "%W% (Berkeley) %G%";
+ #include <limits.h>
+ #include <stdarg.h>
+ 
++#include "local.h"
++
+ #ifndef _REENT_ONLY
+ 
+ int
+diff --git a/newlib/libc/stdio/vsniprintf.c b/newlib/libc/stdio/vsniprintf.c
+index f7c60e2..c4305c1 100644
+--- a/newlib/libc/stdio/vsniprintf.c
++++ b/newlib/libc/stdio/vsniprintf.c
+@@ -27,6 +27,8 @@ static char sccsid[] = "%W% (Berkeley) %G%";
+ #include <stdarg.h>
+ #include <errno.h>
+ 
++#include "local.h"
++
+ #ifndef _REENT_ONLY
+ 
+ int
+diff --git a/newlib/libc/stdio/vsnprintf.c b/newlib/libc/stdio/vsnprintf.c
+index 641047d..58106b6 100644
+--- a/newlib/libc/stdio/vsnprintf.c
++++ b/newlib/libc/stdio/vsnprintf.c
+@@ -27,6 +27,8 @@ static char sccsid[] = "%W% (Berkeley) %G%";
+ #include <stdarg.h>
+ #include <errno.h>
+ 
++#include "local.h"
++
+ #ifndef _REENT_ONLY
+ 
+ int
+diff --git a/newlib/libc/stdio/vsprintf.c b/newlib/libc/stdio/vsprintf.c
+index fd052cd..9ab0c73 100644
+--- a/newlib/libc/stdio/vsprintf.c
++++ b/newlib/libc/stdio/vsprintf.c
+@@ -26,6 +26,8 @@ static char sccsid[] = "%W% (Berkeley) %G%";
+ #include <limits.h>
+ #include <stdarg.h>
+ 
++#include "local.h"
++
+ #ifndef _REENT_ONLY
+ 
+ int
+diff --git a/newlib/libc/stdlib/putenv_r.c b/newlib/libc/stdlib/putenv_r.c
+index 9ba6260..a0f4767 100644
+--- a/newlib/libc/stdlib/putenv_r.c
++++ b/newlib/libc/stdlib/putenv_r.c
+@@ -43,7 +43,7 @@ _DEFUN (_putenv_r, (reent_ptr, str),
+   if (!p)
+     return 1;
+ 
+-  if (!(equal = index (p, '=')))
++  if (!(equal = strchr (p, '=')))
+     {
+       (void) _free_r (reent_ptr, p);
+       return 1;
+diff --git a/newlib/libc/stdlib/setenv_r.c b/newlib/libc/stdlib/setenv_r.c
+index d73ba39..f9ff2c1 100644
+--- a/newlib/libc/stdlib/setenv_r.c
++++ b/newlib/libc/stdlib/setenv_r.c
+@@ -110,7 +110,7 @@ _DEFUN (_setenv_r, (reent_ptr, name, value, rewrite),
+               ENV_UNLOCK;
+ 	      return (-1);
+             }
+-	  bcopy ((char *) *p_environ, (char *) P, cnt * sizeof (char *));
++	  memcpy((char *) P,(char *) *p_environ, cnt * sizeof (char *));
+ 	  *p_environ = P;
+ 	}
+       (*p_environ)[cnt + 1] = NULL;
+diff --git a/newlib/libc/string/bcmp.c b/newlib/libc/string/bcmp.c
+index e8d0573..8d6e12f 100644
+--- a/newlib/libc/string/bcmp.c
++++ b/newlib/libc/string/bcmp.c
+@@ -6,11 +6,11 @@ INDEX
+ 	bcmp
+ 
+ ANSI_SYNOPSIS
+-	#include <string.h>
++	#include <strings.h>
+ 	int bcmp(const void *<[s1]>, const void *<[s2]>, size_t <[n]>);
+ 
+ TRAD_SYNOPSIS
+-	#include <string.h>
++	#include <strings.h>
+ 	int bcmp(<[s1]>, <[s2]>, <[n]>)
+ 	const void *<[s1]>;
+ 	const void *<[s2]>;
+@@ -36,6 +36,7 @@ QUICKREF
+ */
+ 
+ #include <string.h>
++#include <strings.h>
+ 
+ int
+ _DEFUN (bcmp, (m1, m2, n),
+diff --git a/newlib/libc/string/bcopy.c b/newlib/libc/string/bcopy.c
+index 505e39d..2881fd9 100644
+--- a/newlib/libc/string/bcopy.c
++++ b/newlib/libc/string/bcopy.c
+@@ -3,7 +3,7 @@ FUNCTION
+ 	<<bcopy>>---copy memory regions
+ 
+ ANSI_SYNOPSIS
+-	#include <string.h>
++	#include <strings.h>
+ 	void bcopy(const void *<[in]>, void *<[out]>, size_t <[n]>);
+ 
+ TRAD_SYNOPSIS
+@@ -27,6 +27,7 @@ QUICKREF
+ */
+ 
+ #include <string.h>
++#include <strings.h>
+ 
+ void
+ _DEFUN (bcopy, (b1, b2, length),
+diff --git a/newlib/libc/string/bzero.c b/newlib/libc/string/bzero.c
+index 661285f..dbcae02 100644
+--- a/newlib/libc/string/bzero.c
++++ b/newlib/libc/string/bzero.c
+@@ -6,11 +6,11 @@ INDEX
+ 	bzero
+ 
+ ANSI_SYNOPSIS
+-	#include <string.h>
++	#include <strings.h>
+ 	void bzero(void *<[b]>, size_t <[length]>);
+ 
+ TRAD_SYNOPSIS
+-	#include <string.h>
++	#include <strings.h>
+ 	void bzero(<[b]>, <[length]>)
+ 	void *<[b]>;
+ 	size_t <[length]>;
+@@ -30,7 +30,7 @@ Neither ANSI C nor the System V Interface Definition (Issue 2) require
+ <<bzero>> requires no supporting OS subroutines.
+ */
+ 
+-#include <string.h>
++#include <strings.h>
+ 
+ _VOID
+ _DEFUN (bzero, (b, length),
+diff --git a/newlib/libc/string/index.c b/newlib/libc/string/index.c
+index 6c165f9..ec241ff 100644
+--- a/newlib/libc/string/index.c
++++ b/newlib/libc/string/index.c
+@@ -6,11 +6,11 @@ INDEX
+ 	index
+ 
+ ANSI_SYNOPSIS
+-	#include <string.h>
++	#include <strings.h>
+ 	char * index(const char *<[string]>, int <[c]>);
+ 
+ TRAD_SYNOPSIS
+-	#include <string.h>
++	#include <strings.h>
+ 	char * index(<[string]>, <[c]>);
+ 	char *<[string]>;
+ 	int *<[c]>;
+@@ -34,6 +34,7 @@ QUICKREF
+ */
+ 
+ #include <string.h>
++#include <strings.h>
+ 
+ char *
+ _DEFUN (index, (s, c),
+diff --git a/newlib/libc/string/rindex.c b/newlib/libc/string/rindex.c
+index 3c6dff9..daa1c52 100644
+--- a/newlib/libc/string/rindex.c
++++ b/newlib/libc/string/rindex.c
+@@ -10,7 +10,7 @@ ANSI_SYNOPSIS
+ 	char * rindex(const char *<[string]>, int <[c]>);
+ 
+ TRAD_SYNOPSIS
+-	#include <string.h>
++	#include <strings.h>
+ 	char * rindex(<[string]>, <[c]>);
+ 	char *<[string]>;
+ 	int *<[c]>;
+@@ -34,6 +34,7 @@ QUICKREF
+ */
+ 
+ #include <string.h>
++#include <strings.h>
+ 
+ char *
+ _DEFUN (rindex, (s, c),
+diff --git a/newlib/libc/string/strcasecmp.c b/newlib/libc/string/strcasecmp.c
+index 73cf866..ebf23cd 100644
+--- a/newlib/libc/string/strcasecmp.c
++++ b/newlib/libc/string/strcasecmp.c
+@@ -6,11 +6,11 @@ INDEX
+ 	strcasecmp
+ 
+ ANSI_SYNOPSIS
+-	#include <string.h>
++	#include <strings.h>
+ 	int strcasecmp(const char *<[a]>, const char *<[b]>);
+ 
+ TRAD_SYNOPSIS
+-	#include <string.h>
++	#include <strings.h>
+ 	int strcasecmp(<[a]>, <[b]>)
+ 	char *<[a]>;
+ 	char *<[b]>;
+@@ -38,7 +38,7 @@ QUICKREF
+ 	strcasecmp
+ */
+ 
+-#include <string.h>
++#include <strings.h>
+ #include <ctype.h>
+ 
+ int
+diff --git a/newlib/libc/string/strcasestr.c b/newlib/libc/string/strcasestr.c
+index a8276e2..0122d7a 100644
+--- a/newlib/libc/string/strcasestr.c
++++ b/newlib/libc/string/strcasestr.c
+@@ -76,6 +76,7 @@ QUICKREF
+ 
+ #include <ctype.h>
+ #include <string.h>
++#include <strings.h>
+ 
+ #if !defined(PREFER_SIZE_OVER_SPEED) && !defined(__OPTIMIZE_SIZE__)
+ # define RETURN_TYPE char *
+diff --git a/newlib/libc/string/strncasecmp.c b/newlib/libc/string/strncasecmp.c
+index 6909018..27778e0 100644
+--- a/newlib/libc/string/strncasecmp.c
++++ b/newlib/libc/string/strncasecmp.c
+@@ -6,11 +6,11 @@ INDEX
+ 	strncasecmp
+ 
+ ANSI_SYNOPSIS
+-	#include <string.h>
++	#include <strings.h>
+ 	int strncasecmp(const char *<[a]>, const char * <[b]>, size_t <[length]>);
+ 
+ TRAD_SYNOPSIS
+-	#include <string.h>
++	#include <strings.h>
+ 	int strncasecmp(<[a]>, <[b]>, <[length]>)
+ 	char *<[a]>;
+ 	char *<[b]>;
+@@ -40,7 +40,7 @@ QUICKREF
+ 	strncasecmp
+ */
+ 
+-#include <string.h>
++#include <strings.h>
+ #include <ctype.h>
+ 
+ int 
+diff --git a/newlib/libc/string/wcwidth.c b/newlib/libc/string/wcwidth.c
+index f825be6..ac5c47f 100644
+--- a/newlib/libc/string/wcwidth.c
++++ b/newlib/libc/string/wcwidth.c
+@@ -94,6 +94,9 @@ PORTABILITY
+ 
+ #include <_ansi.h>
+ #include <wchar.h>
++#ifndef _MB_CAPABLE
++#include <wctype.h> /* iswprint, iswcntrl */
++#endif
+ #include "local.h"
+ 
+ #ifdef _MB_CAPABLE
+diff --git a/newlib/libc/sys/arm/arm.h b/newlib/libc/sys/arm/arm.h
+new file mode 100644
+index 0000000..26a1ff1
+--- /dev/null
++++ b/newlib/libc/sys/arm/arm.h
+@@ -0,0 +1,62 @@
++/*
++ * Copyright (c) 2011 ARM Ltd
++ * All rights reserved.
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions
++ * are met:
++ * 1. Redistributions of source code must retain the above copyright
++ *    notice, this list of conditions and the following disclaimer.
++ * 2. Redistributions in binary form must reproduce the above copyright
++ *    notice, this list of conditions and the following disclaimer in the
++ *    documentation and/or other materials provided with the distribution.
++ * 3. The name of the company may not be used to endorse or promote
++ *    products derived from this software without specific prior written
++ *    permission.
++ *
++ * THIS SOFTWARE IS PROVIDED BY ARM LTD ``AS IS'' AND ANY EXPRESS OR IMPLIED
++ * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
++ * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
++ * IN NO EVENT SHALL ARM LTD BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
++ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
++ * TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
++ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
++ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
++ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
++ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++ */
++
++#ifndef _LIBGLOSS_ARM_H
++#define _LIBGLOSS_ARM_H
++
++/* __thumb2__ stands for thumb on armva7(A/R/M/EM) architectures,
++   __ARM_ARCH_6M__ stands for armv6-M(thumb only) architecture,
++   __ARM_ARCH_7M__ stands for armv7-M(thumb only) architecture.
++   __ARM_ARCH_7EM__ stands for armv7e-M(thumb only) architecture.
++   There are some macro combinations used many times in libgloss/arm,
++   like (__thumb2__ || (__thumb__ && __ARM_ARCH_6M__)), so factor
++   it out and use THUMB_V7_V6M instead, which stands for thumb on
++   v6-m/v7 arch as the combination does.  */
++#if defined(__thumb2__) || (defined(__thumb__) && defined(__ARM_ARCH_6M__))
++# define THUMB_V7_V6M
++#endif
++
++/* The (__ARM_ARCH_7EM__ || __ARM_ARCH_7M__ || __ARM_ARCH_6M__) combination
++   stands for cortex-M profile architectures, which don't support ARM state.
++   Factor it out and use THUMB_V7M_V6M instead.  */
++#if defined(__ARM_ARCH_7M__)     \
++    || defined(__ARM_ARCH_7EM__) \
++    || defined(__ARM_ARCH_6M__)
++# define THUMB_V7M_V6M
++#endif
++
++/* Defined if this target supports the BLX Rm instruction.  */
++#if  !defined(__ARM_ARCH_2__)   \
++  && !defined(__ARM_ARCH_3__)	\
++  && !defined(__ARM_ARCH_3M__)	\
++  && !defined(__ARM_ARCH_4__)	\
++  && !defined(__ARM_ARCH_4T__)
++# define HAVE_CALL_INDIRECT
++#endif
++
++#endif /* _LIBGLOSS_ARM_H */
+diff --git a/newlib/libc/sys/arm/crt0.S b/newlib/libc/sys/arm/crt0.S
+index c750ca8..79b36b1 100644
+--- a/newlib/libc/sys/arm/crt0.S
++++ b/newlib/libc/sys/arm/crt0.S
+@@ -1,4 +1,5 @@
+ #include "newlib.h"
++#include "arm.h"
+ #include "swi.h"
+ 
+ /* ANSI concatenation macros.  */
+@@ -18,11 +19,11 @@
+ 
+ /* .text is used instead of .section .text so it works with arm-aout too.  */
+ 	.text
+-#if defined(__thumb2__)
+ 	.syntax unified
++#ifdef THUMB_V7_V6M
+ 	.thumb
+ .macro FUNC_START name
+-	.global	\name
++	.global \name
+ 	.thumb_func
+ \name:
+ .endm	
+@@ -33,6 +34,16 @@
+ \name:
+ .endm	
+ #endif
++
++.macro indirect_call reg
++#ifdef HAVE_CALL_INDIRECT
++	blx \reg
++#else
++	mov	lr, pc
++	mov	pc, \reg
++#endif
++.endm
++
+ 	.align 	0
+ 
+ 	FUNC_START	_mainCRTStartup
+@@ -43,34 +54,141 @@
+ 	.fnstart
+ #endif
+ 
+-/* Start by setting up a stack */
++/* Start by setting up a stack.  */
+ #ifdef ARM_RDP_MONITOR
+-	/*  Issue Demon SWI to read stack info */
+-	swi	SWI_GetEnv	/*  Returns command line in r0 */
+-	mov	sp,r1		/*  and the highest memory address in r1 */
+-	ldr	sl, .LC2	/*  stack limit is at end of data */
+-	add	sl, sl, #256	/*  allow slop for stack overflow handling */
+-				/*  and small frames */
++	/*  Issue Demon SWI to read stack info.  */
++	swi	SWI_GetEnv	/*  Returns command line in r0.  */
++	mov	sp,r1		/*  and the highest memory address in r1.  */
++
++	/*  Stack limit is at end of data.  */
++	/*  Allow slop for stack overflow handling and small frames.  */
++#ifdef __ARM_ARCH_6M__
++	ldr	r0, .LC2
++	adds	r0, #128
++	adds	r0, #128
++	mov	sl, r0
++#else
++	ldr	sl, .LC2
++	add	sl, sl, #256
++#endif
+ #else
+ #ifdef ARM_RDI_MONITOR
+-	/*  Issue Angel SWI to read stack info */
+-	mov	r0, #AngelSWI_Reason_HeapInfo
+-	adr	r1, .LC0	/*  point at ptr to 4 words to receive data */
+-#if defined(__thumb2__)
++	/*  Issue Angel SWI to read stack info.  */
++	movs	r0, #AngelSWI_Reason_HeapInfo
++	adr	r1, .LC0	/*  Point at ptr to 4 words to receive data.  */
++#ifdef THUMB_V7M_V6M
+ 	bkpt	AngelSWI
++#elif defined(__thumb2__)
++	/*  We are in thumb mode for startup on armv7 architectures.  */
++	AngelSWIAsm	AngelSWI
+ #else
+-	/*  We are always in ARM mode for startup */
++	/*  We are always in ARM mode for startup on pre armv7 archs.  */
+ 	AngelSWIAsm	AngelSWI_ARM
+ #endif
+-	ldr	r0, .LC0	/*  point at values read */
+-	ldr	sp, [r0, #8]
+-	ldr	sl, [r0, #12]
+-	add	sl, sl, #256	/*  allow slop for stack overflow handling */
+-				/*  and small frames */
++	ldr	r0, .LC0	/*  Point at values read.  */
++
++	ldr     r1, [r0, #0]
++	cmp     r1, #0
++	bne     .LC32
++	/* If the heap base value [r0, #0] is 0 then the heap base is actually 
++	   at the end of program data (i.e. __end__). See:
++           http://infocenter.arm.com/help/topic/com.arm.doc.dui0471-/Bacbefaa.html
++	   for more information.  */
++	ldr     r1, .LC31
++	str     r1, [r0, #0]
++.LC32:	
++	ldr	r1, [r0, #8]
++	ldr	r2, [r0, #12]
++	/*  We skip setting sp/sl if 0 returned from semihosting. 
++	    - According to semihosting docs, if 0 returned from semihosting,
++	      the system was unable to calculate the real value, so it's ok
++	      to skip setting sp/sl to 0 here.
++	    - Considering M-profile processors, We might want to initialize
++	      sp by the first entry of vector table and return 0 to SYS_HEAPINFO
++	      semihosting call, which will be skipped here.  */
++	cmp	r1, #0
++	beq	.LC26
++	mov	sp, r1
++.LC26:
++	cmp	r2, #0
++	beq	.LC27
++
++	/*  Allow slop for stack overflow handling and small frames.  */
++#ifdef __ARM_ARCH_6M__
++	adds	r2, #128
++	adds	r2, #128
++	mov	sl, r2
+ #else
+-	/*  Set up the stack pointer to a fixed value */
++	add	sl, r2, #256
++#endif
++
++.LC27:
++#else
++	/*  Set up the stack pointer to a fixed value.  */
++	/*  Changes by toralf:
++	    - Allow linker script to provide stack via __stack symbol - see
++	      defintion of .Lstack
++	    - Provide "hooks" that may be used by the application to add
++	      custom init code - see .Lhwinit and .Lswinit	
++	    - Go through all execution modes and set up stack for each of them.
++	      Loosely based on init.s from ARM/Motorola example code.
++              Note: Mode switch via CPSR is not allowed once in non-privileged
++		    mode, so we take care not to enter "User" to set up its sp,
++		    and also skip most operations if already in that mode.  */
++
++	ldr	r3, .Lstack
++	cmp	r3, #0
++#ifdef __thumb2__
++	it	eq
++#endif	
++#ifdef __ARM_ARCH_6M__
++	bne	.LC28
+ 	ldr	r3, .LC0
++.LC28:
++#else
++	ldreq	r3, .LC0
++#endif
++	/* Note: This 'mov' is essential when starting in User, and ensures we
++		 always get *some* sp value for the initial mode, even if we 
++		 have somehow missed it below (in which case it gets the same
++		 value as FIQ - not ideal, but better than nothing).  */
++	mov	sp, r3
++#ifdef THUMB_V7_V6M
++	/* XXX Fill in stack assignments for interrupt modes.  */
++#else
++	mrs	r2, CPSR
++	tst	r2, #0x0F	/* Test mode bits - in User of all are 0.  */
++	beq	.LC23		/* "eq" means r2 AND #0x0F is 0.  */
++	msr     CPSR_c, #0xD1	/* FIRQ mode, interrupts disabled.  */
+ 	mov 	sp, r3
++	sub	sl, sp, #0x1000	/* This mode also has its own sl (see below).  */
++	
++	mov	r3, sl	
++	msr     CPSR_c, #0xD7	/* Abort mode, interrupts disabled.  */
++	mov	sp, r3
++	sub	r3, r3, #0x1000
++
++	msr     CPSR_c, #0xDB	/* Undefined mode, interrupts disabled.  */
++	mov	sp, r3
++	sub	r3, r3, #0x1000
++
++	msr     CPSR_c, #0xD2	/* IRQ mode, interrupts disabled.  */
++	mov	sp, r3
++	sub	r3, r3, #0x2000
++		
++	msr     CPSR_c, #0xD3	/* Supervisory mode, interrupts disabled.  */
++
++	mov	sp, r3
++	sub	r3, r3, #0x8000	/* Min size 32k.  */
++	bic	r3, r3, #0x00FF	/* Align with current 64k block.  */
++	bic	r3, r3, #0xFF00
++
++	str	r3, [r3, #-4]	/* Move value into user mode sp without */ 
++	ldmdb	r3, {sp}^       /* changing modes, via '^' form of ldm.  */ 
++	orr	r2, r2, #0xC0	/* Back to original mode, presumably SVC, */
++	msr	CPSR_c, r2	/* with FIQ/IRQ disable bits forced to 1.  */
++#endif	
++.LC23:
+ 	/* Setup a default stack-limit in-case the code has been
+ 	   compiled with "-mapcs-stack-check".  Hard-wiring this value
+ 	   is not ideal, since there is currently no support for
+@@ -78,23 +196,30 @@
+ 	   this default 64k is enough for the program being executed.
+ 	   However, it ensures that this simple crt0 world will not
+ 	   immediately cause an overflow event:  */
+-	sub	sl, sp, #64 << 10	/* Still assumes 256bytes below sl */
++#ifdef __ARM_ARCH_6M__
++	movs	r2, #64
++	lsls	r2, r2, #10
++	subs	r2, r3, r2
++	mov	sl, r2
++#else
++	sub	sl, r3, #64 << 10	/* Still assumes 256bytes below sl.  */
++#endif
+ #endif
+ #endif
+ 	/* Zero the memory in the .bss section.  */
+-	mov 	a2, #0			/* Second arg: fill value */
+-	mov	fp, a2			/* Null frame pointer */
+-	mov	r7, a2			/* Null frame pointer for Thumb */
++	movs 	a2, #0			/* Second arg: fill value.  */
++	mov	fp, a2			/* Null frame pointer.  */
++	mov	r7, a2			/* Null frame pointer for Thumb.  */
+ 	
+-	ldr	a1, .LC1		/* First arg: start of memory block */
++	ldr	a1, .LC1		/* First arg: start of memory block.  */
+ 	ldr	a3, .LC2	
+-	sub	a3, a3, a1		/* Third arg: length of block */
++	subs	a3, a3, a1		/* Third arg: length of block.  */
+ 	
+ 
+-#if defined(__thumb__) && !defined(__thumb2__)
+-	/* Enter Thumb mode.... */
+-	add	a4, pc, #1	/* Get the address of the Thumb block */
+-	bx	a4		/* Go there and start Thumb decoding  */
++#if defined(__thumb__) && !defined(THUMB_V7_V6M)
++	/* Enter Thumb mode...  */
++	add	a4, pc, #1	/* Get the address of the Thumb block.  */
++	bx	a4		/* Go there and start Thumb decoding.  */
+ 
+ 	.code 16
+ 	.global __change_mode
+@@ -104,23 +229,37 @@ __change_mode:
+ 	
+ 	bl	FUNCTION (memset)
+ #if !defined (ARM_RDP_MONITOR) && !defined (ARM_RDI_MONITOR)
+-	mov	r0, #0		/*  no arguments  */
+-	mov	r1, #0		/*  no argv either */
++/* Changes by toralf: Taken from libgloss/m68k/crt0.S
++   initialize target specific stuff. Only execute these
++   functions it they exist.  */
++	ldr	r3, .Lhwinit
++	cmp	r3, #0
++	beq	.LC24
++	indirect_call r3
++.LC24:	
++	ldr	r3, .Lswinit
++	cmp	r3, #0
++	beq	.LC25
++	indirect_call r3
++
++.LC25:	
++	movs	r0, #0		/* No arguments.  */
++	movs	r1, #0		/* No argv either.  */
+ #else
+-	/* Need to set up standard file handles */
++	/* Need to set up standard file handles.  */
+ 	bl	FUNCTION (initialise_monitor_handles)
+ 	
+ #ifdef ARM_RDP_MONITOR
+-	swi	SWI_GetEnv	/*  sets r0 to point to the command line */
++	swi	SWI_GetEnv	/* Sets r0 to point to the command line.  */
+ 	mov	r1, r0
+ #else
+-	mov	r0, #AngelSWI_Reason_GetCmdLine
+-	adr	r1, .LC30	/*  Space for command line */
++	movs	r0, #AngelSWI_Reason_GetCmdLine
++	adr	r1, .LC30	/* Space for command line.  */
+ 	AngelSWIAsm	AngelSWI
+ 	ldr	r1, .LC30
+ #endif
+-	/*  Parse string at r1 */
+-	mov	r0, #0		/*  count of arguments so far */
++	/*  Parse string at r1.  */
++	movs	r0, #0		/* Count of arguments so far.  */
+ 	/* Push a NULL argument onto the end of the list.  */
+ #ifdef __thumb__
+ 	push	{r0}
+@@ -128,10 +267,10 @@ __change_mode:
+ 	stmfd	sp!, {r0}
+ #endif
+ .LC10:
+-/*  Skip leading blanks */
++/*  Skip leading blanks.  */
+ #ifdef __thumb__
+ 	ldrb	r3, [r1]
+-	add	r1, #1
++	adds	r1, #1
+ #else
+ 	ldrb	r3, [r1], #1
+ #endif
+@@ -140,8 +279,8 @@ __change_mode:
+ 	cmp	r3, #' '
+ 	beq	.LC10
+ 
+-/*  See whether we are scanning a string */
+-	cmp	r3, #'"'
++/* See whether we are scanning a string.  */
++	cmp	r3, #'\"'
+ #ifdef __thumb__
+ 	beq	.LC20
+ 	cmp	r3, #'\''
+@@ -151,67 +290,67 @@ __change_mode:
+ 	b	.LC22
+ 
+ .LC21:
+-	mov	r2, #' '	/*  terminator type */
+-	sub	r1, r1, #1	/*  adjust back to point at start char */
++	movs	r2, #' '	/* Terminator type.  */
++	subs	r1, r1, #1	/* Adjust back to point at start char.  */
+ .LC22:
+ #else
+ 	cmpne	r3, #'\''
+ 	moveq	r2, r3
+-	movne	r2, #' '	/*  terminator type */
+-	subne	r1, r1, #1	/*  adjust back to point at start char */
++	movne	r2, #' '	/* Terminator type.  */
++	subne	r1, r1, #1	/* Adjust back to point at start char.  */
+ #endif
+ 
+-/*  Stack a pointer to the current argument */
++/*  Stack a pointer to the current argument.  */
+ #ifdef __thumb__
+ 	push	{r1}
+ #else
+ 	stmfd	sp!, {r1}
+ #endif
+-	add	r0, r0, #1
++	adds	r0, r0, #1
+ .LC11:
+ #ifdef __thumb__
+ 	ldrb	r3, [r1]
+-	add	r1, #1
++	adds	r1, #1
+ #else
+ 	ldrb	r3, [r1], #1
+ #endif
+ 	cmp	r3, #0
+ 	beq	.LC12
+-	cmp	r2, r3		/*  reached terminator? */
++	cmp	r2, r3		/* Reached terminator ?  */
+ 	bne	.LC11
+-	mov	r2, #0
+-	sub	r3, r1, #1
+-	strb	r2, [r3]	/*  terminate the arg string */
++	movs	r2, #0
++	subs	r3, r1, #1
++	strb	r2, [r3]	/* Terminate the arg string.  */
+ 	b	.LC10
+ 
+ .LC12:
+-	mov	r1, sp		/*  point at stacked arg pointers */
+-	/* We've now got the stacked args in order reverse the */
++	mov	r1, sp		/* Point at stacked arg pointers.  */
++	/* We've now got the stacked args in order, reverse them.  */
+ #ifdef __thumb__
+ 	mov	r2, r0
+-	lsl	r2, #2
++	lsls	r2, #2
+ 	add	r2, sp
+ 	mov	r3, sp
+ .LC15:	cmp	r2, r3
+ 	bls	.LC14
+-	sub	r2, #4
++	subs	r2, #4
+ 	ldr	r4, [r2]
+ 	ldr	r5, [r3]
+ 	str	r5, [r2]
+ 	str	r4, [r3]
+-	add	r3, #4
++	adds	r3, #4
+ 	b	.LC15
+ .LC14:	
+ 	/* Ensure doubleword stack alignment.  */
+ 	mov	r4, sp
+-	mov	r5, #7
+-	bic	r4, r5
++	movs	r5, #7
++	bics	r4, r5
+ 	mov	sp, r4
+ #else
+-	add	r2, sp, r0, LSL #2	/* End of args */
+-	mov	r3, sp			/* Start of args */
++	add	r2, sp, r0, LSL #2	/* End of args.  */
++	mov	r3, sp			/* Start of args.  */
+ .LC13:	cmp	r2, r3
+-	ldrhi	r4,[r2, #-4]		/* Reverse ends of list */
++	ldrhi	r4,[r2, #-4]		/* Reverse ends of list.  */
+ 	ldrhi	r5, [r3]
+ 	strhi	r5, [r2, #-4]!
+ 	strhi	r4, [r3], #4
+@@ -238,9 +377,8 @@ __change_mode:
+ 
+ 	bl	FUNCTION (exit)		/* Should not return.  */
+ 
+-#if defined(__thumb__) && !defined(__thumb2__)
++#if defined(__thumb__) && !defined(THUMB_V7_V6M)
+ 	/* Come out of Thumb mode.  This code should be redundant.  */
+-
+ 	mov	a4, pc
+ 	bx	a4
+ 
+@@ -255,20 +393,42 @@ change_back:
+ #endif
+ 	
+ 	/* For Thumb, constants must be after the code since only 
+-	   positive offsets are supported for PC relative addresses.  */
+-	
++	   positive offsets are supported for PC relative addresses.  */	
+ 	.align 0
+ .LC0:
+ #ifdef ARM_RDI_MONITOR
+ 	.word	HeapBase
+ #else
+ #ifndef ARM_RDP_MONITOR
++	/* Changes by toralf: Provide alternative "stack" variable whose value
++	   may be defined externally; .Lstack will be used instead of .LC0 if
++	   it points to a non-0 value. Also set up references to "hooks" that
++           may be used by the application to provide additional init code.  */	
+ #ifdef __pe__
+ 	.word	0x800000
+ #else
+-/*	.word	0x80000	*/		/* Top of RAM on the PIE board.  */
++	.word	0x80000			/* Top of RAM on the PIE board.  */
+ #endif
++
++.Lstack:	
++	.word	__stack
++.Lhwinit:	
++	.word	FUNCTION (hardware_init_hook)
++.Lswinit:
++	.word	FUNCTION (software_init_hook)
++
++	/* Set up defaults for the above variables in the form of weak symbols
++	   - so that application will link correctly, and get value 0 in
++	   runtime (meaning "ignore setting") for the variables, when the user
++	   does not provide the symbols. (The linker uses a weak symbol if,
++	   and only if, a normal version of the same symbol isn't provided
++	   e.g. by a linker script or another object file).  */	
++
++	.weak __stack
++	.weak FUNCTION (hardware_init_hook) 
++	.weak FUNCTION (software_init_hook)
+ #endif
++	
+ #endif
+ #if defined(__ELF__) && !defined(__USING_SJLJ_EXCEPTIONS__)
+ 	/* Protect against unhandled exceptions.  */
+@@ -287,6 +447,8 @@ change_back:
+ .LC30:
+ 	.word	CommandLine
+ 	.word	255
++.LC31:
++	.word	__end__
+ 
+ /*  Workspace for Angel calls.  */
+ 	.data
+diff --git a/newlib/libc/sys/rtems/crt0.c b/newlib/libc/sys/rtems/crt0.c
+index 30b1219..1565859 100644
+--- a/newlib/libc/sys/rtems/crt0.c
++++ b/newlib/libc/sys/rtems/crt0.c
+@@ -12,20 +12,21 @@
+ 
+ #include <reent.h>
+ 
+-#include <signal.h> // sigset_t
+-#include <time.h> // struct timespec
++#include <signal.h> /* sigset_t */
++#include <time.h> /* struct timespec */
++#include <unistd.h> /* isatty */
+ 
+ void rtems_provides_crt0( void ) {}  /* dummy symbol so file always has one */
+ 
+-#define RTEMS_STUB(ret, func) \
+-ret rtems_stub_##func {}; \
+-ret func
++#define RTEMS_STUB(ret, func, body) \
++ret rtems_stub_##func body; \
++ret func body
+ 
+ /* RTEMS provides some of its own routines including a Malloc family */
+-RTEMS_STUB(void *,malloc(size_t s)) { return 0; }
+-RTEMS_STUB(void *,realloc(void* p, size_t s)) { return 0; }
+-RTEMS_STUB(void, free(void* ptr)) { ; }
+-RTEMS_STUB(_PTR, calloc(size_t s1, size_t s2)) {}
++RTEMS_STUB(void *,malloc(size_t s), { return 0; })
++RTEMS_STUB(void *,realloc(void* p, size_t s), { return 0; })
++RTEMS_STUB(void, free(void* ptr), { })
++RTEMS_STUB(_PTR, calloc(size_t s1, size_t s2), { return 0; })
+ 
+ #if defined(__GNUC__)
+ /*
+@@ -49,90 +50,93 @@ int rtems_gxx_recursive_mutex_unlock() { return -1; }
+ #endif
+ 
+ /* stubs for functions RTEMS provides */
+-RTEMS_STUB(int, close (int fd)) { return -1; }
+-RTEMS_STUB(int, dup2(int oldfd, int newfd)) { return -1; }
+-RTEMS_STUB(int, fcntl( int fd, int cmd, ... /* arg */ )) { return -1; }
+-RTEMS_STUB(pid_t, fork(void)) { return -1; }
+-RTEMS_STUB(int, fstat(int fd, struct stat *buf)) { return -1; }
+-RTEMS_STUB(int, getdents(int fd, void *dp, int count)) { return -1; }
+-RTEMS_STUB(char *, getlogin(void)) { return 0; }
+-RTEMS_STUB(struct passwd *, getpwnam(const char *name)) { return 0; }
+-RTEMS_STUB(struct passwd *, getpwuid(uid_t uid)) { return 0; }
+-RTEMS_STUB(uid_t, getuid(void)) { return 0; }
+-RTEMS_STUB(int, nanosleep(const struct timespec *req, struct timespec *rem)) { return -1; }
+-RTEMS_STUB(_off_t, lseek(int fd, _off_t offset, int whence)) { return -1; }
+-RTEMS_STUB(int, lstat(const char *path, struct stat *buf)) { return -1; }
+-RTEMS_STUB(int, open(const char *pathname, int flags, int mode)) { return -1; }
+-RTEMS_STUB(int, pipe(int pipefd[2])) { return -1; }
+-RTEMS_STUB(_ssize_t, read(int fd, void *buf, size_t count)) { return -1; }
+-RTEMS_STUB(int, sigfillset(sigset_t *set)) { return -1; }
+-RTEMS_STUB(int, sigprocmask(int how, const sigset_t *set, sigset_t *oldset)) { return -1; }
+-RTEMS_STUB(int, stat(const char *path, struct stat *buf)) { return -1; }
+-RTEMS_STUB(int, unlink(const char *pathname)) { return -1; }
+-RTEMS_STUB(pid_t, vfork(void)) { return -1; }
++RTEMS_STUB(int, clock_gettime(clockid_t clk_id, struct timespec *tp), { return -1; })
++RTEMS_STUB(int, close (int fd), { return -1; })
++RTEMS_STUB(int, dup2(int oldfd, int newfd), { return -1; })
++RTEMS_STUB(int, fcntl( int fd, int cmd, ... /* arg */ ), { return -1; })
++RTEMS_STUB(pid_t, fork(void), { return -1; })
++RTEMS_STUB(int, fstat(int fd, struct stat *buf), { return -1; })
++RTEMS_STUB(int, getdents(int fd, void *dp, int count), { return -1; })
++RTEMS_STUB(char *, getlogin(void), { return 0; })
++RTEMS_STUB(int, gettimeofday(struct timeval *tv, struct timezone *tz), { return -1; })
++RTEMS_STUB(struct passwd *, getpwnam(const char *name), { return 0; })
++RTEMS_STUB(struct passwd *, getpwuid(uid_t uid), { return 0; })
++RTEMS_STUB(uid_t, getuid(void), { return 0; })
++RTEMS_STUB(int, nanosleep(const struct timespec *req, struct timespec *rem), { return -1; })
++RTEMS_STUB(_off_t, lseek(int fd, _off_t offset, int whence), { return -1; })
++RTEMS_STUB(int, lstat(const char *path, struct stat *buf), { return -1; })
++RTEMS_STUB(int, open(const char *pathname, int flags, int mode), { return -1; })
++RTEMS_STUB(int, pipe(int pipefd[2]), { return -1; })
++RTEMS_STUB(_ssize_t, read(int fd, void *buf, size_t count), { return -1; })
++RTEMS_STUB(int, sched_yield(void), { return -1; })
++RTEMS_STUB(int, sigfillset(sigset_t *set), { return -1; })
++RTEMS_STUB(int, sigprocmask(int how, const sigset_t *set, sigset_t *oldset), { return -1; })
++RTEMS_STUB(int, stat(const char *path, struct stat *buf), { return -1; })
++RTEMS_STUB(int, unlink(const char *pathname), { return -1; })
++RTEMS_STUB(pid_t, vfork(void), { return -1; })
+ #if !defined(_NO_POPEN) && !defined(_NO_WORDEXP)
+ /* pulled in by libc/sys/posix/popen.c and libc/sys/posix/word*.c */
+-RTEMS_STUB(int, waitpid (pid_t pid, int *status, int options)) { return -1; }
++RTEMS_STUB(int, waitpid (pid_t pid, int *status, int options), { return -1; })
+ #endif
+-RTEMS_STUB(_ssize_t, write (int fd, const void *buf, size_t nbytes)) { return -1; }
++RTEMS_STUB(_ssize_t, write (int fd, const void *buf, size_t nbytes), { return -1; })
+ 
+ /* stubs for functions from reent.h */
+-RTEMS_STUB(int, _close_r (struct _reent *r, int fd)) { return -1; }
++RTEMS_STUB(int, _close_r (struct _reent *r, int fd), { return -1; })
+ #if defined(_NO_EXECVE)
+-RTEMS_STUB(int, _execve_r (struct _reent *r, char *, char **, char **)) { return -1; }
++RTEMS_STUB(int, _execve_r (struct _reent *r, char *, char **, char **), { return -1; })
+ #endif
+-RTEMS_STUB(int, _fcntl_r (struct _reent *ptr, int fd, int cmd, int arg )) { return -1; }
++RTEMS_STUB(int, _fcntl_r (struct _reent *ptr, int fd, int cmd, int arg ), { return -1; })
+ #if !(defined (REENTRANT_SYSCALLS_PROVIDED) || defined (NO_EXEC))
+ #ifndef NO_FORK
+ /* cf. newlib/libc/reent/execr.c */
+-RTEMS_STUB(int, _fork_r (struct _reent *r)) { return -1; }
++RTEMS_STUB(int, _fork_r (struct _reent *r), { return -1; })
+ #endif
+ #endif
+-RTEMS_STUB(int, _fstat_r (struct _reent *r, int fd, struct stat *buf)) { return -1; }
+-RTEMS_STUB(int, _getpid_r (struct _reent *r)) { return -1; }
+-RTEMS_STUB(int, _gettimeofday_r(struct _reent *r, struct timeval *tp, void *tzp)) { return 0; }
+-RTEMS_STUB(int, _isatty_r (struct _reent *r, int fd)) { return isatty( fd ); }
+-RTEMS_STUB(int, _kill_r (struct _reent *r, int pid, int sig )) { return -1; }
++RTEMS_STUB(int, _fstat_r (struct _reent *r, int fd, struct stat *buf), { return -1; })
++RTEMS_STUB(int, _getpid_r (struct _reent *r), { return -1; })
++RTEMS_STUB(int, _gettimeofday_r(struct _reent *r, struct timeval *tp, void *tzp), { return 0; })
++RTEMS_STUB(int, _isatty_r (struct _reent *r, int fd), { return isatty( fd ); })
++RTEMS_STUB(int, _kill_r (struct _reent *r, int pid, int sig ), { return -1; })
+ #if !defined(REENTRANT_SYSCALLS_PROVIDED)
+ /* cf. newlib/libc/reent/linkr.c */
+-RTEMS_STUB(int, _link_r (struct _reent *, const char *, const char *)) { return -1; }
++RTEMS_STUB(int, _link_r (struct _reent *r, const char *oldpath, const char *newpath), { return -1; })
+ #endif
+-RTEMS_STUB(_off_t, _lseek_r ( struct _reent *ptr, int fd, _off_t offset, int whence )) { return -1; }
+-RTEMS_STUB(int, _open_r (struct _reent *r, const char *buf, int flags, int mode)) { return -1; }
+-RTEMS_STUB(_ssize_t, _read_r (struct _reent *r, int fd, void *buf, size_t nbytes)) { return -1; }
+-RTEMS_STUB(int, _rename_r (struct _reent *r, const char *a, const char *b)){ return -1; }
++RTEMS_STUB(_off_t, _lseek_r ( struct _reent *ptr, int fd, _off_t offset, int whence ), { return -1; })
++RTEMS_STUB(int, _open_r (struct _reent *r, const char *buf, int flags, int mode), { return -1; })
++RTEMS_STUB(_ssize_t, _read_r (struct _reent *r, int fd, void *buf, size_t nbytes), { return -1; })
++RTEMS_STUB(int, _rename_r (struct _reent *r, const char *a, const char *b), { return -1; })
+ #if !(defined (REENTRANT_SYSCALLS_PROVIDED) || defined (MALLOC_PROVIDED))
+ /* cf. newlib/libc/reent/sbrkr.c */
+-RTEMS_STUB(void *,_sbrk_r (struct _reent *r, ptrdiff_t)) { return -1; }
++RTEMS_STUB(void *,_sbrk_r (struct _reent *r, ptrdiff_t addr), { return 0; })
+ #endif
+-RTEMS_STUB(int, _stat_r (struct _reent *r, const char *path, struct stat *buf)) { return -1; }
+-RTEMS_STUB(_CLOCK_T_, _times_r (struct _reent *r, struct tms *ptms)) { return -1; }
+-RTEMS_STUB(int, _unlink_r (struct _reent *r, const char *path)) { return -1; }
++RTEMS_STUB(int, _stat_r (struct _reent *r, const char *path, struct stat *buf), { return -1; })
++RTEMS_STUB(_CLOCK_T_, _times_r (struct _reent *r, struct tms *ptms), { return -1; })
++RTEMS_STUB(int, _unlink_r (struct _reent *r, const char *path), { return -1; })
+ #if !(defined (REENTRANT_SYSCALLS_PROVIDED) || defined (NO_EXEC))
+ /* cf. newlib/libc/reent/execr.c */
+-RTEMS_STUB(int, _wait_r (struct _reent *r, int *)) { return -1; }
++RTEMS_STUB(int, _wait_r (struct _reent *r, int *status), { return -1; })
+ #endif
+-RTEMS_STUB(_ssize_t, _write_r (struct _reent *r, int fd, const void *buf, size_t nbytes)) { return -1; }
++RTEMS_STUB(_ssize_t, _write_r (struct _reent *r, int fd, const void *buf, size_t nbytes), { return -1; })
+ 
+ 
+-RTEMS_STUB(int, _execve(const char *path, char * const *argv, char * const *envp)) { return -1; }
+-RTEMS_STUB(void, _exit(int status)) { while(1); }
++RTEMS_STUB(int, _execve(const char *path, char * const *argv, char * const *envp), { return -1; })
++RTEMS_STUB(void, _exit(int status), { while(1); })
+ 
+ /* Pulled in by newlib/libc/posix/glob.c */
+ #ifndef _NO_GLOB
+ #ifndef __NETBSD_SYSCALLS
+-RTEMS_STUB(int, issetugid (void)) { return 0; }
++RTEMS_STUB(int, issetugid (void), { return 0; })
+ #endif
+ #endif
+ 
+ /* stdlib.h */
+-RTEMS_STUB(_PTR, _realloc_r(struct _reent *r, _PTR p, size_t s)) {}
+-RTEMS_STUB(_PTR, _calloc_r(struct _reent *r, size_t s1, size_t s2)) {}
+-RTEMS_STUB(_PTR, _malloc_r(struct _reent *r, size_t s)) {}
+-RTEMS_STUB(_VOID, _free_r(struct _reent *r, _PTR p)) {}
++RTEMS_STUB(_PTR, _realloc_r(struct _reent *r, _PTR p, size_t s), { return 0; })
++RTEMS_STUB(_PTR, _calloc_r(struct _reent *r, size_t s1, size_t s2), { return 0; })
++RTEMS_STUB(_PTR, _malloc_r(struct _reent * r, size_t s), { return 0; })
++RTEMS_STUB(_VOID, _free_r(struct _reent *r, _PTR *p), { })
+ 
+ /* stubs for functions required by libc/stdlib */
+-RTEMS_STUB(void, __assert_func(const char *file, int line, const char *failedexpr)) {}
++RTEMS_STUB(void, __assert_func(const char *file, int line, const char *failedexpr), { })
+ 
+ /* The PowerPC expects certain symbols to be defined in the linker script. */
+ 
+@@ -154,41 +158,6 @@ RTEMS_STUB(void, __assert_func(const char *file, int line, const char *failedexp
+ int __EH_FRAME_BEGIN__;
+ #endif
+ 
+-/*  The hppa expects this to be defined in the real crt0.s. 
+- *  Also for some reason, the hppa1.1 does not find atexit()
+- *  during the AC_PROG_CC tests.
+- */
+-
+-#if defined(__hppa__)
+-/*
+-  asm ( ".subspa \$GLOBAL\$,QUAD=1,ALIGN=8,ACCESS=0x1f,SORT=40");
+-  asm ( ".export \$global\$" );
+-  asm ( "\$global\$:");
+-*/
+-
+-  asm (".text");
+-  asm (".global");
+-  asm (".EXPORT $$dyncall,ENTRY");
+-  asm ("$$dyncall:");
+-  int atexit(void (*function)(void)) { return 0; }
+-#endif
+-
+-
+-/*
+- *  The AMD a29k generates code expecting the following.
+- */
+-
+-#if defined(_AM29000) || defined(_AM29K)
+-asm (".global V_SPILL, V_FILL" );
+-asm (".global V_EPI_OS, V_BSD_OS" );
+-
+-asm (".equ    V_SPILL, 64" );
+-asm (".equ    V_FILL, 65" );
+-
+-asm (".equ    V_BSD_OS, 66" );
+-asm (".equ    V_EPI_OS, 69" );
+-#endif
+-
+ #if defined(__AVR__)
+ /*
+  * Initial stack pointer address "__stack"
+diff --git a/newlib/libc/sys/rtems/include/limits.h b/newlib/libc/sys/rtems/include/limits.h
+index 8ddb8c8..4be172b 100644
+--- a/newlib/libc/sys/rtems/include/limits.h
++++ b/newlib/libc/sys/rtems/include/limits.h
+@@ -78,7 +78,13 @@
+  *  Invariant values
+  */
+ 
++#ifdef __SIZE_MAX__
++#define SSIZE_MAX		(__SIZE_MAX__ >> 1)
++#elif defined(__SIZEOF_SIZE_T__) && defined(__CHAR_BIT__)
++#define SSIZE_MAX               ((1UL << (__SIZEOF_SIZE_T__ * __CHAR_BIT__ - 1)) - 1)
++#else /* historic fallback, wrong in most cases */
+ #define SSIZE_MAX               32767
++#endif
+ 
+ /*
+  *  Maximum Values
+diff --git a/newlib/libc/time/mktime.c b/newlib/libc/time/mktime.c
+index acd5d3a..5bedf5a 100644
+--- a/newlib/libc/time/mktime.c
++++ b/newlib/libc/time/mktime.c
+@@ -107,7 +107,7 @@ _DEFUN(validate_structure, (tim_p),
+         }
+     }
+ 
+-  if (tim_p->tm_mon > 11)
++  if (tim_p->tm_mon < 0 || tim_p->tm_mon > 11)
+     {
+       res = div (tim_p->tm_mon, 12);
+       tim_p->tm_year += res.quot;
+@@ -159,7 +159,7 @@ _DEFUN(mktime, (tim_p),
+ {
+   time_t tim = 0;
+   long days = 0;
+-  int year, isdst, tm_isdst;
++  int year, isdst=0;
+   __tzinfo_type *tz = __gettzinfo ();
+ 
+   /* validate structure */
+@@ -178,41 +178,35 @@ _DEFUN(mktime, (tim_p),
+   /* compute day of the year */
+   tim_p->tm_yday = days;
+ 
+-  if (tim_p->tm_year > 10000
+-      || tim_p->tm_year < -10000)
+-    {
++  if (tim_p->tm_year > 10000 || tim_p->tm_year < -10000)
+       return (time_t) -1;
+-    }
+ 
+   /* compute days in other years */
+-  if (tim_p->tm_year > 70)
++  if ((year = tim_p->tm_year) > 70)
+     {
+       for (year = 70; year < tim_p->tm_year; year++)
+ 	days += _DAYS_IN_YEAR (year);
+     }
+-  else if (tim_p->tm_year < 70)
++  else if (year < 70)
+     {
+       for (year = 69; year > tim_p->tm_year; year--)
+ 	days -= _DAYS_IN_YEAR (year);
+       days -= _DAYS_IN_YEAR (year);
+     }
+ 
+-  /* compute day of the week */
+-  if ((tim_p->tm_wday = (days + 4) % 7) < 0)
+-    tim_p->tm_wday += 7;
+-
+   /* compute total seconds */
+   tim += (days * _SEC_IN_DAY);
+ 
+-  /* Convert user positive into 1 */
+-  tm_isdst = tim_p->tm_isdst > 0  ?  1 : tim_p->tm_isdst;
+-  isdst = tm_isdst;
+-
+   TZ_LOCK;
+ 
+   if (_daylight)
+     {
++      int tm_isdst;
+       int y = tim_p->tm_year + YEAR_BASE;
++      /* Convert user positive into 1 */
++      tm_isdst = tim_p->tm_isdst > 0  ?  1 : tim_p->tm_isdst;
++      isdst = tm_isdst;
++
+       if (y == tz->__tzyear || __tzcalc_limits (y))
+ 	{
+ 	  /* calculate start of dst in dst local time and 
+@@ -246,8 +240,29 @@ _DEFUN(mktime, (tim_p),
+ 		  if (!isdst)
+ 		    diff = -diff;
+ 		  tim_p->tm_sec += diff;
+-		  validate_structure (tim_p);
+ 		  tim += diff;  /* we also need to correct our current time calculation */
++		  int mday = tim_p->tm_mday;
++		  validate_structure (tim_p);
++		  mday = tim_p->tm_mday - mday;
++		  /* roll over occurred */
++		  if (mday) {
++		    /* compensate for month roll overs */
++		    if (mday > 1)
++			  mday = -1;
++		    else if (mday < -1)
++			  mday = 1;
++		    /* update days for wday calculation */
++		    days += mday;
++		    /* handle yday */
++		    if ((tim_p->tm_yday += mday) < 0) {
++			  --year;
++			  tim_p->tm_yday = _DAYS_IN_YEAR(year) - 1;
++		    } else {
++			  mday = _DAYS_IN_YEAR(year);
++			  if (tim_p->tm_yday > (mday - 1))
++				tim_p->tm_yday -= mday;
++		    }
++		  }
+ 		}
+ 	    }
+ 	}
+@@ -264,5 +279,9 @@ _DEFUN(mktime, (tim_p),
+   /* reset isdst flag to what we have calculated */
+   tim_p->tm_isdst = isdst;
+ 
++  /* compute day of the week */
++  if ((tim_p->tm_wday = (days + 4) % 7) < 0)
++    tim_p->tm_wday += 7;
++	
+   return tim;
+ }
+diff --git a/newlib/libc/time/mktm_r.c b/newlib/libc/time/mktm_r.c
+index 4d4b4fa..9a3bc82 100644
+--- a/newlib/libc/time/mktm_r.c
++++ b/newlib/libc/time/mktm_r.c
+@@ -182,7 +182,7 @@ _DEFUN (_mktm_r, (tim_p, res, is_gmtime),
+ 		{
+ 		  res->tm_mon = 11;
+ 		  res->tm_year -= 1;
+-		  res->tm_yday = 365 + isleap(res->tm_year);
++		  res->tm_yday = 364 + isleap(res->tm_year + 1900);
+ 		}
+ 	      res->tm_mday = ip[res->tm_mon];
+ 	    }
+@@ -216,10 +216,13 @@ _DEFUN (__tzcalc_limits, (year),
+   
+   for (i = 0; i < 2; ++i)
+     {
+-      if (tz->__tzrule[i].ch == 'J')
++	if (tz->__tzrule[i].ch == 'J') {
++        /* The Julian day n (1 <= n <= 365). */
+ 	days = year_days + tz->__tzrule[i].d + 
+ 		(isleap(year) && tz->__tzrule[i].d >= 60);
+-      else if (tz->__tzrule[i].ch == 'D')
++        /* Convert to yday */
++        --days;
++	} else if (tz->__tzrule[i].ch == 'D')
+ 	days = year_days + tz->__tzrule[i].d;
+       else
+ 	{
+@@ -254,4 +257,3 @@ _DEFUN (__tzcalc_limits, (year),
+ 
+   return 1;
+ }
+-
+diff --git a/newlib/libc/time/strptime.c b/newlib/libc/time/strptime.c
+index 359fe5e..0fc5f4e 100644
+--- a/newlib/libc/time/strptime.c
++++ b/newlib/libc/time/strptime.c
+@@ -34,6 +34,7 @@
+ #include <stdio.h>
+ #include <time.h>
+ #include <string.h>
++#include <strings.h>
+ #include <ctype.h>
+ #include <stdlib.h>
+ #include "../locale/timelocal.h"
+diff --git a/newlib/testsuite/lib/flags.exp b/newlib/testsuite/lib/flags.exp
+index cc9a356..577efa8 100644
+--- a/newlib/testsuite/lib/flags.exp
++++ b/newlib/testsuite/lib/flags.exp
+@@ -1,4 +1,4 @@
+-# Copyright (C) 2002 by Red Hat, Incorporated. All rights reserved.
++# Copyright (C) 2002, 2011 by Red Hat, Incorporated. All rights reserved.
+ #
+ # Permission to use, copy, modify, and distribute this software
+ # is freely granted, provided that this notice is preserved.
+@@ -82,5 +82,9 @@ proc newlib_include_flags { args } {
+ 	return ""
+     }
+ 
+-    return " -I$objdir/targ-include"
++    set newlib_dir [lookfor_file ${srcdir} newlib/libc/include/assert.h]
++    if { ${newlib_dir} != "" } {
++        set newlib_dir [file dirname ${newlib_dir}]
++    }
++    return " -I$objdir/targ-include -I$objdir -I${newlib_dir}"
+ }
+diff --git a/newlib/testsuite/newlib.string/memcpy-1.c b/newlib/testsuite/newlib.string/memcpy-1.c
+new file mode 100644
+index 0000000..145db1a
+--- /dev/null
++++ b/newlib/testsuite/newlib.string/memcpy-1.c
+@@ -0,0 +1,160 @@
++/*
++ * Copyright (c) 2011 ARM Ltd
++ * All rights reserved.
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions
++ * are met:
++ * 1. Redistributions of source code must retain the above copyright
++ *    notice, this list of conditions and the following disclaimer.
++ * 2. Redistributions in binary form must reproduce the above copyright
++ *    notice, this list of conditions and the following disclaimer in the
++ *    documentation and/or other materials provided with the distribution.
++ * 3. The name of the company may not be used to endorse or promote
++ *    products derived from this software without specific prior written
++ *    permission.
++ *
++ * THIS SOFTWARE IS PROVIDED BY ARM LTD ``AS IS'' AND ANY EXPRESS OR IMPLIED
++ * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
++ * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
++ * IN NO EVENT SHALL ARM LTD BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
++ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
++ * TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
++ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
++ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
++ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
++ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++ */
++
++#include <string.h>
++#include <stdlib.h>
++#include <stdio.h>
++#include <stdarg.h>
++
++#ifndef BUFF_SIZE
++#define BUFF_SIZE 1024
++#endif
++
++#ifndef START_COPY
++#define START_COPY 256
++#endif
++
++#ifndef MAX_BLOCK_SIZE
++#define MAX_BLOCK_SIZE 128
++#endif
++
++#ifndef MAX_OFFSET
++#define MAX_OFFSET 3
++#endif
++
++#if (START_COPY + MAX_OFFSET + MAX_BLOCK_SIZE >= BUFF_SIZE)
++#error "Buffer overrun: START_COPY + MAX_OFFSET + MAX_BLOCK_SIZE >= BUFF_SIZE."
++#endif
++
++#define TOO_MANY_ERRORS 11
++int errors = 0;
++
++void
++print_error (char const* msg, ...)
++{   
++  errors++;
++  if (errors == TOO_MANY_ERRORS)
++    {
++      fprintf (stderr, "Too many errors.\n");
++    }
++  else if (errors < TOO_MANY_ERRORS)
++    {
++      va_list ap;
++      va_start (ap, msg);
++      vfprintf (stderr, msg, ap);
++      va_end (ap);
++    }
++  else
++    {
++      /* Further errors omitted.  */
++    }
++}
++
++int
++main (void)
++{
++  /* Allocate buffers to read and write from.  */
++  char src[BUFF_SIZE], dest[BUFF_SIZE], backup_src[BUFF_SIZE];
++
++  /* Fill the source buffer with non-null values, reproducable random data.  */
++  srand (1539);
++  int i, j;
++  unsigned sa;
++  unsigned da;
++  unsigned n;
++  for (i = 0; i < BUFF_SIZE; i++)
++    {
++      src[i] = (char)rand () | 1;
++      backup_src[i] = src[i];
++    }
++
++  /* Make calls to memcpy with block sizes ranging between 1 and
++     MAX_BLOCK_SIZE bytes, aligned and misaligned source and destination.  */
++  for (sa = 0; sa <= MAX_OFFSET; sa++)
++    for (da = 0; da <= MAX_OFFSET; da++)
++      for (n = 1; n <= MAX_BLOCK_SIZE; n++)
++        {
++          printf (".");
++          /* Zero dest so we can check it properly after the copying.  */
++          for (j = 0; j < BUFF_SIZE; j++)
++            dest[j] = 0;
++          
++          void *ret = memcpy (dest + START_COPY + da, src + sa, n);
++          
++          /* Check return value.  */
++          if (ret != (dest + START_COPY + da))
++            print_error ("\nFailed: wrong return value in memcpy of %u bytes "
++                         "with src_align %u and dst_align %u. "
++                         "Return value and dest should be the same"
++                         "(ret is %p, dest is %p)\n",
++                         n, sa, da, ret, dest + START_COPY + da);
++          
++          /* Check that content of the destination buffer
++             is the same as the source buffer, and
++             memory outside destination buffer is not modified.  */
++          for (j = 0; j < BUFF_SIZE; j++)
++            if (j < START_COPY + da)
++              {
++                if (dest[j] != 0)
++                  print_error ("\nFailed: after memcpy of %u bytes "
++                               "with src_align %u and dst_align %u, "
++                               "byte %u before the start of dest is not 0.\n",
++                               n, sa, da, START_COPY - j);
++              }
++            else if (j < START_COPY + da + n)
++              {
++                i = j - START_COPY - da;
++                if (dest[j] != (src + sa)[i])
++                  print_error ("\nFailed: after memcpy of %u bytes "
++                               "with src_align %u and dst_align %u, "
++                               "byte %u in dest and src are not the same.\n",
++                               n, sa, da, i);
++              }
++            else if (dest[j] != 0)
++              {
++                print_error ("\nFailed: after memcpy of %u bytes "
++                             "with src_align %u and dst_align %u, "
++                             "byte %u after the end of dest is not 0.\n",
++                             n, sa, da, j - START_COPY - da - n);
++              }
++
++          /* Check src is not modified.  */
++          for (j = 0; j < BUFF_SIZE; j++)
++            if (src[i] != backup_src[i])
++              print_error ("\nFailed: after memcpy of %u bytes "
++                           "with src_align %u and dst_align %u, "
++                           "byte %u of src is modified.\n",
++                           n, sa, da, j);
++        }
++
++  printf ("\n");
++  if (errors != 0)
++    abort ();
++
++  exit (0);
++}
+diff --git a/src-release b/src-release
+index 8c25e6b..cba4384 100644
+--- a/src-release
++++ b/src-release
+@@ -269,7 +269,7 @@ gnats.tar.bz2: $(DIST_SUPPORT) $(GNATS_SUPPORT_DIRS) gnats
+ 		SUPPORT_FILES="$(GNATS_SUPPORT_DIRS)"
+ 
+ .PHONY: gdb.tar.bz2
+-GDB_SUPPORT_DIRS= bfd include libiberty opcodes readline sim intl libdecnumber
++GDB_SUPPORT_DIRS= bfd include libiberty opcodes readline sim intl libdecnumber cpu
+ gdb.tar.bz2: $(DIST_SUPPORT) $(GDB_SUPPORT_DIRS) gdb
+ 	$(MAKE) -f $(SELF) gdb-taz TOOL=gdb \
+ 		MD5PROG="$(MD5PROG)" \
+-- 
+1.7.1
+
