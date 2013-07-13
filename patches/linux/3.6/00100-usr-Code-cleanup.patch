@@ -1,0 +1,79 @@
+From 070418bf7688824708572ec0123f23a2c6a0436d Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Thu, 18 Oct 2012 17:04:29 +0200
+Subject: [PATCH] usr: Code cleanup
+
+Remove INITRAMFS_NO_CHECK option
+Remove CYGWIN
+Cleanup .gitignore
+
+All these changes are not used.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ usr/.gitignore      |    2 --
+ usr/Kconfig         |    9 ---------
+ usr/gen_init_cpio.c |    9 ---------
+ 3 files changed, 0 insertions(+), 20 deletions(-)
+
+diff --git a/usr/.gitignore b/usr/.gitignore
+index 0cf6b17..8e48117 100644
+--- a/usr/.gitignore
++++ b/usr/.gitignore
+@@ -8,5 +8,3 @@ initramfs_data.cpio.bz2
+ initramfs_data.cpio.lzma
+ initramfs_list
+ include
+-initramfs_data.S
+-bin2asm
+diff --git a/usr/Kconfig b/usr/Kconfig
+index be4d957..085872b 100644
+--- a/usr/Kconfig
++++ b/usr/Kconfig
+@@ -2,15 +2,6 @@
+ # Configuration for initramfs
+ #
+ 
+-config INITRAMFS_NO_CHECK
+-	depends on MICROBLAZE
+-	bool "Assume a valid initramfs image exists. Don't check."
+-	help
+-	  Enabling this option will cause the kernel to assume a valid
+-	  initramfs image exists in the kernel image. The kernel will skip the
+-	  check for initramfs during the boot time which will substantially
+-	  speed up the boot process on slow systems.
+-
+ config INITRAMFS_SOURCE
+ 	string "Initramfs source file(s)"
+ 	default ""
+diff --git a/usr/gen_init_cpio.c b/usr/gen_init_cpio.c
+index 1481246..af0f22f 100644
+--- a/usr/gen_init_cpio.c
++++ b/usr/gen_init_cpio.c
+@@ -17,11 +17,6 @@
+  * Hard link support by Luciano Rocha
+  */
+ 
+-#ifdef __CYGWIN32__
+-#undef PATH_MAX
+-#define PATH_MAX 259
+-#endif
+-
+ #define xstr(s) #s
+ #define str(s) xstr(s)
+ 
+@@ -312,11 +307,7 @@ static int cpio_mkfile(const char *name, const char *location,
+ 
+ 	mode |= S_IFREG;
+ 
+-#ifdef __CYGWIN32__
+-	file = open (location, O_RDONLY | O_BINARY);
+-#else
+ 	file = open (location, O_RDONLY);
+-#endif
+ 	if (file < 0) {
+ 		fprintf (stderr, "File %s could not be opened for reading\n", location);
+ 		goto error;
+-- 
+1.7.1
+

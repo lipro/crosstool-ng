@@ -1,0 +1,117 @@
+From f460f44e8a819de88323460eb3d05303322ceeb2 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Fri, 19 Oct 2012 13:12:50 +0200
+Subject: [PATCH] Add ZEDboard USB support
+
+This is based on digilent usb fix from
+https://github.com/Digilent/linux-3.3-digilent/commit/2ce5ab37ba6fc3ced54ee53275619c91cd7aa1be
+
+Signed-off-by: Jason Wu <jason.wu@petalogix.com>
+---
+ drivers/usb/host/ehci-xilinx-usbps.c |   25 +++++++++++++++++++++++++
+ drivers/usb/host/ehci.h              |    3 +++
+ drivers/usb/otg/Kconfig              |   12 ++++++++++++
+ drivers/usb/otg/ulpi.c               |    1 +
+ 4 files changed, 41 insertions(+), 0 deletions(-)
+
+diff --git a/drivers/usb/host/ehci-xilinx-usbps.c b/drivers/usb/host/ehci-xilinx-usbps.c
+index c6cbd3d..9c96b85 100755
+--- a/drivers/usb/host/ehci-xilinx-usbps.c
++++ b/drivers/usb/host/ehci-xilinx-usbps.c
+@@ -23,6 +23,9 @@
+ #include <linux/platform_device.h>
+ #include <linux/xilinx_devices.h>
+ #include <linux/usb/otg.h>
++#ifdef CONFIG_XILINX_ZED_USB_OTG
++#include <linux/usb/ulpi.h>
++#endif
+ #include <linux/usb/xilinx_usbps_otg.h>
+ 
+ #include "ehci-xilinx-usbps.h"
+@@ -165,6 +168,15 @@ static int usb_hcd_xusbps_probe(const struct hc_driver *driver,
+ #ifdef CONFIG_USB_XUSBPS_OTG
+ 	ehci = hcd_to_ehci(hcd);
+ 	if (pdata->otg) {
++#ifdef CONFIG_XILINX_ZED_USB_OTG
++		pr_info ("usb_hcd_xusbps_probe: Have OTG assigned.\n");
++
++		retval = otg_init(pdata->otg);
++		if (retval) {
++			dev_err(&pdev->dev, "Unable to init transceiver, probably missing\n");
++			return ENODEV;
++		}
++#endif
+ 		hcd->phy = pdata->otg;
+ 		retval = otg_set_host(hcd->phy->otg,
+ 				&ehci_to_hcd(ehci)->self);
+@@ -177,6 +189,19 @@ static int usb_hcd_xusbps_probe(const struct hc_driver *driver,
+ 		/* inform otg driver about host driver */
+ 		xusbps_update_transceiver();
+ 	} else {
++#ifdef CONFIG_XILINX_ZED_USB_OTG
++		pr_info ("usb_hcd_xusbps_probe: No OTG assigned!\n");
++		if (!pdata->otg) {
++			pdata->otg = otg_ulpi_create (&ulpi_viewport_access_ops,
++				ULPI_OTG_DRVVBUS | ULPI_OTG_DRVVBUS_EXT);
++			if (pdata->otg) {
++				pdata->otg->io_priv = hcd->regs + XUSBPS_SOC_USB_ULPIVP;
++				ehci->ulpi = pdata->otg;
++			}
++		}
++		pr_info ("usb_hcd_xusbps_probe: OTG now assigned!\n");
++#endif
++
+ 		retval = usb_add_hcd(hcd, irq, IRQF_DISABLED | IRQF_SHARED);
+ 		if (retval != 0)
+ 			goto err2;
+diff --git a/drivers/usb/host/ehci.h b/drivers/usb/host/ehci.h
+index 1c6fe46..0a19e47 100644
+--- a/drivers/usb/host/ehci.h
++++ b/drivers/usb/host/ehci.h
+@@ -179,6 +179,9 @@ struct ehci_hcd {			/* one per controller */
+ 	 * other external transceivers should be software-transparent
+ 	 */
+ 	void (*start_hnp)(struct ehci_hcd *ehci);
++#ifdef CONFIG_XILINX_ZED_USB_OTG
++	struct otg_transceiver	*ulpi;
++#endif
+ #endif
+ 
+ 	/* per-HC memory pools (could be per-bus, but ...) */
+diff --git a/drivers/usb/otg/Kconfig b/drivers/usb/otg/Kconfig
+index c23f5c4..95279b5 100644
+--- a/drivers/usb/otg/Kconfig
++++ b/drivers/usb/otg/Kconfig
+@@ -150,5 +150,17 @@ config USB_XUSBPS_OTG
+ 	  To compile this driver as a module, choose M here: the
+ 	  module will be called xilinx_usbps_otg.
+ 
++config XILINX_ZED_USB_OTG
++	bool "Using USB OTG on the Digilent ZED board"
++	default n
++	depends on USB_SUPPORT
++	select USB_XUSBPS_OTG
++	select USB_ULPI if USB_SUPPORT
++	select USB_ULPI_VIEWPORT if USB_SUPPORT
++	help
++	  Select this option if using the USB OTG port on the Digilent ZED board
++	  as a USB on-the-go port. This option is necessary to properly
++	  initialize the TUSB1210 USB PHY used on the ZED board as an
++	  on-the-go USB port that can supply power to a USB slave device.
+ 
+ endif # USB || OTG
+diff --git a/drivers/usb/otg/ulpi.c b/drivers/usb/otg/ulpi.c
+index 217339d..cd6dd21 100644
+--- a/drivers/usb/otg/ulpi.c
++++ b/drivers/usb/otg/ulpi.c
+@@ -47,6 +47,7 @@ struct ulpi_info {
+ static struct ulpi_info ulpi_ids[] = {
+ 	ULPI_INFO(ULPI_ID(0x04cc, 0x1504), "NXP ISP1504"),
+ 	ULPI_INFO(ULPI_ID(0x0424, 0x0006), "SMSC USB331x"),
++	ULPI_INFO(ULPI_ID(0x0451, 0x1507), "TI TUSB1210"),
+ };
+ 
+ static int ulpi_set_otg_flags(struct usb_phy *phy)
+-- 
+1.7.1
+

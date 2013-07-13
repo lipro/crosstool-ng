@@ -1,0 +1,28 @@
+From 163070f3889255ee2cd81c536f2bcebc7b781041 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Mon, 22 Oct 2012 12:12:08 +0200
+Subject: [PATCH] arm: Kconfig: Clean coding style for Zynq
+
+Remove one space before tab.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ arch/arm/Kconfig |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/arch/arm/Kconfig b/arch/arm/Kconfig
+index bba29ba..18e2c35 100644
+--- a/arch/arm/Kconfig
++++ b/arch/arm/Kconfig
+@@ -1018,7 +1018,7 @@ config ARCH_ZYNQ
+ 	select ARM_AMBA
+ 	select ICST
+ 	select USE_OF
+- 	select HAVE_SMP
++	select HAVE_SMP
+ 	select CACHE_L2X0
+ 	select ISA_DMA_API
+ 	select ARCH_REQUIRE_GPIOLIB
+-- 
+1.7.1
+

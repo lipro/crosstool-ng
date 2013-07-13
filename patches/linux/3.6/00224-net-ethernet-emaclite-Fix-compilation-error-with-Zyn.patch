@@ -1,0 +1,37 @@
+From 96aabc1938d1c2b66920af9c36d3828e52c6775e Mon Sep 17 00:00:00 2001
+From: Jason Wu <jason.wu@petalogix.com>
+Date: Thu, 1 Nov 2012 20:15:58 +1000
+Subject: [PATCH] net: ethernet: emaclite: Fix compilation error with Zynq
+
+Currently Zynq is not aware of in_be32 and out_be32 functions. So if
+emaclite driver is enabled, it will get compilation error.
+e.g implicit declaration of function 'in_be32'
+	[-Werror=implicit-function-declaration]
+
+Signed-off-by: Jason Wu <huanyu@xilinx.com>
+---
+ drivers/net/ethernet/xilinx/xilinx_emaclite.c |    8 ++++++++
+ 1 files changed, 8 insertions(+), 0 deletions(-)
+
+diff --git a/drivers/net/ethernet/xilinx/xilinx_emaclite.c b/drivers/net/ethernet/xilinx/xilinx_emaclite.c
+index a9d3521..1dd2324 100644
+--- a/drivers/net/ethernet/xilinx/xilinx_emaclite.c
++++ b/drivers/net/ethernet/xilinx/xilinx_emaclite.c
+@@ -102,6 +102,14 @@
+ /* BUFFER_ALIGN(adr) calculates the number of bytes to the next alignment. */
+ #define BUFFER_ALIGN(adr) ((ALIGNMENT - ((u32) adr)) % ALIGNMENT)
+ 
++/* Read/Write access to the registers */
++#ifndef in_be32
++#ifdef CONFIG_ARCH_ZYNQ
++#define in_be32(offset)		__raw_readl(offset)
++#define out_be32(offset, val)	__raw_writel(val, offset)
++#endif
++#endif
++
+ /**
+  * struct net_local - Our private per device data
+  * @ndev:		instance of the network device
+-- 
+1.7.1
+

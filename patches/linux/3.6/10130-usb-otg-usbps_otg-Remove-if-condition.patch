@@ -1,0 +1,30 @@
+From 67f7838385f5d6eedea4461971104bc937d9d668 Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Thu, 22 Nov 2012 15:12:14 +0100
+Subject: [PATCH] usb: otg: usbps_otg: Remove if condition
+
+the_transceiver is always initialized and xusbps_otg_remove
+is called all the time.
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+---
+ drivers/usb/otg/xilinx_usbps_otg.c |    3 +--
+ 1 files changed, 1 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/usb/otg/xilinx_usbps_otg.c b/drivers/usb/otg/xilinx_usbps_otg.c
+index edc5655..edc3cdf 100644
+--- a/drivers/usb/otg/xilinx_usbps_otg.c
++++ b/drivers/usb/otg/xilinx_usbps_otg.c
+@@ -2036,8 +2036,7 @@ static int xusbps_otg_probe(struct platform_device *pdev)
+ 	return 0;
+ 
+ err:
+-	if (the_transceiver)
+-		xusbps_otg_remove(pdev);
++	xusbps_otg_remove(pdev);
+ 
+ 	return retval;
+ }
+-- 
+1.7.1
+

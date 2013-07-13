@@ -1,0 +1,33 @@
+From 01be7259523576f0bd86179e719b5e32644f68dc Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Sun, 21 Oct 2012 16:50:41 +0200
+Subject: [PATCH] mtd: m25p80: Remove temporary hack
+
+It is probably unused right now.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ drivers/mtd/devices/m25p80.c |    7 -------
+ 1 files changed, 0 insertions(+), 7 deletions(-)
+
+diff --git a/drivers/mtd/devices/m25p80.c b/drivers/mtd/devices/m25p80.c
+index 5b9bdf5..642efce 100644
+--- a/drivers/mtd/devices/m25p80.c
++++ b/drivers/mtd/devices/m25p80.c
+@@ -35,13 +35,6 @@
+ #include <linux/spi/spi.h>
+ #include <linux/spi/flash.h>
+ 
+-#define HACK_PAGE_SZ_128		/* temp hack to use 128 byte page */
+-#ifdef HACK_PAGE_SZ_128
+- #define MTD_PAGE_SIZE	128
+-#else
+- #define MTD_PAGE_SIZE	256
+-#endif
+-
+ /* Flash opcodes. */
+ #define	OPCODE_WREN		0x06	/* Write enable */
+ #define	OPCODE_RDSR		0x05	/* Read status register */
+-- 
+1.7.1
+

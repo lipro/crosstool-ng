@@ -1,0 +1,129 @@
+From 989765beb3b11e0f1d2275c8f0bd6832b76286de Mon Sep 17 00:00:00 2001
+From: Peter Crosthwaite <peter.crosthwaite@petalogix.com>
+Date: Sat, 29 Sep 2012 11:45:36 +1000
+Subject: [PATCH] spi-xilinx: Remove ISR race condition
+
+The ISR currently consumes the rx buffer data and re-enables transmission
+from within interrupt context. This is bad because if the interrupt
+occurs again before the ISR exits, the new interrupt will be erroneously
+cleared by the still completing ISR.
+
+Simplified the ISR by just setting the completion variable and exiting with
+no action. Then just looped the transmit functionality in
+xilinx_spi_txrx_bufs().
+
+Signed-off-by: Peter Crosthwaite <peter.crosthwaite@xilinx.com>
+---
+ drivers/spi/spi-xilinx.c |   74 +++++++++++++++++++++------------------------
+ 1 files changed, 35 insertions(+), 39 deletions(-)
+
+diff --git a/drivers/spi/spi-xilinx.c b/drivers/spi/spi-xilinx.c
+index 4c5a663..28444fd 100644
+--- a/drivers/spi/spi-xilinx.c
++++ b/drivers/spi/spi-xilinx.c
+@@ -267,7 +267,6 @@ static int xilinx_spi_txrx_bufs(struct spi_device *spi, struct spi_transfer *t)
+ {
+ 	struct xilinx_spi *xspi = spi_master_get_devdata(spi->master);
+ 	u32 ipif_ier;
+-	u16 cr;
+ 
+ 	/* We get here with transmitter inhibited */
+ 
+@@ -276,7 +275,6 @@ static int xilinx_spi_txrx_bufs(struct spi_device *spi, struct spi_transfer *t)
+ 	xspi->remaining_bytes = t->len;
+ 	INIT_COMPLETION(xspi->done);
+ 
+-	xilinx_spi_fill_tx_fifo(xspi);
+ 
+ 	/* Enable the transmit empty interrupt, which we use to determine
+ 	 * progress on the transmission.
+@@ -285,12 +283,41 @@ static int xilinx_spi_txrx_bufs(struct spi_device *spi, struct spi_transfer *t)
+ 	xspi->write_fn(ipif_ier | XSPI_INTR_TX_EMPTY,
+ 		xspi->regs + XIPIF_V123B_IIER_OFFSET);
+ 
+-	/* Start the transfer by not inhibiting the transmitter any longer */
+-	cr = xspi->read_fn(xspi->regs + XSPI_CR_OFFSET) &
+-		~XSPI_CR_TRANS_INHIBIT;
+-	xspi->write_fn(cr, xspi->regs + XSPI_CR_OFFSET);
++	for (;;) {
++		u16 cr;
++		u8 sr;
++
++		xilinx_spi_fill_tx_fifo(xspi);
++
++		/* Start the transfer by not inhibiting the transmitter any
++		 *longer
++		 */
++		cr = xspi->read_fn(xspi->regs + XSPI_CR_OFFSET) &
++			~XSPI_CR_TRANS_INHIBIT;
++		xspi->write_fn(cr, xspi->regs + XSPI_CR_OFFSET);
++
++		wait_for_completion(&xspi->done);
++
++		/* A transmit has just completed. Process received data and
++		 * check for more data to transmit. Always inhibit the
++		 * transmitter while the Isr refills the transmit register/FIFO,
++		 * or make sure it is stopped if we're done.
++		 */
++		cr = xspi->read_fn(xspi->regs + XSPI_CR_OFFSET);
++		xspi->write_fn(cr | XSPI_CR_TRANS_INHIBIT,
++			xspi->regs + XSPI_CR_OFFSET);
++
++		/* Read out all the data from the Rx FIFO */
++		sr = xspi->read_fn(xspi->regs + XSPI_SR_OFFSET);
++		while ((sr & XSPI_SR_RX_EMPTY_MASK) == 0) {
++			xspi->rx_fn(xspi);
++			sr = xspi->read_fn(xspi->regs + XSPI_SR_OFFSET);
++		}
+ 
+-	wait_for_completion(&xspi->done);
++		/* See if there is more data to send */
++		if (!xspi->remaining_bytes > 0)
++			break;
++	}
+ 
+ 	/* Disable the transmit empty interrupt */
+ 	xspi->write_fn(ipif_ier, xspi->regs + XIPIF_V123B_IIER_OFFSET);
+@@ -314,38 +341,7 @@ static irqreturn_t xilinx_spi_irq(int irq, void *dev_id)
+ 	xspi->write_fn(ipif_isr, xspi->regs + XIPIF_V123B_IISR_OFFSET);
+ 
+ 	if (ipif_isr & XSPI_INTR_TX_EMPTY) {	/* Transmission completed */
+-		u16 cr;
+-		u8 sr;
+-
+-		/* A transmit has just completed. Process received data and
+-		 * check for more data to transmit. Always inhibit the
+-		 * transmitter while the Isr refills the transmit register/FIFO,
+-		 * or make sure it is stopped if we're done.
+-		 */
+-		cr = xspi->read_fn(xspi->regs + XSPI_CR_OFFSET);
+-		xspi->write_fn(cr | XSPI_CR_TRANS_INHIBIT,
+-			xspi->regs + XSPI_CR_OFFSET);
+-
+-		/* Read out all the data from the Rx FIFO */
+-		sr = xspi->read_fn(xspi->regs + XSPI_SR_OFFSET);
+-		while ((sr & XSPI_SR_RX_EMPTY_MASK) == 0) {
+-			xspi->rx_fn(xspi);
+-			sr = xspi->read_fn(xspi->regs + XSPI_SR_OFFSET);
+-		}
+-
+-		/* See if there is more data to send */
+-		if (xspi->remaining_bytes > 0) {
+-			xilinx_spi_fill_tx_fifo(xspi);
+-			/* Start the transfer by not inhibiting the
+-			 * transmitter any longer
+-			 */
+-			xspi->write_fn(cr, xspi->regs + XSPI_CR_OFFSET);
+-		} else {
+-			/* No more data to send.
+-			 * Indicate the transfer is completed.
+-			 */
+-			complete(&xspi->done);
+-		}
++		complete(&xspi->done);
+ 	}
+ 
+ 	return IRQ_HANDLED;
+-- 
+1.7.1
+

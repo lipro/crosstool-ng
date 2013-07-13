@@ -1,0 +1,166 @@
+From e23586e358084448bbef0b0a5019fb20845a6acd Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Tue, 20 Nov 2012 15:25:17 +0100
+Subject: [PATCH] arm: zynq: Allow UART1 to be used as DEBUG_LL console.
+
+The main UART on the Xilinx ZC702 board is UART1, located at address
+e0001000.  Add a Kconfig option to select this device as the low-level
+debugging port.  This allows the really early boot printouts to reach
+the USB serial adaptor on this board.
+
+For consistency's sake, add a choice entry for UART0 even though it is
+the the default if UART1 is not selected.
+
+Signed-off-by: Nick Bowler <nbowler@elliptictech.com>
+Tested-by: Josh Cartwright <josh.cartwright@ni.com>
+Acked-by: Michal Simek <michal.simek@xilinx.com>
+---
+ arch/arm/Kconfig.debug                     |   17 +++++++++++++++++
+ arch/arm/configs/xilinx_zynq_defconfig     |    7 +++----
+ arch/arm/mach-zynq/Kconfig                 |   15 ---------------
+ arch/arm/mach-zynq/common.c                |    2 +-
+ arch/arm/mach-zynq/include/mach/zynq_soc.h |   27 ++++++++++++---------------
+ 5 files changed, 33 insertions(+), 35 deletions(-)
+
+diff --git a/arch/arm/Kconfig.debug b/arch/arm/Kconfig.debug
+index e968a52..69e453a 100644
+--- a/arch/arm/Kconfig.debug
++++ b/arch/arm/Kconfig.debug
+@@ -132,6 +132,23 @@ choice
+ 		  their output to UART1 serial port on DaVinci TNETV107X
+ 		  devices.
+ 
++	config DEBUG_ZYNQ_UART0
++		bool "Kernel low-level debugging on Xilinx Zynq using UART0"
++		depends on ARCH_ZYNQ
++		help
++		  Say Y here if you want the debug print routines to direct
++		  their output to UART0 on the Zynq platform.
++
++	config DEBUG_ZYNQ_UART1
++		bool "Kernel low-level debugging on Xilinx Zynq using UART1"
++		depends on ARCH_ZYNQ
++		help
++		  Say Y here if you want the debug print routines to direct
++		  their output to UART1 on the Zynq platform.
++
++		  If you have a ZC702 board and want early boot messages to
++		  appear on the USB serial adaptor, select this option.
++
+ 	config DEBUG_DC21285_PORT
+ 		bool "Kernel low-level debugging messages via footbridge serial port"
+ 		depends on FOOTBRIDGE
+diff --git a/arch/arm/configs/xilinx_zynq_defconfig b/arch/arm/configs/xilinx_zynq_defconfig
+index 1e62e85..3150746 100644
+--- a/arch/arm/configs/xilinx_zynq_defconfig
++++ b/arch/arm/configs/xilinx_zynq_defconfig
+@@ -284,9 +284,6 @@ CONFIG_ARCH_ZYNQ=y
+ #
+ # Xilinx Specific Options
+ #
+-CONFIG_ZYNQ_EARLY_UART1=y
+-# CONFIG_ZYNQ_EARLY_UART_EP107 is not set
+-# CONFIG_XILINX_FIXED_DEVTREE_ADDR is not set
+ CONFIG_XILINX_L1_PREFETCH=y
+ CONFIG_XILINX_L2_PREFETCH=y
+ # CONFIG_XILINX_TEST is not set
+@@ -2279,7 +2276,9 @@ CONFIG_HAVE_ARCH_KGDB=y
+ CONFIG_ARM_UNWIND=y
+ # CONFIG_DEBUG_USER is not set
+ CONFIG_DEBUG_LL=y
+-CONFIG_DEBUG_LL_UART_NONE=y
++# CONFIG_DEBUG_ZYNQ_UART0 is not set
++CONFIG_DEBUG_ZYNQ_UART1=y
++# CONFIG_DEBUG_LL_UART_NONE is not set
+ # CONFIG_DEBUG_ICEDCC is not set
+ # CONFIG_DEBUG_SEMIHOSTING is not set
+ CONFIG_EARLY_PRINTK=y
+diff --git a/arch/arm/mach-zynq/Kconfig b/arch/arm/mach-zynq/Kconfig
+index 4c241f0..957b90c 100644
+--- a/arch/arm/mach-zynq/Kconfig
++++ b/arch/arm/mach-zynq/Kconfig
+@@ -1,21 +1,6 @@
+ if ARCH_ZYNQ
+ 
+ menu "Xilinx Specific Options"
+-config ZYNQ_EARLY_UART1
+-	bool "Early Printk On UART1 (2nd UART)"
+-	default n
+-	help
+-	  Select if you want to use the 2nd UART (UART1) in Zynq for the early
+-	  printk. If not selected, the 1st UART (UART0) is used.
+-
+-config ZYNQ_EARLY_UART_EP107
+-	bool "Early UART Clock Input For EP107"
+-	default y
+-	help
+-	  Select if you want the kernel to be setup for the EP107 board which is
+-	  using a 50 MHz clock into the UART. Not selecting this causes a clock into
+-	  the UART that is based on a 33.333 MHz clock divided down by 63.  Note that
+-	  this only affects early printk.
+ 
+ config XILINX_L1_PREFETCH
+ 	bool "L1 Cache Prefetch"
+diff --git a/arch/arm/mach-zynq/common.c b/arch/arm/mach-zynq/common.c
+index 80d0bd3..08af439 100644
+--- a/arch/arm/mach-zynq/common.c
++++ b/arch/arm/mach-zynq/common.c
+@@ -63,7 +63,7 @@ static struct map_desc io_desc[] __initdata = {
+ 	{
+ 		.virtual	= LL_UART_VADDR,
+ 		.pfn		= __phys_to_pfn(LL_UART_PADDR),
+-		.length		= SZ_4K,
++		.length		= UART_SIZE,
+ 		.type		= MT_DEVICE,
+ 	},
+ #endif
+diff --git a/arch/arm/mach-zynq/include/mach/zynq_soc.h b/arch/arm/mach-zynq/include/mach/zynq_soc.h
+index 25f5af7..3ae2c2e 100644
+--- a/arch/arm/mach-zynq/include/mach/zynq_soc.h
++++ b/arch/arm/mach-zynq/include/mach/zynq_soc.h
+@@ -19,15 +19,22 @@
+ 
+ /* For now, all mappings are flat (physical = virtual)
+  */
+-
+-/* Virtual address must be inside vmalloc area - this is weird - better
+- * to create virtual mapping on the fly */
+-#define UART0_PHYS			0xE0000000
+-#define UART0_VIRT			0xFE000000
++#define UART0_PHYS		0xE0000000
++#define UART1_PHYS		0xE0001000
++#define UART_SIZE		SZ_4K
++#define UART_VIRT		0xF0001000
+ 
+ #define SCU_PERIPH_PHYS			0xF8F00000
+ #define SCU_PERIPH_VIRT			SCU_PERIPH_PHYS
+ 
++#if IS_ENABLED(CONFIG_DEBUG_ZYNQ_UART1)
++# define LL_UART_PADDR		UART1_PHYS
++#else
++# define LL_UART_PADDR		UART0_PHYS
++#endif
++
++#define LL_UART_VADDR		UART_VIRT
++
+ /* The following are intended for the devices that are mapped early */
+ 
+ #define SCU_PERIPH_BASE			IOMEM(SCU_PERIPH_VIRT)
+@@ -62,14 +69,4 @@
+ #define SLCR_FPGA3_CLK_CTRL		(SLCR_BASE_VIRT | 0x1a0)
+ #define SLCR_621_TRUE			(SLCR_BASE_VIRT | 0x1c4)
+ 
+-/*
+- * Mandatory for CONFIG_LL_DEBUG, UART is mapped virtual = physical
+- */
+-#if defined(CONFIG_ZYNQ_EARLY_UART1)
+-	#define LL_UART_PADDR	(UART0_PHYS+0x1000)
+-	#define LL_UART_VADDR	(UART0_VIRT+0x1000)
+-#else
+-	#define LL_UART_PADDR	UART0_PHYS
+-	#define LL_UART_VADDR	UART0_VIRT
+-#endif
+ #endif
+-- 
+1.7.1
+

@@ -1,0 +1,28 @@
+From 75fff93f09da764080b3545c269232d0e94b478c Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Thu, 22 Nov 2012 15:16:00 +0100
+Subject: [PATCH] usb: otg: usbps_otg: Do not initialized retval
+
+Not necessary to initialized retval because it is
+always setup later in the code.
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+---
+ drivers/usb/otg/xilinx_usbps_otg.c |    1 -
+ 1 files changed, 0 insertions(+), 1 deletions(-)
+
+diff --git a/drivers/usb/otg/xilinx_usbps_otg.c b/drivers/usb/otg/xilinx_usbps_otg.c
+index edc3cdf..ca28795 100644
+--- a/drivers/usb/otg/xilinx_usbps_otg.c
++++ b/drivers/usb/otg/xilinx_usbps_otg.c
+@@ -1931,7 +1931,6 @@ static int xusbps_otg_probe(struct platform_device *pdev)
+ 	if (!pdata)
+ 		return -ENODEV;
+ 
+-	retval = 0;
+ 	dev_dbg(&pdev->dev, "\notg controller is detected.\n");
+ 
+ 	xotg = kzalloc(sizeof *xotg, GFP_KERNEL);
+-- 
+1.7.1
+

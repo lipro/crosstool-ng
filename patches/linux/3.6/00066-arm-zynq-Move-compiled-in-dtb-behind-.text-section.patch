@@ -1,0 +1,59 @@
+From 14b81b0e3f883794575553659d35f7dbe0b7a743 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Tue, 3 Apr 2012 12:57:12 +0200
+Subject: [PATCH] arm: zynq: Move compiled-in dtb behind .text section
+
+Moving dtb behind .text section fix problem with
+loadable modules because it was placed in init section
+which is cleared. That's why dtb was corrupted and
+drivers weren't probed.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ arch/arm/kernel/vmlinux.lds.S |   23 +++++++++++++----------
+ 1 files changed, 13 insertions(+), 10 deletions(-)
+
+diff --git a/arch/arm/kernel/vmlinux.lds.S b/arch/arm/kernel/vmlinux.lds.S
+index f8cf850..855a8b5 100644
+--- a/arch/arm/kernel/vmlinux.lds.S
++++ b/arch/arm/kernel/vmlinux.lds.S
+@@ -120,6 +120,19 @@ SECTIONS
+ 
+ 	RO_DATA(PAGE_SIZE)
+ 
++
++#ifdef CONFIG_ARCH_ZYNQ
++	. = ALIGN (4) ;
++	__fdt_blob : AT(ADDR(__fdt_blob) - LOAD_OFFSET) {
++		_fdt_start = . ;		/* place for fdt blob */
++		*(__fdt_blob) ;			/* Any link-placed DTB */
++	        . = _fdt_start + 0x8000;	/* Pad up to 16kbyte */
++		_fdt_end = . ;
++	}
++#endif
++
++
++
+ #ifdef CONFIG_ARM_UNWIND
+ 	/*
+ 	 * Stack unwinding tables
+@@ -193,16 +206,6 @@ SECTIONS
+ 	PERCPU_SECTION(L1_CACHE_BYTES)
+ #endif
+ 
+-#ifdef CONFIG_ARCH_ZYNQ
+-	. = ALIGN (4) ;
+-	__fdt_blob : AT(ADDR(__fdt_blob) - LOAD_OFFSET) {
+-		_fdt_start = . ;		/* place for fdt blob */
+-		*(__fdt_blob) ;			/* Any link-placed DTB */
+-	        . = _fdt_start + 0x8000;	/* Pad up to 16kbyte */
+-		_fdt_end = . ;
+-	}
+-#endif
+-
+ #ifdef CONFIG_XIP_KERNEL
+ 	__data_loc = ALIGN(4);		/* location in binary */
+ 	. = PAGE_OFFSET + TEXT_OFFSET;
+-- 
+1.7.1
+

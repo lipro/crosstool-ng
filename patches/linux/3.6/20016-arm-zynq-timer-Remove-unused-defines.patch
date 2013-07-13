@@ -1,0 +1,29 @@
+From 9905fefde28f4e536434656f4890f3c62d5b78e0 Mon Sep 17 00:00:00 2001
+From: Soren Brinkmann <soren.brinkmann@xilinx.com>
+Date: Fri, 7 Dec 2012 13:48:14 -0800
+Subject: [PATCH] arm: zynq: timer: Remove unused #defines
+
+Signed-off-by: Soren Brinkmann <soren.brinkmann@xilinx.com>
+Acked-by: Michal Simek <michal.simek@xilinx.com>
+Acked-by: John Linn <john.linn@xilinx.com>
+---
+ arch/arm/mach-zynq/timer.c |    3 ---
+ 1 files changed, 0 insertions(+), 3 deletions(-)
+
+diff --git a/arch/arm/mach-zynq/timer.c b/arch/arm/mach-zynq/timer.c
+index c595d18..95c710a 100644
+--- a/arch/arm/mach-zynq/timer.c
++++ b/arch/arm/mach-zynq/timer.c
+@@ -62,9 +62,6 @@
+ #define XTTCPSS_CNT_CNTRL_OFFSET	0x0C /* Counter Control Reg, RW */
+ #define XTTCPSS_COUNT_VAL_OFFSET	0x18 /* Counter Value Reg, RO */
+ #define XTTCPSS_INTR_VAL_OFFSET		0x24 /* Interval Count Reg, RW */
+-#define XTTCPSS_MATCH_1_OFFSET		0x30 /* Match 1 Value Reg, RW */
+-#define XTTCPSS_MATCH_2_OFFSET		0x3C /* Match 2 Value Reg, RW */
+-#define XTTCPSS_MATCH_3_OFFSET		0x48 /* Match 3 Value Reg, RW */
+ #define XTTCPSS_ISR_OFFSET		0x54 /* Interrupt Status Reg, RO */
+ #define XTTCPSS_IER_OFFSET		0x60 /* Interrupt Enable Reg, RW */
+ 
+-- 
+1.7.1
+

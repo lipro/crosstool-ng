@@ -1,0 +1,29 @@
+From 23ef060e11040fa35e6d368accbddb071b797e9b Mon Sep 17 00:00:00 2001
+From: Naveen Mamindlapalli <naveen.mamindlapalli@xilinx.com>
+Date: Tue, 12 Mar 2013 13:55:39 +0530
+Subject: [PATCH] dmatest: Fixed alignment issue with PL330 DMA driver for Zynq.
+
+Fixed alignment issue with PL330 DMA driver for Zynq. This takes
+care of MFIFO alignment issues. This needs to be taken care by the
+PL330 driver.
+
+Signed-off-by: Naveen Mamindlapalli <naveenm@xilinx.com>
+---
+ drivers/dma/dmatest.c |    1 +
+ 1 files changed, 1 insertions(+), 0 deletions(-)
+
+diff --git a/drivers/dma/dmatest.c b/drivers/dma/dmatest.c
+index 24225f0..188885a 100644
+--- a/drivers/dma/dmatest.c
++++ b/drivers/dma/dmatest.c
+@@ -335,6 +335,7 @@ static int dmatest_func(void *data)
+ 			break;
+ 		}
+ 
++		align = 3;
+ 		len = dmatest_random() % test_buf_size + 1;
+ 		len = (len >> align) << align;
+ 		if (!len)
+-- 
+1.7.1
+

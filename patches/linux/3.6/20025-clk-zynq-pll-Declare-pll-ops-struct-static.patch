@@ -1,0 +1,27 @@
+From 622871feecb2c7864d80ba8aaa284205c65a4166 Mon Sep 17 00:00:00 2001
+From: Soren Brinkmann <soren.brinkmann@xilinx.com>
+Date: Tue, 11 Dec 2012 17:47:10 -0800
+Subject: [PATCH] clk: zynq: pll: Declare pll ops struct static
+
+Signed-off-by: Soren Brinkmann <soren.brinkmann@xilinx.com>
+Acked-by: Michal Simek <michal.simek@xilinx.com>
+---
+ drivers/clk/zynq/pll.c |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/drivers/clk/zynq/pll.c b/drivers/clk/zynq/pll.c
+index d65f972..1ae3f68 100644
+--- a/drivers/clk/zynq/pll.c
++++ b/drivers/clk/zynq/pll.c
+@@ -350,7 +350,7 @@ static u8 zynq_pll_get_parent(struct clk_hw *hw)
+ 	return clk->bypassed;
+ }
+ 
+-const struct clk_ops zynq_pll_ops = {
++static const struct clk_ops zynq_pll_ops = {
+ 	.set_parent = zynq_pll_set_parent,
+ 	.get_parent = zynq_pll_get_parent,
+ 	.set_rate = zynq_pll_set_rate,
+-- 
+1.7.1
+

@@ -1,0 +1,162 @@
+From 588f7c7290b1a88d1976d77de40c25cd7c586ac9 Mon Sep 17 00:00:00 2001
+From: John Linn <john.linn@xilinx.com>
+Date: Fri, 26 Oct 2012 11:20:16 -0700
+Subject: [PATCH] arm: xilinx: Update device trees for emac driver change
+
+The driver was updated during the merge of trees such that the
+device trees must match.
+
+Signed-off-by: John Linn <john.linn@xilinx.com>
+---
+ arch/arm/boot/dts/zynq-ep107.dts       |   28 ++++++++++++++++++----------
+ arch/arm/boot/dts/zynq-zc702.dts       |   13 ++++++++-----
+ arch/arm/boot/dts/zynq-zc706.dts       |   13 ++++++++-----
+ arch/arm/boot/dts/zynq-zc770-xm010.dts |   13 ++++++++-----
+ arch/arm/boot/dts/zynq-zc770-xm013.dts |   13 ++++++++-----
+ 5 files changed, 50 insertions(+), 30 deletions(-)
+
+diff --git a/arch/arm/boot/dts/zynq-ep107.dts b/arch/arm/boot/dts/zynq-ep107.dts
+index 53710ff..e27a87f 100644
+--- a/arch/arm/boot/dts/zynq-ep107.dts
++++ b/arch/arm/boot/dts/zynq-ep107.dts
+@@ -247,11 +247,15 @@
+ 			phy-handle = <&phy0>;
+ 			#address-cells = <1>;
+ 			#size-cells = <0>;
+-			phy0: phy@23 {
+-				compatible = "marvell,88e1111";
+-				device_type = "ethernet-phy";
+-				reg = <23>;
+-			} ;
++			mdio {
++				#address-cells = <1>;
++				#size-cells = <0>;
++				phy0: phy@23 {
++					compatible = "marvell,88e1111";
++					device_type = "ethernet-phy";
++					reg = <23>;
++				};
++			};
+ 		};
+ 
+ 		eth1: eth@e000c000 {
+@@ -262,11 +266,15 @@
+ 			phy-handle = <&phy1>;
+ 			#address-cells = <1>;
+ 			#size-cells = <0>;
+-			phy1: phy@16 {
+-				compatible = "marvell,88e1111";
+-				device_type = "ethernet-phy";
+-				reg = <16>;
+-			} ;
++			mdio {
++				#address-cells = <1>;
++				#size-cells = <0>;
++				phy1: phy@16 {
++					compatible = "marvell,88e1111";
++					device_type = "ethernet-phy";
++					reg = <16>;
++				};
++			};
+ 		};
+ 
+ 		nand: nand@e1000000 {
+diff --git a/arch/arm/boot/dts/zynq-zc702.dts b/arch/arm/boot/dts/zynq-zc702.dts
+index a536a41..620bf74 100644
+--- a/arch/arm/boot/dts/zynq-zc702.dts
++++ b/arch/arm/boot/dts/zynq-zc702.dts
+@@ -104,11 +104,14 @@
+ 			xlnx,slcr-div1-10Mbps = <50>;
+ 			#address-cells = <0x1>;
+ 			#size-cells = <0x0>;
+-
+-			phy0: phy@7 {
+-				compatible = "marvell,88e1116r";
+-				device_type = "ethernet-phy";
+-				reg = <0x7>;
++			mdio {
++				#address-cells = <1>;
++				#size-cells = <0>;
++				phy0: phy@7 {
++					compatible = "marvell,88e1116r";
++					device_type = "ethernet-phy";
++					reg = <7>;
++				};
+ 			};
+ 		};
+ 
+diff --git a/arch/arm/boot/dts/zynq-zc706.dts b/arch/arm/boot/dts/zynq-zc706.dts
+index b3efd50..ce3b425 100644
+--- a/arch/arm/boot/dts/zynq-zc706.dts
++++ b/arch/arm/boot/dts/zynq-zc706.dts
+@@ -102,11 +102,14 @@
+ 			xlnx,slcr-div1-10Mbps = <50>;
+ 			#address-cells = <0x1>;
+ 			#size-cells = <0x0>;
+-
+-			phy0: phy@7 {
+-				compatible = "marvell,88e1116r";
+-				device_type = "ethernet-phy";
+-				reg = <0x7>;
++			mdio {
++				#address-cells = <1>;
++				#size-cells = <0>;
++				phy0: phy@7 {
++					compatible = "marvell,88e1116r";
++					device_type = "ethernet-phy";
++					reg = <7>;
++				};
+ 			};
+ 		};
+ 
+diff --git a/arch/arm/boot/dts/zynq-zc770-xm010.dts b/arch/arm/boot/dts/zynq-zc770-xm010.dts
+index 9105e6c..653f9ad 100644
+--- a/arch/arm/boot/dts/zynq-zc770-xm010.dts
++++ b/arch/arm/boot/dts/zynq-zc770-xm010.dts
+@@ -104,11 +104,14 @@
+ 			xlnx,slcr-div1-10Mbps = <50>;
+ 			#address-cells = <0x1>;
+ 			#size-cells = <0x0>;
+-
+-			phy0: phy@7 {
+-				compatible = "marvell,88e1116r";
+-				device_type = "ethernet-phy";
+-				reg = <0x7>;
++			mdio {
++				#address-cells = <1>;
++				#size-cells = <0>;
++				phy0: phy@7 {
++					compatible = "marvell,88e1116r";
++					device_type = "ethernet-phy";
++					reg = <7>;
++				};
+ 			};
+ 		};
+ 
+diff --git a/arch/arm/boot/dts/zynq-zc770-xm013.dts b/arch/arm/boot/dts/zynq-zc770-xm013.dts
+index 1c0123b..97ade92 100644
+--- a/arch/arm/boot/dts/zynq-zc770-xm013.dts
++++ b/arch/arm/boot/dts/zynq-zc770-xm013.dts
+@@ -172,11 +172,14 @@
+ 			xlnx,slcr-div1-10Mbps = <50>;
+ 			#address-cells = <0x1>;
+ 			#size-cells = <0x0>;
+-
+-			phy0: phy@7 {
+-				compatible = "vitesse,vsc8211";
+-				device_type = "ethernet-phy";
+-				reg = <0x7>;
++			mdio {
++				#address-cells = <1>;
++				#size-cells = <0>;
++				phy0: phy@7 {
++					compatible = "vitesse,vsc8211";
++					device_type = "ethernet-phy";
++					reg = <7>;
++				};
+ 			};
+ 		};
+ 
+-- 
+1.7.1
+

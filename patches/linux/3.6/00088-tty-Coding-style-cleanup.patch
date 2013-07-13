@@ -1,0 +1,28 @@
+From 1b02780680dc8eabf4513ca755b7315fec7544bd Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Fri, 12 Oct 2012 14:11:45 +0200
+Subject: [PATCH] tty: Coding style cleanup
+
+Remove trailing white space.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ drivers/tty/serial/uartlite.c |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/drivers/tty/serial/uartlite.c b/drivers/tty/serial/uartlite.c
+index 68354f9..d76e27c 100644
+--- a/drivers/tty/serial/uartlite.c
++++ b/drivers/tty/serial/uartlite.c
+@@ -34,7 +34,7 @@
+  * Register definitions
+  *
+  * For register details see datasheet:
+- * http://www.xilinx.com/support/documentation/ip_documentation/opb_uartlite.pdf 
++ * http://www.xilinx.com/support/documentation/ip_documentation/opb_uartlite.pdf
+  */
+ 
+ #define ULITE_RX		0x00
+-- 
+1.7.1
+

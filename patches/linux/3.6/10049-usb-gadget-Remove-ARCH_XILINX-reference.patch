@@ -1,0 +1,29 @@
+From 52e874583cdcd1f1dbb29724a4b17dea4577cdd5 Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Tue, 13 Nov 2012 10:49:44 +0100
+Subject: [PATCH] usb: gadget: Remove ARCH_XILINX reference
+
+Remove old unused ARCH_XILINX platform name.
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+Acked-by: John Linn <john.linn@xilinx.com>
+---
+ drivers/usb/gadget/Kconfig |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/drivers/usb/gadget/Kconfig b/drivers/usb/gadget/Kconfig
+index 78ec0aa..40690ea 100644
+--- a/drivers/usb/gadget/Kconfig
++++ b/drivers/usb/gadget/Kconfig
+@@ -178,7 +178,7 @@ config USB_FSL_USB2
+ 
+ config USB_GADGET_XUSBPS
+ 	boolean "Xilinx PS Highspeed USB DR Peripheral Controller"
+-	depends on ARCH_XILINX || ARCH_ZYNQ
++	depends on ARCH_ZYNQ
+ 	select USB_GADGET_DUALSPEED
+ 	select USB_XUSBPS_DR_OF if OF
+ 	help
+-- 
+1.7.1
+

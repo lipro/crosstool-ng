@@ -1,0 +1,46 @@
+From 8161688c58707269bdb579f1fc9f9be75ae94015 Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Tue, 20 Nov 2012 16:49:26 +0100
+Subject: [PATCH] arm: zynq: Move zynq clock initialization to timer init
+
+Timer should be the first device which requires clock
+interface. Move it out of xilinx_irq_init and remove
+comment which suggested that it wasn't correct place.
+
+It is also synchronization with mainline.
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+Acked-by: John Linn <john.linn@xilinx.com>
+Acked-by: Soren Brinkmann <soren.brinkmann@xilinx.com>
+---
+ arch/arm/mach-zynq/common.c |    7 ++-----
+ 1 files changed, 2 insertions(+), 5 deletions(-)
+
+diff --git a/arch/arm/mach-zynq/common.c b/arch/arm/mach-zynq/common.c
+index efd8312..80d0bd3 100644
+--- a/arch/arm/mach-zynq/common.c
++++ b/arch/arm/mach-zynq/common.c
+@@ -79,6 +79,8 @@ static struct map_desc io_desc[] __initdata = {
+ 
+ static void __init xilinx_zynq_timer_init(void)
+ {
++	zynq_clock_init();
++
+ 	xttcpss_timer_init();
+ }
+ 
+@@ -185,11 +187,6 @@ early_initcall(xilinx_l2c_init);
+ void __init xilinx_irq_init(void)
+ {
+ 	of_irq_init(zynq_dt_irq_match);
+-	/* This is probably the ugliest hack possible but this is why:
+-	 * Clock init needs to be done before timer init, so the timer can use
+-	 * COMMON_CLK. All __initcall types are called after time_init().
+-	 * Putting it in here is ugly but works. */
+-	zynq_clock_init();
+ }
+ 
+ /**
+-- 
+1.7.1
+

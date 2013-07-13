@@ -1,0 +1,55 @@
+From c2ec10ba2db4b5fa8e63d0aec653cf54c1da40f5 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Wed, 30 May 2012 14:38:58 +0200
+Subject: [PATCH] net: xilinx: Show csum in bootlog
+
+Just show current setting in bootlog.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ drivers/net/ethernet/xilinx/ll_temac_main.c       |    2 ++
+ drivers/net/ethernet/xilinx/xilinx_axienet_main.c |    2 ++
+ 2 files changed, 4 insertions(+), 0 deletions(-)
+
+diff --git a/drivers/net/ethernet/xilinx/ll_temac_main.c b/drivers/net/ethernet/xilinx/ll_temac_main.c
+index f8e3518..2cbb05b 100644
+--- a/drivers/net/ethernet/xilinx/ll_temac_main.c
++++ b/drivers/net/ethernet/xilinx/ll_temac_main.c
+@@ -1055,12 +1055,14 @@ static int __devinit temac_of_probe(struct platform_device *op)
+ 	/* Setup checksum offload, but default to off if not specified */
+ 	lp->temac_features = 0;
+ 	p = (__be32 *)of_get_property(op->dev.of_node, "xlnx,txcsum", NULL);
++	dev_info(&op->dev, "TX_CSUM %d\n", be32_to_cpup(p));
+ 	if (p && be32_to_cpu(*p)) {
+ 		lp->temac_features |= TEMAC_FEATURE_TX_CSUM;
+ 		/* Can checksum TCP/UDP over IPv4. */
+ 		ndev->features |= NETIF_F_IP_CSUM;
+ 	}
+ 	p = (__be32 *)of_get_property(op->dev.of_node, "xlnx,rxcsum", NULL);
++	dev_info(&op->dev, "RX_CSUM %d\n", be32_to_cpup(p));
+ 	if (p && be32_to_cpu(*p))
+ 		lp->temac_features |= TEMAC_FEATURE_RX_CSUM;
+ 
+diff --git a/drivers/net/ethernet/xilinx/xilinx_axienet_main.c b/drivers/net/ethernet/xilinx/xilinx_axienet_main.c
+index c3181ff..03276f1 100755
+--- a/drivers/net/ethernet/xilinx/xilinx_axienet_main.c
++++ b/drivers/net/ethernet/xilinx/xilinx_axienet_main.c
+@@ -1532,6 +1532,7 @@ static int __devinit axienet_of_probe(struct platform_device *op)
+ 	lp->features = 0;
+ 
+ 	p = (__be32 *) of_get_property(op->dev.of_node, "xlnx,txcsum", NULL);
++	dev_info(&op->dev, "TX_CSUM %d\n", be32_to_cpup(p));
+ 	if (p) {
+ 		switch (be32_to_cpup(p)) {
+ 		case 1:
+@@ -1553,6 +1554,7 @@ static int __devinit axienet_of_probe(struct platform_device *op)
+ 		}
+ 	}
+ 	p = (__be32 *) of_get_property(op->dev.of_node, "xlnx,rxcsum", NULL);
++	dev_info(&op->dev, "RX_CSUM %d\n", be32_to_cpup(p));
+ 	if (p) {
+ 		switch (be32_to_cpup(p)) {
+ 		case 1:
+-- 
+1.7.1
+

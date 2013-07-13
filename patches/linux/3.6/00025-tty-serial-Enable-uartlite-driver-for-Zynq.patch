@@ -1,0 +1,28 @@
+From a3d40d278dda65aad1a3445d152ef8ac1027b23e Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Mon, 8 Oct 2012 14:09:55 +0200
+Subject: [PATCH] tty: serial: Enable uartlite driver for Zynq
+
+Enable uartlite in menuconfig.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ drivers/tty/serial/Kconfig |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/drivers/tty/serial/Kconfig b/drivers/tty/serial/Kconfig
+index 09f0bd0..dfbdce3 100644
+--- a/drivers/tty/serial/Kconfig
++++ b/drivers/tty/serial/Kconfig
+@@ -537,7 +537,7 @@ config SERIAL_IMX_CONSOLE
+ 
+ config SERIAL_UARTLITE
+ 	tristate "Xilinx uartlite serial port support"
+-	depends on PPC32 || MICROBLAZE || MFD_TIMBERDALE
++	depends on PPC32 || MICROBLAZE || MFD_TIMBERDALE || ARCH_ZYNQ
+ 	select SERIAL_CORE
+ 	help
+ 	  Say Y here if you want to use the Xilinx uartlite serial controller.
+-- 
+1.7.1
+

@@ -1,0 +1,44 @@
+From 02512e834c476cad4657c62c445199d704794c30 Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Mon, 17 Dec 2012 16:58:46 +0100
+Subject: [PATCH] arm: zynq: pl330: Fix coding style issues
+
+Remove empty lines and fix one comment.
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+---
+ arch/arm/mach-zynq/pl330.c |    4 +---
+ 1 files changed, 1 insertions(+), 3 deletions(-)
+
+diff --git a/arch/arm/mach-zynq/pl330.c b/arch/arm/mach-zynq/pl330.c
+index 1dc2efd..fdfe632 100644
+--- a/arch/arm/mach-zynq/pl330.c
++++ b/arch/arm/mach-zynq/pl330.c
+@@ -1806,7 +1806,6 @@ static void pl330_free_dma(unsigned int channel, dma_t *indexed_dma_chan)
+ #ifdef PL330_DEBUG
+ static void print_pl330_bus_des(struct pl330_bus_des *bus_des)
+ {
+-
+ 	if (!bus_des) {
+ 		pr_debug("NULL\n");
+ 		return;
+@@ -1822,7 +1821,7 @@ static void print_pl330_bus_des(struct pl330_bus_des *bus_des)
+ #endif
+ 
+ /**
+- * pl33_exec_dmago - Execute the DMAGO to start a channel.
++ * pl330_exec_dmago - Execute the DMAGO to start a channel.
+  * @dev_id: PL330 device ID indicating which PL330, the ID starts at 0.
+  * @base: PL330 device base address
+  * @dev_chan: Channel number for the device
+@@ -1973,7 +1972,6 @@ static void pl330_enable_dma(unsigned int channel,
+ 		dst_inc = channel_data->incr_dev_addr;
+ 	} else {
+ 		pr_err("Error: mode %x is not supported\n", dma->dma_mode);
+-
+ 		return;
+ 	}
+ 
+-- 
+1.7.1
+

@@ -1,0 +1,75 @@
+From 9c19d8ae08c899069369ddff121c27a275a841a2 Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Thu, 28 Mar 2013 16:42:44 +0100
+Subject: [PATCH] microblaze: Fix uaccess_ok macro
+
+Fix access_ok macro no to permit
+case where user will try to access
+the last address space which is equal
+to segment address.
+
+Example:
+segment addr = 0xbfff ffff
+address = 0xbfff fff0
+size = 0x10
+
+Current wrong implementation
+0xbfff ffff >= (0xbfff fff0 | 0x10 | (0xbfff fff0 + 0x10))
+0xbfff ffff >= (0xbfff fff0        | 0xc000 0000)
+0xbfff ffff >= 0xf000 0000
+return 0 which is access failed even the combination is valid.
+because get_fs().seq returns the last valid address.
+
+This patch fix this problem.
+
+Size equals to zero is valid access.
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+---
+ arch/microblaze/include/asm/uaccess.h |   30 +++++++++++++++++++-----------
+ 1 files changed, 19 insertions(+), 11 deletions(-)
+
+diff --git a/arch/microblaze/include/asm/uaccess.h b/arch/microblaze/include/asm/uaccess.h
+index a1ab5f0..efe59d8 100644
+--- a/arch/microblaze/include/asm/uaccess.h
++++ b/arch/microblaze/include/asm/uaccess.h
+@@ -90,17 +90,25 @@ static inline int ___range_ok(unsigned long addr, unsigned long size)
+ 
+ #else
+ 
+-/*
+- * Address is valid if:
+- *  - "addr", "addr + size" and "size" are all below the limit
+- */
+-#define access_ok(type, addr, size) \
+-	(get_fs().seg >= (((unsigned long)(addr)) | \
+-		(size) | ((unsigned long)(addr) + (size))))
+-
+-/* || printk("access_ok failed for %s at 0x%08lx (size %d), seg 0x%08x\n",
+- type?"WRITE":"READ",addr,size,get_fs().seg)) */
+-
++static inline int access_ok(int type, const void __user *addr,
++							unsigned long size)
++{
++	if (!size)
++		goto ok;
++
++	if ((get_fs().seg < ((unsigned long)addr)) ||
++			(get_fs().seg < ((unsigned long)addr + size - 1))) {
++		pr_debug("ACCESS fail: %s at 0x%08x (size 0x%x), seg 0x%08x\n",
++			type ? "WRITE" : "READ ", (u32)addr, (u32)size,
++			(u32)get_fs().seg);
++		return 0;
++	}
++ok:
++	pr_debug("ACCESS OK: %s at 0x%08x (size 0x%x), seg 0x%08x\n",
++			type ? "WRITE" : "READ ", (u32)addr, (u32)size,
++			(u32)get_fs().seg);
++	return 1;
++}
+ #endif
+ 
+ #ifdef CONFIG_MMU
+-- 
+1.7.1
+

@@ -1,0 +1,38 @@
+From cb435db3241f6be382b16d117217a35f3ca57df9 Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Wed, 19 Dec 2012 10:52:19 +0100
+Subject: [PATCH] microblaze: Add support for new cpu versions and target architecture
+
+Update PVR values based on reference manual.
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+---
+ arch/microblaze/kernel/cpu/cpuinfo.c |    5 +++++
+ 1 files changed, 5 insertions(+), 0 deletions(-)
+
+diff --git a/arch/microblaze/kernel/cpu/cpuinfo.c b/arch/microblaze/kernel/cpu/cpuinfo.c
+index eab6abf..3ffd337 100644
+--- a/arch/microblaze/kernel/cpu/cpuinfo.c
++++ b/arch/microblaze/kernel/cpu/cpuinfo.c
+@@ -37,6 +37,8 @@ const struct cpu_ver_key cpu_ver_lookup[] = {
+ 	{"8.20.a", 0x15},
+ 	{"8.20.b", 0x16},
+ 	{"8.30.a", 0x17},
++	{"8.40.a", 0x18},
++	{"8.40.b", 0x19},
+ 	{NULL, 0},
+ };
+ 
+@@ -57,6 +59,9 @@ const struct family_string_key family_string_lookup[] = {
+ 	{"virtex6", 0xe},
+ 	/* FIXME There is no key code defined for spartan2 */
+ 	{"spartan2", 0xf0},
++	{"kintex7", 0x10},
++	{"artix7", 0x11},
++	{"zynq7000", 0x12},
+ 	{NULL, 0},
+ };
+ 
+-- 
+1.7.1
+

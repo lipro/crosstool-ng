@@ -1,0 +1,36 @@
+From 161fee6fd9f31a659fbfd5ff53dba68560a2a591 Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Fri, 1 Feb 2013 14:41:09 +0100
+Subject: [PATCH] net: ethernet: axienet: Do not use NO_IRQ
+
+This driver is used on Microblaze and will be used
+on Arm Zynq.
+Microblaze doesn't define NO_IRQ and no IRQ is 0.
+Arm still uses NO_IRQ as -1 and there is no option
+to connect IRQ to irq 0.
+
+That's why <= 0 is only one option how to find out
+undefined IRQ.
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+---
+ drivers/net/ethernet/xilinx/xilinx_axienet_main.c |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/drivers/net/ethernet/xilinx/xilinx_axienet_main.c b/drivers/net/ethernet/xilinx/xilinx_axienet_main.c
+index 9d6abf3..d033f39 100644
+--- a/drivers/net/ethernet/xilinx/xilinx_axienet_main.c
++++ b/drivers/net/ethernet/xilinx/xilinx_axienet_main.c
+@@ -1605,7 +1605,7 @@ static int __devinit axienet_of_probe(struct platform_device *op)
+ 	lp->rx_irq = irq_of_parse_and_map(np, 1);
+ 	lp->tx_irq = irq_of_parse_and_map(np, 0);
+ 	of_node_put(np);
+-	if ((!lp->rx_irq) || (!lp->tx_irq)) {
++	if ((lp->rx_irq <= 0) || (lp->tx_irq <= 0)) {
+ 		dev_err(&op->dev, "could not determine irqs\n");
+ 		ret = -ENOMEM;
+ 		goto err_iounmap_2;
+-- 
+1.7.1
+

@@ -1,0 +1,424 @@
+From 30c152388cb0ff3b426d03b9559a0b4b8e6e3ff2 Mon Sep 17 00:00:00 2001
+From: Soren Brinkmann <soren.brinkmann@xilinx.com>
+Date: Thu, 20 Dec 2012 10:53:03 -0800
+Subject: [PATCH] clk: zynq: Switch to clock bindings for root clock
+
+Switching to the newly introduced clock bindings to register
+all fixed rate clocks with the clock framework.
+
+Signed-off-by: Soren Brinkmann <soren.brinkmann@xilinx.com>
+---
+ arch/arm/boot/dts/zynq-afx-nand.dts    |   22 +++++++++++++++++-----
+ arch/arm/boot/dts/zynq-afx-nor.dts     |   22 +++++++++++++++++-----
+ arch/arm/boot/dts/zynq-ep107.dts       |   19 +++++++++++++------
+ arch/arm/boot/dts/zynq-zc702.dts       |   22 +++++++++++++++++-----
+ arch/arm/boot/dts/zynq-zc706.dts       |   22 +++++++++++++++++-----
+ arch/arm/boot/dts/zynq-zc770-xm010.dts |   22 +++++++++++++++++-----
+ arch/arm/boot/dts/zynq-zc770-xm011.dts |   22 +++++++++++++++++-----
+ arch/arm/boot/dts/zynq-zc770-xm012.dts |   22 +++++++++++++++++-----
+ arch/arm/boot/dts/zynq-zc770-xm013.dts |   22 +++++++++++++++++-----
+ drivers/clk/zynq/clk.c                 |   19 ++++---------------
+ 10 files changed, 153 insertions(+), 61 deletions(-)
+
+diff --git a/arch/arm/boot/dts/zynq-afx-nand.dts b/arch/arm/boot/dts/zynq-afx-nand.dts
+index f7e37b9..ce646ea 100644
+--- a/arch/arm/boot/dts/zynq-afx-nand.dts
++++ b/arch/arm/boot/dts/zynq-afx-nand.dts
+@@ -17,11 +17,6 @@
+ 		linux,stdout-path = "/amba@0/uart@E0001000";
+ 	};
+ 
+-	soc {
+-		compatible = "xlnx,zynq";
+-		clock-frequency = <33333333>;
+-	};
+-
+ 	amba@0 {
+ 		compatible = "simple-bus";
+ 		#address-cells = <0x1>;
+@@ -53,6 +48,23 @@
+ 			clock = <50000000>;
+ 		};
+ 
++		slcr: slcr@f8000000 {
++			compatible = "xlnx,zynq-slcr";
++			reg = <0xF8000000 0x1000>;
++
++			clocks {
++				#address-cells = <1>;
++				#size-cells = <0>;
++
++				ps_clk: ps_clk {
++					#clock-cells = <0>;
++					compatible = "fixed-clock";
++					clock-frequency = <33333333>;
++					clock-output-names = "PS_CLK";
++				};
++			};
++		};
++
+ 		timer@0xf8001000 {
+ 			compatible = "xlnx,ps7-ttc-1.00.a";
+ 			reg = <0xf8001000 0x1000>;
+diff --git a/arch/arm/boot/dts/zynq-afx-nor.dts b/arch/arm/boot/dts/zynq-afx-nor.dts
+index a7f54b0..fff2ea6 100644
+--- a/arch/arm/boot/dts/zynq-afx-nor.dts
++++ b/arch/arm/boot/dts/zynq-afx-nor.dts
+@@ -17,11 +17,6 @@
+ 		linux,stdout-path = "/amba@0/uart@E0001000";
+ 	};
+ 
+-	soc {
+-		compatible = "xlnx,zynq";
+-		clock-frequency = <33333333>;
+-	};
+-
+ 	amba@0 {
+ 		compatible = "simple-bus";
+ 		#address-cells = <0x1>;
+@@ -53,6 +48,23 @@
+ 			clock = <50000000>;
+ 		};
+ 
++		slcr: slcr@f8000000 {
++			compatible = "xlnx,zynq-slcr";
++			reg = <0xF8000000 0x1000>;
++
++			clocks {
++				#address-cells = <1>;
++				#size-cells = <0>;
++
++				ps_clk: ps_clk {
++					#clock-cells = <0>;
++					compatible = "fixed-clock";
++					clock-frequency = <33333333>;
++					clock-output-names = "PS_CLK";
++				};
++			};
++		};
++
+ 		timer@0xf8001000 {
+ 			compatible = "xlnx,ps7-ttc-1.00.a";
+ 			reg = <0xf8001000 0x1000>;
+diff --git a/arch/arm/boot/dts/zynq-ep107.dts b/arch/arm/boot/dts/zynq-ep107.dts
+index e2f7047..09b46fa 100644
+--- a/arch/arm/boot/dts/zynq-ep107.dts
++++ b/arch/arm/boot/dts/zynq-ep107.dts
+@@ -29,11 +29,6 @@
+ 		linux,stdout-path = &uart0;
+ 	};
+ 
+-	soc {
+-		compatible = "xlnx,zynq";
+-		clock-frequency = <121154004>;
+-	};
+-
+ 	amba {
+ 		compatible = "simple-bus";
+ 		#address-cells = <1>;
+@@ -65,8 +60,20 @@
+ 		};
+ 
+ 		slcr: slcr@f8000000 {
+-			compatible = "xlnx,ps7-slcr-1.00.a";
++			compatible = "xlnx,zynq-slcr";
+ 			reg = <0xF8000000 0x1000>;
++
++			clocks {
++				#address-cells = <1>;
++				#size-cells = <0>;
++
++				ps_clk: ps_clk {
++					#clock-cells = <0>;
++					compatible = "fixed-clock";
++					clock-frequency = <121154004>;
++					clock-output-names = "PS_CLK";
++				};
++			};
+ 		};
+ 
+ 		wdt0: swdt@f8005000 {
+diff --git a/arch/arm/boot/dts/zynq-zc702.dts b/arch/arm/boot/dts/zynq-zc702.dts
+index 695d198..782c228 100644
+--- a/arch/arm/boot/dts/zynq-zc702.dts
++++ b/arch/arm/boot/dts/zynq-zc702.dts
+@@ -16,11 +16,6 @@
+ 		linux,stdout-path = "/amba@0/uart@E0001000";
+ 	};
+ 
+-	soc {
+-		compatible = "xlnx,zynq";
+-		clock-frequency = <33333333>;
+-	};
+-
+ 	amba@0 {
+ 		compatible = "simple-bus";
+ 		#address-cells = <0x1>;
+@@ -52,6 +47,23 @@
+ 			clock = <50000000>;
+ 		};
+ 
++		slcr: slcr@f8000000 {
++			compatible = "xlnx,zynq-slcr";
++			reg = <0xF8000000 0x1000>;
++
++			clocks {
++				#address-cells = <1>;
++				#size-cells = <0>;
++
++				ps_clk: ps_clk {
++					#clock-cells = <0>;
++					compatible = "fixed-clock";
++					clock-frequency = <33333333>;
++					clock-output-names = "PS_CLK";
++				};
++			};
++		};
++
+ 		timer@0xf8001000 {
+ 			compatible = "xlnx,ps7-ttc-1.00.a";
+ 			reg = <0xf8001000 0x1000>;
+diff --git a/arch/arm/boot/dts/zynq-zc706.dts b/arch/arm/boot/dts/zynq-zc706.dts
+index b53b15e..1561c07 100644
+--- a/arch/arm/boot/dts/zynq-zc706.dts
++++ b/arch/arm/boot/dts/zynq-zc706.dts
+@@ -16,11 +16,6 @@
+ 		linux,stdout-path = "/amba@0/uart@E0001000";
+ 	};
+ 
+-	soc {
+-		compatible = "xlnx,zynq";
+-		clock-frequency = <33333333>;
+-	};
+-
+ 	amba@0 {
+ 		compatible = "simple-bus";
+ 		#address-cells = <0x1>;
+@@ -52,6 +47,23 @@
+ 			clock = <50000000>;
+ 		};
+ 
++		slcr: slcr@f8000000 {
++			compatible = "xlnx,zynq-slcr";
++			reg = <0xF8000000 0x1000>;
++
++			clocks {
++				#address-cells = <1>;
++				#size-cells = <0>;
++
++				ps_clk: ps_clk {
++					#clock-cells = <0>;
++					compatible = "fixed-clock";
++					clock-frequency = <33333333>;
++					clock-output-names = "PS_CLK";
++				};
++			};
++		};
++
+ 		timer@0xf8001000 {
+ 			compatible = "xlnx,ps7-ttc-1.00.a";
+ 			reg = <0xf8001000 0x1000>;
+diff --git a/arch/arm/boot/dts/zynq-zc770-xm010.dts b/arch/arm/boot/dts/zynq-zc770-xm010.dts
+index 34d20f7..5da863c 100644
+--- a/arch/arm/boot/dts/zynq-zc770-xm010.dts
++++ b/arch/arm/boot/dts/zynq-zc770-xm010.dts
+@@ -16,11 +16,6 @@
+ 		linux,stdout-path = "/amba@0/uart@E0001000";
+ 	};
+ 
+-	soc {
+-		compatible = "xlnx,zynq";
+-		clock-frequency = <33333333>;
+-	};
+-
+ 	amba@0 {
+ 		compatible = "simple-bus";
+ 		#address-cells = <0x1>;
+@@ -52,6 +47,23 @@
+ 			clock = <50000000>;
+ 		};
+ 
++		slcr: slcr@f8000000 {
++			compatible = "xlnx,zynq-slcr";
++			reg = <0xF8000000 0x1000>;
++
++			clocks {
++				#address-cells = <1>;
++				#size-cells = <0>;
++
++				ps_clk: ps_clk {
++					#clock-cells = <0>;
++					compatible = "fixed-clock";
++					clock-frequency = <33333333>;
++					clock-output-names = "PS_CLK";
++				};
++			};
++		};
++
+ 		timer@0xf8001000 {
+ 			compatible = "xlnx,ps7-ttc-1.00.a";
+ 			reg = <0xf8001000 0x1000>;
+diff --git a/arch/arm/boot/dts/zynq-zc770-xm011.dts b/arch/arm/boot/dts/zynq-zc770-xm011.dts
+index 4922c0a..651bcb9 100644
+--- a/arch/arm/boot/dts/zynq-zc770-xm011.dts
++++ b/arch/arm/boot/dts/zynq-zc770-xm011.dts
+@@ -17,11 +17,6 @@
+ 		linux,stdout-path = "/amba@0/uart@E0001000";
+ 	};
+ 
+-	soc {
+-		compatible = "xlnx,zynq";
+-		clock-frequency = <33333333>;
+-	};
+-
+ 	amba@0 {
+ 		compatible = "simple-bus";
+ 		#address-cells = <0x1>;
+@@ -53,6 +48,23 @@
+ 			clock = <0x2faf080>;
+ 		};
+ 
++		slcr: slcr@f8000000 {
++			compatible = "xlnx,zynq-slcr";
++			reg = <0xF8000000 0x1000>;
++
++			clocks {
++				#address-cells = <1>;
++				#size-cells = <0>;
++
++				ps_clk: ps_clk {
++					#clock-cells = <0>;
++					compatible = "fixed-clock";
++					clock-frequency = <33333333>;
++					clock-output-names = "PS_CLK";
++				};
++			};
++		};
++
+ 		timer@0xf8001000 {
+ 			compatible = "xlnx,ps7-ttc-1.00.a";
+ 			reg = <0xf8001000 0x1000>;
+diff --git a/arch/arm/boot/dts/zynq-zc770-xm012.dts b/arch/arm/boot/dts/zynq-zc770-xm012.dts
+index 18d0a50..1111f1a 100644
+--- a/arch/arm/boot/dts/zynq-zc770-xm012.dts
++++ b/arch/arm/boot/dts/zynq-zc770-xm012.dts
+@@ -17,11 +17,6 @@
+ 		linux,stdout-path = "/amba@0/uart@E0001000";
+ 	};
+ 
+-	soc {
+-		compatible = "xlnx,zynq";
+-		clock-frequency = <33333333>;
+-	};
+-
+ 	amba@0 {
+ 		compatible = "simple-bus";
+ 		#address-cells = <0x1>;
+@@ -54,6 +49,23 @@
+ 			clock = <50000000>;
+ 		};
+ 
++		slcr: slcr@f8000000 {
++			compatible = "xlnx,zynq-slcr";
++			reg = <0xF8000000 0x1000>;
++
++			clocks {
++				#address-cells = <1>;
++				#size-cells = <0>;
++
++				ps_clk: ps_clk {
++					#clock-cells = <0>;
++					compatible = "fixed-clock";
++					clock-frequency = <33333333>;
++					clock-output-names = "PS_CLK";
++				};
++			};
++		};
++
+ 		timer@0xf8001000 {
+ 			compatible = "xlnx,ps7-ttc-1.00.a";
+ 			reg = <0xf8001000 0x1000>;
+diff --git a/arch/arm/boot/dts/zynq-zc770-xm013.dts b/arch/arm/boot/dts/zynq-zc770-xm013.dts
+index 8b3ece3..b1f70b0 100644
+--- a/arch/arm/boot/dts/zynq-zc770-xm013.dts
++++ b/arch/arm/boot/dts/zynq-zc770-xm013.dts
+@@ -16,11 +16,6 @@
+ 		linux,stdout-path = "/amba@0/uart@E0000000";
+ 	};
+ 
+-	soc {
+-		compatible = "xlnx,zynq";
+-		clock-frequency = <33333333>;
+-	};
+-
+ 	amba@0 {
+ 		compatible = "simple-bus";
+ 		#address-cells = <0x1>;
+@@ -52,6 +47,23 @@
+ 			clock = <50000000>;
+ 		};
+ 
++		slcr: slcr@f8000000 {
++			compatible = "xlnx,zynq-slcr";
++			reg = <0xF8000000 0x1000>;
++
++			clocks {
++				#address-cells = <1>;
++				#size-cells = <0>;
++
++				ps_clk: ps_clk {
++					#clock-cells = <0>;
++					compatible = "fixed-clock";
++					clock-frequency = <33333333>;
++					clock-output-names = "PS_CLK";
++				};
++			};
++		};
++
+ 		timer@0xf8002000 {
+ 			compatible = "xlnx,ps7-ttc-1.00.a";
+ 			reg = <0xf8002000 0x1000>;
+diff --git a/drivers/clk/zynq/clk.c b/drivers/clk/zynq/clk.c
+index 0dacc4b..2c858b7 100644
+--- a/drivers/clk/zynq/clk.c
++++ b/drivers/clk/zynq/clk.c
+@@ -70,9 +70,9 @@ static void __init zynq_clkdev_add(const char *con_id, const char *dev_id,
+ 		pr_warn("Adding clkdev failed.");
+ }
+ 
+-static const struct of_device_id matches __initconst = {
+-	.compatible = "xlnx,zynq",
+-	.name = "soc",
++static const struct of_device_id clk_match[] __initconst = {
++	{ .compatible = "fixed-clock", .data = of_fixed_clk_setup, },
++	{}
+ };
+ 
+ /**
+@@ -85,22 +85,11 @@ static const struct of_device_id matches __initconst = {
+ void __init zynq_clock_init(void)
+ {
+ 	struct clk *clk;
+-	struct device_node *np;
+-	const void *prop;
+-	unsigned int ps_clk_f = 33333333;
+ 
+ 	pr_info("Zynq clock init\n");
+ 
+-	np = of_find_matching_node(NULL, &matches);
+-	if (np) {
+-		prop = of_get_property(np, "clock-frequency", NULL);
+-		if (prop)
+-			ps_clk_f = be32_to_cpup(prop);
+-		of_node_put(np);
+-	}
++	of_clk_init(clk_match);
+ 
+-	clk = clk_register_fixed_rate(NULL, "PS_CLK", NULL, CLK_IS_ROOT,
+-			ps_clk_f);
+ 	clk = clk_register_zynq_pll("ARMPLL",
+ 			(__force void __iomem *)SLCR_ARMPLL_CTRL,
+ 			(__force void __iomem *)SLCR_ARMPLL_CFG,
+-- 
+1.7.1
+

@@ -1,0 +1,67 @@
+From 13ababa1b2372e7fd31d72c0d3f7f7e6aa1e8e1b Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Mon, 12 Nov 2012 11:31:43 +0100
+Subject: [PATCH] rpmsg: Fix section mismatch
+
+The latest kernel activity is remove all __dev* options anyway.
+
+Here is the description from the v3.8-rc1:
+"CONFIG_HOTPLUG is going away as an option.  As result the __dev*
+markings will be going away.
+
+Remove use of __devinit, __devexit_p, __devinitdata, __devinitconst,
+and __devexit."
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+---
+ drivers/rpmsg/rpmsg_server_sample.c |    4 ++--
+ net/rpmsg/rpmsg_proto.c             |    4 ++--
+ 2 files changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/rpmsg/rpmsg_server_sample.c b/drivers/rpmsg/rpmsg_server_sample.c
+index 669d9df..55fad28 100644
+--- a/drivers/rpmsg/rpmsg_server_sample.c
++++ b/drivers/rpmsg/rpmsg_server_sample.c
+@@ -141,7 +141,7 @@ static int rpmsg_sample_probe(struct rpmsg_channel *rpdev)
+ 	return 0;
+ }
+ 
+-static void __devexit rpmsg_sample_remove(struct rpmsg_channel *rpdev)
++static void rpmsg_sample_remove(struct rpmsg_channel *rpdev)
+ {
+ 	dev_info(&rpdev->dev, "rpmsg sample driver is removed\n");
+ }
+@@ -158,7 +158,7 @@ static struct rpmsg_driver rpmsg_sample_server = {
+ 	.id_table	= rpmsg_driver_sample_id_table,
+ 	.probe		= rpmsg_sample_probe,
+ 	.callback	= rpmsg_sample_cb,
+-	.remove		= __devexit_p(rpmsg_sample_remove),
++	.remove		= rpmsg_sample_remove,
+ };
+ 
+ static int __init init(void)
+diff --git a/net/rpmsg/rpmsg_proto.c b/net/rpmsg/rpmsg_proto.c
+index 75a61b0..407622c 100644
+--- a/net/rpmsg/rpmsg_proto.c
++++ b/net/rpmsg/rpmsg_proto.c
+@@ -514,7 +514,7 @@ static int rpmsg_proto_probe(struct rpmsg_channel *rpdev)
+ 	return ret;
+ }
+ 
+-static void __devexit rpmsg_proto_remove(struct rpmsg_channel *rpdev)
++static void rpmsg_proto_remove(struct rpmsg_channel *rpdev)
+ {
+ 	struct device *dev = &rpdev->dev;
+ 	int id, dst = rpdev->dst;
+@@ -552,7 +552,7 @@ static struct rpmsg_driver rpmsg_proto_drv = {
+ 	.id_table	= rpmsg_proto_id_table,
+ 	.probe		= rpmsg_proto_probe,
+ 	.callback	= rpmsg_proto_cb,
+-	.remove		= __devexit_p(rpmsg_proto_remove),
++	.remove		= rpmsg_proto_remove,
+ };
+ 
+ int __init rpmsg_proto_init(void)
+-- 
+1.7.1
+

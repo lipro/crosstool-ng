@@ -1,0 +1,27 @@
+From 7293d8531d860a6cd8e24a50e8e6e8c80f14856e Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Tue, 20 Mar 2012 15:20:47 +0100
+Subject: [PATCH] of: Export of_irq_count for modules
+
+of_irq_count is used by zynq-remoteproc.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ drivers/of/irq.c |    1 +
+ 1 files changed, 1 insertions(+), 0 deletions(-)
+
+diff --git a/drivers/of/irq.c b/drivers/of/irq.c
+index ff8ab7b..0a2a177 100644
+--- a/drivers/of/irq.c
++++ b/drivers/of/irq.c
+@@ -372,6 +372,7 @@ int of_irq_count(struct device_node *dev)
+ 
+ 	return nr;
+ }
++EXPORT_SYMBOL_GPL(of_irq_count);
+ 
+ /**
+  * of_irq_to_resource_table - Fill in resource table with node's IRQ info
+-- 
+1.7.1
+

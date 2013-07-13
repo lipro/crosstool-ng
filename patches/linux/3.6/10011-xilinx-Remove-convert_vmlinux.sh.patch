@@ -1,0 +1,41 @@
+From 16661e4dfb3f5ff619af8a12c972c9e0fe2bf5aa Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Tue, 6 Nov 2012 13:44:25 +0100
+Subject: [PATCH] xilinx: Remove convert_vmlinux.sh
+
+This helper script is not used anymore.
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+---
+ convert_vmlinux.sh |   19 -------------------
+ 1 files changed, 0 insertions(+), 19 deletions(-)
+ delete mode 100755 convert_vmlinux.sh
+
+diff --git a/convert_vmlinux.sh b/convert_vmlinux.sh
+deleted file mode 100755
+index 1459f08..0000000
+--- a/convert_vmlinux.sh
++++ /dev/null
+@@ -1,19 +0,0 @@
+-#!/bin/sh
+-
+-
+-if [ "$1" == "cpu1" ] ; then
+-	echo "Creating vmlinux1.bin for CPU1 at 66MB (0x4200000) start address"
+-
+-	${CROSS_COMPILE:-arm-none-linux-gnueabi-}objcopy -R .note.gnu.build-id -R .comment -R .ARM.attributes --change-addresses -0xBBE00000 vmlinux vmlinux1.elf
+-	${CROSS_COMPILE:-arm-none-linux-gnueabi-}objcopy --gap-fill=0xFF -O binary vmlinux1.elf vmlinux1.bin
+-
+-elif [ "$1" == "cpu0amp" ] ; then
+-	echo "Creating vmlinux.bin for CPU0 at 0x400000 start address"
+-	${CROSS_COMPILE:-arm-none-linux-gnueabi-}objcopy -R .note.gnu.build-id -R .comment -R .ARM.attributes --change-addresses -0xBC000000 vmlinux vmlinux.elf
+-	${CROSS_COMPILE:-arm-none-linux-gnueabi-}objcopy --gap-fill=0xFF -O binary vmlinux.elf vmlinux.bin
+-else
+-	echo "Creating vmlinux.bin for CPU0 at 0 start address"
+-	${CROSS_COMPILE:-arm-none-linux-gnueabi-}objcopy -R .note.gnu.build-id -R .comment -R .ARM.attributes --change-addresses -0xC0000000 vmlinux vmlinux.elf
+-	${CROSS_COMPILE:-arm-none-linux-gnueabi-}objcopy --gap-fill=0xFF -O binary vmlinux.elf vmlinux.bin
+-fi
+-
+-- 
+1.7.1
+

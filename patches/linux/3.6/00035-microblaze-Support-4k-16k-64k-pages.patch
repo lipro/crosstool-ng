@@ -1,0 +1,77 @@
+From 39b3b88c5dec5fda4053f5e53e34481d43ac35d6 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Wed, 1 Aug 2012 10:29:28 +0200
+Subject: [PATCH] microblaze: Support 4k/16k/64k pages
+
+Add support for page size which is supported by MMU.
+Remove 8k and 32k page size because they are not supported
+by MMU.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ arch/microblaze/Kconfig                       |    7 ++-----
+ arch/microblaze/include/asm/page.h            |    6 ++----
+ arch/microblaze/kernel/hw_exception_handler.S |    6 ++++++
+ 3 files changed, 10 insertions(+), 9 deletions(-)
+
+diff --git a/arch/microblaze/Kconfig b/arch/microblaze/Kconfig
+index 98100e7..311bfc6 100644
+--- a/arch/microblaze/Kconfig
++++ b/arch/microblaze/Kconfig
+@@ -243,14 +243,11 @@ choice
+ config MICROBLAZE_4K_PAGES
+ 	bool "4k page size"
+ 
+-config MICROBLAZE_8K_PAGES
+-	bool "8k page size"
+-
+ config MICROBLAZE_16K_PAGES
+ 	bool "16k page size"
+ 
+-config MICROBLAZE_32K_PAGES
+-	bool "32k page size"
++config MICROBLAZE_64K_PAGES
++	bool "64k page size"
+ 
+ endchoice
+ 
+diff --git a/arch/microblaze/include/asm/page.h b/arch/microblaze/include/asm/page.h
+index dd9ea9d..85a5ae8 100644
+--- a/arch/microblaze/include/asm/page.h
++++ b/arch/microblaze/include/asm/page.h
+@@ -23,12 +23,10 @@
+ #ifdef __KERNEL__
+ 
+ /* PAGE_SHIFT determines the page size */
+-#if defined(CONFIG_MICROBLAZE_32K_PAGES)
+-#define PAGE_SHIFT		15
++#if defined(CONFIG_MICROBLAZE_64K_PAGES)
++#define PAGE_SHIFT		16
+ #elif defined(CONFIG_MICROBLAZE_16K_PAGES)
+ #define PAGE_SHIFT		14
+-#elif defined(CONFIG_MICROBLAZE_8K_PAGES)
+-#define PAGE_SHIFT		13
+ #else
+ #define PAGE_SHIFT		12
+ #endif
+diff --git a/arch/microblaze/kernel/hw_exception_handler.S b/arch/microblaze/kernel/hw_exception_handler.S
+index 76a069d..0a573df 100644
+--- a/arch/microblaze/kernel/hw_exception_handler.S
++++ b/arch/microblaze/kernel/hw_exception_handler.S
+@@ -862,7 +862,13 @@ ex_handler_done:
+ 		 * bits 20 and 21 are zero.
+ 		 */
+ 		andi	r3, r3, PAGE_MASK
++#ifdef CONFIG_MICROBLAZE_64K_PAGES
++		ori	r3, r3, TLB_VALID | TLB_PAGESZ(PAGESZ_64K)
++#elif CONFIG_MICROBLAZE_16K_PAGES
++		ori	r3, r3, TLB_VALID | TLB_PAGESZ(PAGESZ_16K)
++#else
+ 		ori	r3, r3, TLB_VALID | TLB_PAGESZ(PAGESZ_4K)
++#endif
+ 		mts	rtlbhi,	r3		/* Load TLB HI */
+ 		nop
+ 
+-- 
+1.7.1
+

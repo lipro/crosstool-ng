@@ -1,0 +1,56 @@
+From f869186c3eded36735c9c4ac6b70a6adb6c8ec19 Mon Sep 17 00:00:00 2001
+From: Soren Brinkmann <soren.brinkmann@xilinx.com>
+Date: Tue, 27 Nov 2012 10:22:46 -0800
+Subject: [PATCH] mtd: xilinx_nandps: Sort #includes alphabetically
+
+Just sorting for easier maintenance.
+
+Signed-off-by: Soren Brinkmann <soren.brinkmann@xilinx.com>
+Acked-by: Michal Simek <michal.simek@xilinx.com>
+---
+ drivers/mtd/nand/xilinx_nandps.c |   20 ++++++++++----------
+ 1 files changed, 10 insertions(+), 10 deletions(-)
+
+diff --git a/drivers/mtd/nand/xilinx_nandps.c b/drivers/mtd/nand/xilinx_nandps.c
+index 79d993b..4521722 100644
+--- a/drivers/mtd/nand/xilinx_nandps.c
++++ b/drivers/mtd/nand/xilinx_nandps.c
+@@ -17,25 +17,25 @@
+  * This driver is based on plat_nand.c and mxc_nand.c drivers
+  */
+ 
+-#include <linux/module.h>
+-#include <linux/moduleparam.h>
++#include <linux/delay.h>
+ #include <linux/init.h>
+-#include <linux/ioport.h>
+-#include <linux/platform_device.h>
+ #include <linux/interrupt.h>
+-#include <linux/irq.h>
+ #include <linux/io.h>
+-#include <linux/slab.h>
++#include <linux/ioport.h>
++#include <linux/irq.h>
++#include <linux/module.h>
++#include <linux/moduleparam.h>
+ #include <linux/mtd/mtd.h>
+ #include <linux/mtd/nand.h>
+-#include <linux/mtd/partitions.h>
+-#include <linux/delay.h>
+ #include <linux/mtd/nand_ecc.h>
+-#include <mach/smc.h>
+-#include <mach/nand.h>
++#include <linux/mtd/partitions.h>
+ #include <linux/of_address.h>
+ #include <linux/of_device.h>
+ #include <linux/of_platform.h>
++#include <linux/platform_device.h>
++#include <linux/slab.h>
++#include <mach/nand.h>
++#include <mach/smc.h>
+ 
+ #define XNANDPS_DRIVER_NAME "xilinx_nandps"
+ 
+-- 
+1.7.1
+

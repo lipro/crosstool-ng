@@ -1,0 +1,40 @@
+From 2d4ee5ea000475b2ec3d7a261b0c9cc825250a5f Mon Sep 17 00:00:00 2001
+From: Wendy Liang <wendy.liang@petalogix.com>
+Date: Wed, 14 Nov 2012 11:06:03 +1000
+Subject: [PATCH] Uncomment the ehci_setup function in ehci-hcd.c
+
+Since ehci_setup() is used by ehci-pci.c and some other files.
+we should reenable this functinon.
+
+I have checked the 3.7 kernel, this function is still there.
+
+Signed-off-by: Wendy Liang <jliang@xilinx.com>
+Acked-by: Michal Simek <michal.simek@xilinx.com>
+---
+ drivers/usb/host/ehci-hcd.c |    3 ---
+ 1 files changed, 0 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/usb/host/ehci-hcd.c b/drivers/usb/host/ehci-hcd.c
+index 8207c09..2282d83 100644
+--- a/drivers/usb/host/ehci-hcd.c
++++ b/drivers/usb/host/ehci-hcd.c
+@@ -688,8 +688,6 @@ static int ehci_run (struct usb_hcd *hcd)
+ 	return 0;
+ }
+ 
+-/* FIXME It it unused - this should be probably resolve somehow */
+-#if 0
+ static int ehci_setup(struct usb_hcd *hcd)
+ {
+ 	struct ehci_hcd *ehci = hcd_to_ehci(hcd);
+@@ -721,7 +719,6 @@ static int ehci_setup(struct usb_hcd *hcd)
+ 
+ 	return 0;
+ }
+-#endif
+ 
+ /*-------------------------------------------------------------------------*/
+ 
+-- 
+1.7.1
+

@@ -1,0 +1,79 @@
+From 11b213b9234c19ba056c197291033d11f2fe78b6 Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Fri, 1 Feb 2013 14:10:29 +0100
+Subject: [PATCH] xilinx: Remove structures for ancient ethernet drivers
+
+Remove this relic structures.
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+---
+ include/linux/xilinx_devices.h |   53 ----------------------------------------
+ 1 files changed, 0 insertions(+), 53 deletions(-)
+
+diff --git a/include/linux/xilinx_devices.h b/include/linux/xilinx_devices.h
+index efda7d5..f493aae 100644
+--- a/include/linux/xilinx_devices.h
++++ b/include/linux/xilinx_devices.h
+@@ -20,59 +20,6 @@
+ #include <linux/version.h>
+ #include <linux/platform_device.h>
+ 
+-/*- 10/100 Mb Ethernet Controller IP (XEMAC) -*/
+-
+-struct xemac_platform_data {
+-	u32 device_flags;
+-	u32 dma_mode;
+-	u32 has_mii;
+-	u32 has_err_cnt;
+-	u32 has_cam;
+-	u32 has_jumbo;
+-	u32 tx_dre;
+-	u32 rx_dre;
+-	u32 tx_hw_csum;
+-	u32 rx_hw_csum;
+-	u8 mac_addr[6];
+-};
+-
+-/* Flags related to XEMAC device features */
+-#define XEMAC_HAS_ERR_COUNT	0x00000001
+-#define XEMAC_HAS_MII		0x00000002
+-#define XEMAC_HAS_CAM		0x00000004
+-#define XEMAC_HAS_JUMBO		0x00000008
+-
+-/* Possible DMA modes supported by XEMAC */
+-#define XEMAC_DMA_NONE		1
+-#define XEMAC_DMA_SIMPLE	2	/* simple 2 channel DMA */
+-#define XEMAC_DMA_SGDMA		3	/* scatter gather DMA */
+-
+-/*- 10/100/1000 Mb Ethernet Controller IP (XTEMAC) -*/
+-
+-struct xtemac_platform_data {
+-#ifdef XPAR_TEMAC_0_INCLUDE_RX_CSUM
+-	u8 tx_dre;
+-	u8 rx_dre;
+-	u8 tx_csum;
+-	u8 rx_csum;
+-	u8 phy_type;
+-#endif
+-	u8 dma_mode;
+-	u32 rx_pkt_fifo_depth;
+-	u32 tx_pkt_fifo_depth;
+-	u16 mac_fifo_depth;
+-	u8 dcr_host;
+-	u8 dre;
+-
+-	u8 mac_addr[6];
+-};
+-
+-/* Possible DMA modes supported by XTEMAC */
+-#define XTEMAC_DMA_NONE		1
+-#define XTEMAC_DMA_SIMPLE	2	/* simple 2 channel DMA */
+-#define XTEMAC_DMA_SGDMA	3	/* scatter gather DMA */
+-
+-
+ /* LLTEMAC platform data */
+ struct xlltemac_platform_data {
+ 	u8 tx_csum;
+-- 
+1.7.1
+

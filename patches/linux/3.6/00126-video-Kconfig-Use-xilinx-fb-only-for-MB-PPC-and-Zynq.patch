@@ -1,0 +1,28 @@
+From bf93dfaaf17ae8c25baa90f54295839f04449ff8 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Fri, 19 Oct 2012 11:36:31 +0200
+Subject: [PATCH] video: Kconfig: Use xilinx fb only for MB/PPC and Zynq
+
+Limit Kconfig option just for Xilinx platforms
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ drivers/video/Kconfig |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/drivers/video/Kconfig b/drivers/video/Kconfig
+index f4738b7..b2a52a4 100644
+--- a/drivers/video/Kconfig
++++ b/drivers/video/Kconfig
+@@ -2199,7 +2199,7 @@ config FB_PS3_DEFAULT_SIZE_M
+ 
+ config FB_XILINX
+ 	tristate "Xilinx frame buffer support"
+-	depends on FB 
++	depends on FB && (XILINX_VIRTEX || MICROBLAZE || ARCH_ZYNQ)
+ 	select FB_CFB_FILLRECT
+ 	select FB_CFB_COPYAREA
+ 	select FB_CFB_IMAGEBLIT
+-- 
+1.7.1
+

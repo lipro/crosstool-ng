@@ -1,0 +1,178 @@
+From ebb1a1625b359b0b6d35ebd42d17696fd78f1434 Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Thu, 25 Oct 2012 16:12:22 +0200
+Subject: [PATCH] xilinx: Clean coding style for zynq device tree files
+
+Coding style cleanup.
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+---
+ arch/arm/boot/dts/zynq-ep107.dts       |   10 +++++-----
+ arch/arm/boot/dts/zynq-zc702.dts       |    8 ++++----
+ arch/arm/boot/dts/zynq-zc770-xm010.dts |    8 ++++----
+ arch/arm/boot/dts/zynq-zc770-xm011.dts |    2 +-
+ arch/arm/boot/dts/zynq-zc770-xm012.dts |    2 +-
+ arch/arm/boot/dts/zynq-zc770-xm013.dts |    2 +-
+ 6 files changed, 16 insertions(+), 16 deletions(-)
+
+diff --git a/arch/arm/boot/dts/zynq-ep107.dts b/arch/arm/boot/dts/zynq-ep107.dts
+index ae63996..53710ff 100644
+--- a/arch/arm/boot/dts/zynq-ep107.dts
++++ b/arch/arm/boot/dts/zynq-ep107.dts
+@@ -61,7 +61,7 @@
+ 		timer0: timer@0xf8001000 {
+ 			compatible = "xlnx,ps7-ttc-1.00.a";
+ 			reg = <0xF8001000 0x1000>;
+-			interrupts = <0 10 0>,<0 11 0>,<0 12 0>; 
++			interrupts = <0 10 0>,<0 11 0>,<0 12 0>;
+ 			interrupt-parent = <&gic>;
+ 			clock-frequency-timer0 = <2500000>;
+ 			clock-frequency-timer1 = <2500000>;
+@@ -87,7 +87,7 @@
+ 			compatible = "xlnx,ps7-scuwdt-1.00.a";
+ 			reg = <0xF8F00620 0x20>;
+ 		};
+-	
++
+ 		uart0: uart@e0000000 {
+ 			compatible = "xlnx,ps7-uart-1.00.a";
+ 			reg = <0xE0000000 0x1000>;
+@@ -95,7 +95,7 @@
+ 			interrupt-parent = <&gic>;
+ 			clock = <50000000>;
+ 		};
+-	
++
+ 		uart1: uart@e0001000 {
+ 			compatible = "xlnx,ps7-uart-1.00.a";
+ 			reg = <0xE0001000 0x1000>;
+@@ -103,7 +103,7 @@
+ 			interrupt-parent = <&gic>;
+ 			clock = <50000000>;
+ 		};
+-	
++
+ 		spi0: spi@e0006000 {
+ 			compatible = "xlnx,ps7-spi-1.00.a";
+ 			reg = <0xE0006000 0x1000>;
+@@ -143,7 +143,7 @@
+ 			bus-id = <0>;
+ 			input-clk = <50000000>;
+ 			i2c-clk = <100000>;
+-			
++
+ 			#address-cells = <1>;
+ 			#size-cells = <0>;
+ 			m24c02_eeprom@50 {
+diff --git a/arch/arm/boot/dts/zynq-zc702.dts b/arch/arm/boot/dts/zynq-zc702.dts
+index 85ba299..a536a41 100644
+--- a/arch/arm/boot/dts/zynq-zc702.dts
++++ b/arch/arm/boot/dts/zynq-zc702.dts
+@@ -9,10 +9,10 @@
+ 
+ 	memory {
+ 		device_type = "memory";
+-		reg = <0x00000000 0x40000000>; 
++		reg = <0x00000000 0x40000000>;
+ 	};
+ 	chosen {
+-		bootargs = "console=ttyPS0,115200 root=/dev/ram rw ip=:::::eth0:dhcp earlyprintk"; 
++		bootargs = "console=ttyPS0,115200 root=/dev/ram rw ip=:::::eth0:dhcp earlyprintk";
+ 		linux,stdout-path = "/amba@0/uart@E0001000";
+ 	};
+ 
+@@ -56,7 +56,7 @@
+ 		timer@0xf8001000 {
+ 			compatible = "xlnx,ps7-ttc-1.00.a";
+ 			reg = <0xf8001000 0x1000>;
+-			interrupts = <0 10 4>,<0 11 4>,<0 12 4>; 
++			interrupts = <0 10 4>,<0 11 4>,<0 12 4>;
+ 			interrupt-parent = <&gic>;
+ 			clock-frequency-timer0 = <111111111>;
+ 			clock-frequency-timer1 = <111111111>;
+@@ -120,7 +120,7 @@
+ 			bus-id = <0>;
+ 			input-clk = <111111111>;
+ 			i2c-clk = <100000>;
+-			
++
+ 			#address-cells = <1>;
+ 			#size-cells = <0>;
+ 		};
+diff --git a/arch/arm/boot/dts/zynq-zc770-xm010.dts b/arch/arm/boot/dts/zynq-zc770-xm010.dts
+index 0194d97..9105e6c 100644
+--- a/arch/arm/boot/dts/zynq-zc770-xm010.dts
++++ b/arch/arm/boot/dts/zynq-zc770-xm010.dts
+@@ -9,10 +9,10 @@
+ 
+ 	memory {
+ 		device_type = "memory";
+-		reg = <0x00000000 0x40000000>; 
++		reg = <0x00000000 0x40000000>;
+ 	};
+ 	chosen {
+-		bootargs = "console=ttyPS0,115200 root=/dev/ram rw ip=:::::eth0:dhcp earlyprintk"; 
++		bootargs = "console=ttyPS0,115200 root=/dev/ram rw ip=:::::eth0:dhcp earlyprintk";
+ 		linux,stdout-path = "/amba@0/uart@E0001000";
+ 	};
+ 
+@@ -56,7 +56,7 @@
+ 		timer@0xf8001000 {
+ 			compatible = "xlnx,ps7-ttc-1.00.a";
+ 			reg = <0xf8001000 0x1000>;
+-			interrupts = <0 10 4>,<0 11 4>,<0 12 4>; 
++			interrupts = <0 10 4>,<0 11 4>,<0 12 4>;
+ 			interrupt-parent = <&gic>;
+ 			clock-frequency-timer0 = <133000000>;
+ 			clock-frequency-timer1 = <133000000>;
+@@ -143,7 +143,7 @@
+ 			bus-id = <0>;
+ 			input-clk = <133000000>;
+ 			i2c-clk = <400000>;
+-			
++
+ 			#address-cells = <1>;
+ 			#size-cells = <0>;
+ 			m24c02_eeprom@52 {
+diff --git a/arch/arm/boot/dts/zynq-zc770-xm011.dts b/arch/arm/boot/dts/zynq-zc770-xm011.dts
+index 360b6b9..fc896fc 100644
+--- a/arch/arm/boot/dts/zynq-zc770-xm011.dts
++++ b/arch/arm/boot/dts/zynq-zc770-xm011.dts
+@@ -57,7 +57,7 @@
+ 		timer@0xf8001000 {
+ 			compatible = "xlnx,ps7-ttc-1.00.a";
+ 			reg = <0xf8001000 0x1000>;
+-			interrupts = <0 10 4>,<0 11 4>,<0 12 4>; 
++			interrupts = <0 10 4>,<0 11 4>,<0 12 4>;
+ 			interrupt-parent = <&gic>;
+ 			clock-frequency-timer0 = <0x7ed6b40>;
+ 			clock-frequency-timer1 = <0x7ed6b40>;
+diff --git a/arch/arm/boot/dts/zynq-zc770-xm012.dts b/arch/arm/boot/dts/zynq-zc770-xm012.dts
+index 7d0b2b2..d4d1d21 100644
+--- a/arch/arm/boot/dts/zynq-zc770-xm012.dts
++++ b/arch/arm/boot/dts/zynq-zc770-xm012.dts
+@@ -36,7 +36,7 @@
+ 				  < 0xf8f00100 0x0100 >;
+ 		};
+ 
+-		pl310@f8f02000 
++		pl310@f8f02000
+ 		{
+ 			compatible = "arm,pl310-cache";
+ 			cache-unified;
+diff --git a/arch/arm/boot/dts/zynq-zc770-xm013.dts b/arch/arm/boot/dts/zynq-zc770-xm013.dts
+index 55e2b14..1c0123b 100644
+--- a/arch/arm/boot/dts/zynq-zc770-xm013.dts
++++ b/arch/arm/boot/dts/zynq-zc770-xm013.dts
+@@ -9,7 +9,7 @@
+ 
+ 	memory {
+ 		device_type = "memory";
+-		reg = <0x00000000 0x40000000>; 
++		reg = <0x00000000 0x40000000>;
+ 	};
+ 	chosen {
+ 		bootargs = "console=ttyPS0,115200 root=/dev/ram rw";
+-- 
+1.7.1
+

@@ -1,0 +1,27 @@
+From bf61507f81913939589c8d9d838e59d3af5fd320 Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Tue, 27 Nov 2012 15:42:48 +0100
+Subject: [PATCH] arm: zynq: Remove gpio function references
+
+These two functions are completely unused.
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+---
+ arch/arm/mach-zynq/include/mach/gpio.h |    3 ---
+ 1 files changed, 0 insertions(+), 3 deletions(-)
+
+diff --git a/arch/arm/mach-zynq/include/mach/gpio.h b/arch/arm/mach-zynq/include/mach/gpio.h
+index b0b3507..78b2929 100644
+--- a/arch/arm/mach-zynq/include/mach/gpio.h
++++ b/arch/arm/mach-zynq/include/mach/gpio.h
+@@ -55,7 +55,4 @@ static inline unsigned int irq_to_gpio(unsigned int irq)
+ 	return irq - XGPIOPS_IRQBASE;
+ }
+ 
+-void xgpiodf_set_bypass_mode(struct gpio_chip *chip, unsigned int pin);
+-void xgpiodf_set_normal_mode(struct gpio_chip *chip, unsigned int pin);
+-
+ #endif /* __ASM_ARCH_GPIO_H */
+-- 
+1.7.1
+

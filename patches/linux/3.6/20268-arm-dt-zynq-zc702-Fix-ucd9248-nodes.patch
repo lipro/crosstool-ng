@@ -1,0 +1,41 @@
+From fac5e9b6b9c0ee55997918dbd0e177ab321f13b7 Mon Sep 17 00:00:00 2001
+From: Soren Brinkmann <soren.brinkmann@xilinx.com>
+Date: Wed, 3 Apr 2013 15:25:34 -0700
+Subject: [PATCH] arm: dt: zynq-zc702: Fix ucd9248 nodes
+
+Commit 'arm: zynq: fix indentation and formatting' (sha1:
+3a48d14c4fbb1a08ae659fed98091667a9778b53) wrongly added '0x' prefixes to
+the reg properties of ucd9248 nodes.
+Rectify this issue by removing the wrongly added prefixes.
+
+Signed-off-by: Soren Brinkmann <soren.brinkmann@xilinx.com>
+---
+ arch/arm/boot/dts/zynq-zc702.dts |    6 +++---
+ 1 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/arch/arm/boot/dts/zynq-zc702.dts b/arch/arm/boot/dts/zynq-zc702.dts
+index bf0e3b9..6d5845c 100644
+--- a/arch/arm/boot/dts/zynq-zc702.dts
++++ b/arch/arm/boot/dts/zynq-zc702.dts
+@@ -228,15 +228,15 @@
+ 					reg = <7>;
+ 					hwmon@52 {
+ 						compatible = "pmbus,ucd9248";
+-						reg = <0x52>;
++						reg = <52>;
+ 					};
+ 					hwmon@53 {
+ 						compatible = "pmbus,ucd9248";
+-						reg = <0x53>;
++						reg = <53>;
+ 					};
+ 					hwmon@54 {
+ 						compatible = "pmbus,ucd9248";
+-						reg = <0x54>;
++						reg = <54>;
+ 					};
+ 				};
+ 			};
+-- 
+1.7.1
+

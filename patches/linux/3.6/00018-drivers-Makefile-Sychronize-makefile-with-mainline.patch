@@ -1,0 +1,50 @@
+From dd53025f19dbd4d52b4ce2ec6135359f43057ea8 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Mon, 8 Oct 2012 14:02:16 +0200
+Subject: [PATCH] drivers/Makefile: Sychronize makefile with mainline
+
+Move xilinx_common to the end of the file
+because it is not in the mainline kernel and
+it is easier to maintain it.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ drivers/Makefile |    7 ++++---
+ 1 files changed, 4 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/Makefile b/drivers/Makefile
+index a9126f5..d1b2204 100644
+--- a/drivers/Makefile
++++ b/drivers/Makefile
+@@ -1,4 +1,4 @@
+-
++#
+ # Makefile for the Linux kernel device drivers.
+ #
+ # 15 Sep 2000, Christoph Hellwig <hch@infradead.org>
+@@ -105,7 +105,6 @@ obj-$(CONFIG_INFINIBAND)	+= infiniband/
+ obj-$(CONFIG_SGI_SN)		+= sn/
+ obj-y				+= firmware/
+ obj-$(CONFIG_CRYPTO)		+= crypto/
+-obj-$(CONFIG_XILINX_EDK)	+= xilinx_common/
+ obj-$(CONFIG_SUPERH)		+= sh/
+ obj-$(CONFIG_ARCH_SHMOBILE)	+= sh/
+ ifndef CONFIG_ARCH_USES_GETTIMEOFFSET
+@@ -122,7 +121,6 @@ obj-$(CONFIG_VLYNQ)		+= vlynq/
+ obj-$(CONFIG_STAGING)		+= staging/
+ obj-y				+= platform/
+ obj-y				+= ieee802154/
+-obj-y				+= xilinx_common/
+ #common clk code
+ obj-y				+= clk/
+ 
+@@ -141,3 +139,6 @@ obj-$(CONFIG_EXTCON)		+= extcon/
+ obj-$(CONFIG_MEMORY)		+= memory/
+ obj-$(CONFIG_IIO)		+= iio/
+ obj-$(CONFIG_VME_BUS)		+= vme/
++
++obj-y				+= xilinx_common/
++
+-- 
+1.7.1
+

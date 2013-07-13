@@ -1,0 +1,29 @@
+From f948fc8700a45296e949c5a10d89c89f21e7c6e3 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Mon, 22 Oct 2012 15:00:06 +0200
+Subject: [PATCH] arm: zynq: Remove old non OF gic addresses
+
+None uses these symbols.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ arch/arm/mach-zynq/include/mach/zynq_soc.h |    2 --
+ 1 files changed, 0 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/mach-zynq/include/mach/zynq_soc.h b/arch/arm/mach-zynq/include/mach/zynq_soc.h
+index 6696141..e87a30c 100644
+--- a/arch/arm/mach-zynq/include/mach/zynq_soc.h
++++ b/arch/arm/mach-zynq/include/mach/zynq_soc.h
+@@ -31,9 +31,7 @@
+ /* The following are intended for the devices that are mapped early */
+ 
+ #define SCU_PERIPH_BASE			IOMEM(SCU_PERIPH_VIRT)
+-#define SCU_GIC_CPU_BASE		(SCU_PERIPH_BASE + 0x100)
+ #define SCU_GLOBAL_TIMER_BASE		(SCU_PERIPH_BASE + 0x200)
+-#define SCU_GIC_DIST_BASE		(SCU_PERIPH_BASE + 0x1000)
+ 
+ #define SLCR_BASE_VIRT			0xf8000000
+ #define SLCR_BASE_PHYS			0xf8000000
+-- 
+1.7.1
+

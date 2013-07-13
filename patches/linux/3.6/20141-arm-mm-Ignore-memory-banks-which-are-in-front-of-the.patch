@@ -1,0 +1,55 @@
+From 497302faf54cfd5820e101037c23be5847b9f35a Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Fri, 25 Jan 2013 11:11:47 +0100
+Subject: [PATCH] arm: mm: Ignore memory banks which are in front of the kernel when HIGHMEM is ON
+
+Arm kernel with HIGHMEM ON will fail when dts memory node is described
+by memory banks and the starting address is not inside the first 16MB
+of the first memory bank. If HIGHMEM is OFF and the configuration is the same
+then the first memory bank is ignored and the kernel boots.
+
+Here is the example of behavior:
+dts memory reg = <0x0 0x10000000 0x10000000 0x30000000>
+kernel load address = 0x10000000 (respectively 0x1000800)
+
+Current:
+"Machine: Xilinx Zynq Platform, model: Zynq ZC702 Development Board
+bootconsole [earlycon0] enabled
+Memory policy: ECC disabled, Data cache writeback
+Kernel panic - not syncing: ERROR: Failed to allocate 0x1000 bytes below 0x0."
+
+After:
+The kernel ignore ram 0x0-0x0fffffff because is lower than the kernel starting
+address and the kernel bootlog contains.
+"Ignoring RAM at 00000000-0fffffff (CONFIG_HIGHMEM)."
+
+Also using mem=768M on the command line will overwrite dts memory
+map and kernel will boot with HIGHMEM ON too.
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+---
+ arch/arm/mm/mmu.c |    8 ++++++++
+ 1 files changed, 8 insertions(+), 0 deletions(-)
+
+diff --git a/arch/arm/mm/mmu.c b/arch/arm/mm/mmu.c
+index 8fd0399..2d9d4ab 100644
+--- a/arch/arm/mm/mmu.c
++++ b/arch/arm/mm/mmu.c
+@@ -892,6 +892,14 @@ void __init sanity_check_meminfo(void)
+ 			highmem = 1;
+ 
+ #ifdef CONFIG_HIGHMEM
++		if (__va(bank->start + bank->size - 1) < (void *)PAGE_OFFSET) {
++			pr_notice("Ignoring RAM at %.8llx-%.8llx "
++				"(CONFIG_HIGHMEM).\n",
++				(unsigned long long)bank->start,
++				(unsigned long long)bank->start + bank->size - 1);
++			continue;
++		}
++
+ 		if (__va(bank->start) >= vmalloc_min ||
+ 		    __va(bank->start) < (void *)PAGE_OFFSET)
+ 			highmem = 1;
+-- 
+1.7.1
+

@@ -1,0 +1,58 @@
+From 4f156ebc944e3fa4f5ee4045e94aed169fcf7f4b Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Mon, 5 Nov 2012 18:04:33 +0100
+Subject: [PATCH] net: xilinx_emacps: Fix mdio name initialization
+
+We are using this mdio bus description which
+requires properly setup additional device level.
+lp->mii_bus->id is address of device itself
+but ethernet device itself is
+of_get_parent(of_get_parent(lp->phy_node));
+
+ps7_ethernet_0: ps7-ethernet@e000b000 {
+	mdio {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		phy0: phy@7 {
+			compatible = "marvell,88e1111";
+			device_type = "ethernet-phy";
+			reg = <7>;
+		} ;
+	} ;
+} ;
+
+This patch fix the problem with several emacps drivers.
+
+Reported-by: Peter Crosthwaite <peter.crosthwaite@petalogix.com>
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+Tested-by: Peter Crosthwaite <peter.crosthwaite@petalogix.com>
+Acked-by: John Linn <john.linn@xilinx.com>
+---
+ drivers/net/ethernet/xilinx/xilinx_emacps.c |    4 +++-
+ 1 files changed, 3 insertions(+), 1 deletions(-)
+
+diff --git a/drivers/net/ethernet/xilinx/xilinx_emacps.c b/drivers/net/ethernet/xilinx/xilinx_emacps.c
+index cdff041..de4d98e 100644
+--- a/drivers/net/ethernet/xilinx/xilinx_emacps.c
++++ b/drivers/net/ethernet/xilinx/xilinx_emacps.c
+@@ -978,6 +978,7 @@ static int xemacps_mii_init(struct net_local *lp)
+ #ifdef CONFIG_OF
+ 	struct resource res;
+ 	struct device_node *np = of_get_parent(lp->phy_node);
++	struct device_node *npp;
+ #endif
+ 
+ 	lp->mii_bus = mdiobus_alloc();
+@@ -1002,7 +1003,8 @@ static int xemacps_mii_init(struct net_local *lp)
+ 	for (i = 0; i < PHY_MAX_ADDR; i++)
+ 		lp->mii_bus->irq[i] = PHY_POLL;
+ #ifdef CONFIG_OF
+-	of_address_to_resource(np, 0, &res);
++	npp = of_get_parent(np);
++	of_address_to_resource(npp, 0, &res);
+ 	snprintf(lp->mii_bus->id, MII_BUS_ID_SIZE, "%.8llx",
+ 		 (unsigned long long)res.start);
+ 	if (of_mdiobus_register(lp->mii_bus, np))
+-- 
+1.7.1
+

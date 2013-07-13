@@ -1,0 +1,245 @@
+From 20a050a5fa6388ca17ea7d3d0088f1996acabb6b Mon Sep 17 00:00:00 2001
+From: Soren Brinkmann <soren.brinkmann@xilinx.com>
+Date: Tue, 27 Nov 2012 10:02:29 -0800
+Subject: [PATCH] mmc: xilinx_sdhcips: Port driver to COMMON_CLK
+
+Use the common clock framework to manage device clocks.
+
+Signed-off-by: Soren Brinkmann <soren.brinkmann@xilinx.com>
+---
+ drivers/clk/zynq/clk.c               |   36 ++++-----
+ drivers/mmc/host/sdhci-of-xilinxps.c |  134 +++++++++++++++++++++++++++++++---
+ 2 files changed, 139 insertions(+), 31 deletions(-)
+
+diff --git a/drivers/clk/zynq/clk.c b/drivers/clk/zynq/clk.c
+index 62de936..46aebfa 100644
+--- a/drivers/clk/zynq/clk.c
++++ b/drivers/clk/zynq/clk.c
+@@ -253,17 +253,17 @@ void __init zynq_clock_init(void)
+ 	 * 		CLK_SET_RATE_PARENT, (void __iomem *)SLCR_CAN_CLK_CTRL,
+ 	 * 		1, 0, &canclk_lock);
+ 	 * zynq_clkdev_add(NULL, "CAN1", clk);
+-
+-	 * clk = clk_register_gate(NULL, "SDIO0_CLK", "SDIO_MASTER_CLK",
+-	 * 		CLK_SET_RATE_PARENT, (void __iomem *)SLCR_SDIO_CLK_CTRL,
+-	 * 		0, 0, &sdioclk_lock);
+-	 * zynq_clkdev_add(NULL, "SDIO0", clk);
+-	 * clk = clk_register_gate(NULL, "SDIO1_CLK", "SDIO_MASTER_CLK",
+-	 * 		CLK_SET_RATE_PARENT, (void __iomem *)SLCR_SDIO_CLK_CTRL,
+-	 * 		1, 0, &sdioclk_lock);
+-	 * zynq_clkdev_add(NULL, "SDIO1", clk);
+ 	 */
+ 
++	clk = clk_register_gate(NULL, "SDIO0_CLK", "SDIO_MASTER_CLK",
++			CLK_SET_RATE_PARENT, (void __iomem *)SLCR_SDIO_CLK_CTRL,
++			0, 0, &sdioclk_lock);
++	zynq_clkdev_add(NULL, "SDIO0", clk);
++	clk = clk_register_gate(NULL, "SDIO1_CLK", "SDIO_MASTER_CLK",
++			CLK_SET_RATE_PARENT, (void __iomem *)SLCR_SDIO_CLK_CTRL,
++			1, 0, &sdioclk_lock);
++	zynq_clkdev_add(NULL, "SDIO1", clk);
++
+ 	clk = clk_register_gate(NULL, "UART0_CLK", "UART_MASTER_CLK",
+ 			CLK_SET_RATE_PARENT, (void __iomem *)SLCR_UART_CLK_CTRL,
+ 			0, 0, &uartclk_lock);
+@@ -315,16 +315,14 @@ void __init zynq_clock_init(void)
+ 			(void __iomem *)SLCR_APER_CLK_CTRL, 7, 0,
+ 			&aperclk_lock);
+ 	zynq_clkdev_add(NULL, "GEM1_APER", clk);
+-	/*
+-	 * clk = clk_register_gate(NULL, "SDI0_CPU1X", "CPU_1X_CLK", 0,
+-	 * 		(void __iomem *)SLCR_APER_CLK_CTRL, 10, 0,
+-	 * 		&aperclk_lock);
+-	 * zynq_clkdev_add(NULL, "SDIO0_APER", clk);
+-	 * clk = clk_register_gate(NULL, "SDI1_CPU1X", "CPU_1X_CLK", 0,
+-	 * 		(void __iomem *)SLCR_APER_CLK_CTRL, 11, 0,
+-	 * 		&aperclk_lock);
+-	 * zynq_clkdev_add(NULL, "SDIO1_APER", clk);
+-	 */
++	clk = clk_register_gate(NULL, "SDI0_CPU1X", "CPU_1X_CLK", 0,
++			(void __iomem *)SLCR_APER_CLK_CTRL, 10, 0,
++			&aperclk_lock);
++	zynq_clkdev_add(NULL, "SDIO0_APER", clk);
++	clk = clk_register_gate(NULL, "SDI1_CPU1X", "CPU_1X_CLK", 0,
++			(void __iomem *)SLCR_APER_CLK_CTRL, 11, 0,
++			&aperclk_lock);
++	zynq_clkdev_add(NULL, "SDIO1_APER", clk);
+ 	clk = clk_register_gate(NULL, "SPI0_CPU1X", "CPU_1X_CLK", 0,
+ 			(void __iomem *)SLCR_APER_CLK_CTRL, 14, 0,
+ 			&aperclk_lock);
+diff --git a/drivers/mmc/host/sdhci-of-xilinxps.c b/drivers/mmc/host/sdhci-of-xilinxps.c
+index 7149457..6f2e5c0 100644
+--- a/drivers/mmc/host/sdhci-of-xilinxps.c
++++ b/drivers/mmc/host/sdhci-of-xilinxps.c
+@@ -17,13 +17,27 @@
+  * your option) any later version.
+  */
+ 
++#include <linux/clk.h>
+ #include <linux/delay.h>
+ #include <linux/io.h>
+ #include <linux/mmc/host.h>
+ #include <linux/module.h>
+ #include <linux/of.h>
++#include <linux/slab.h>
+ #include "sdhci-pltfm.h"
+ 
++/**
++ * struct xsdhcips
++ * @devclk		Pointer to the peripheral clock
++ * @aperclk		Pointer to the APER clock
++ * @clk_rate_change_nb	Notifier block for clock frequency change callback
++ */
++struct xsdhcips {
++	struct clk		*devclk;
++	struct clk		*aperclk;
++	struct notifier_block	clk_rate_change_nb;
++};
++
+ static unsigned int zynq_of_get_max_clock(struct sdhci_host *host)
+ {
+ 	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
+@@ -41,32 +55,128 @@ static struct sdhci_pltfm_data sdhci_zynq_pdata = {
+ 	.ops = &sdhci_zynq_ops,
+ };
+ 
++static int xsdhcips_clk_notifier_cb(struct notifier_block *nb,
++		unsigned long event, void *data)
++{
++	switch (event) {
++	case PRE_RATE_CHANGE:
++		/* if a rate change is announced we need to check whether we can
++		 * maintain the current frequency by changing the clock
++		 * dividers. And we may have to suspend operation and return
++		 * after the rate change or its abort
++		 */
++		/* fall through */
++	case POST_RATE_CHANGE:
++		return NOTIFY_OK;
++	case ABORT_RATE_CHANGE:
++	default:
++		return NOTIFY_DONE;
++	}
++}
++
+ static int __devinit sdhci_zynq_probe(struct platform_device *pdev)
+ {
+ 	int ret;
+-	const void *prop = NULL;
++	int irq = platform_get_irq(pdev, 0);
++	const void *prop;
+ 	struct device_node *np = pdev->dev.of_node;
+-	struct sdhci_host *host = NULL;
++	struct sdhci_host *host;
++	struct sdhci_pltfm_host *pltfm_host;
++	struct xsdhcips *xsdhcips;
++
++	xsdhcips = kmalloc(sizeof(*xsdhcips), GFP_KERNEL);
++	if (!xsdhcips) {
++		dev_err(&pdev->dev, "unable to allocate memory\n");
++		return -ENOMEM;
++	}
++
++	if (irq == 56)
++		xsdhcips->aperclk = clk_get_sys("SDIO0_APER", NULL);
++	else
++		xsdhcips->aperclk = clk_get_sys("SDIO1_APER", NULL);
++
++	if (IS_ERR(xsdhcips->aperclk)) {
++		dev_err(&pdev->dev, "APER clock not found.\n");
++		ret = PTR_ERR(xsdhcips->aperclk);
++		goto err_free;
++	}
++
++	if (irq == 56)
++		xsdhcips->devclk = clk_get_sys("SDIO0", NULL);
++	else
++		xsdhcips->devclk = clk_get_sys("SDIO1", NULL);
++
++	if (IS_ERR(xsdhcips->devclk)) {
++		dev_err(&pdev->dev, "Device clock not found.\n");
++		ret = PTR_ERR(xsdhcips->devclk);
++		goto clk_put_aper;
++	}
++
++	ret = clk_prepare_enable(xsdhcips->aperclk);
++	if (ret) {
++		dev_err(&pdev->dev, "Unable to enable APER clock.\n");
++		goto clk_put;
++	}
++
++	ret = clk_prepare_enable(xsdhcips->devclk);
++	if (ret) {
++		dev_err(&pdev->dev, "Unable to enable device clock.\n");
++		goto clk_dis_aper;
++	}
++
++	xsdhcips->clk_rate_change_nb.notifier_call = xsdhcips_clk_notifier_cb;
++	xsdhcips->clk_rate_change_nb.next = NULL;
++	if (clk_notifier_register(xsdhcips->devclk,
++				&xsdhcips->clk_rate_change_nb))
++		dev_warn(&pdev->dev, "Unable to register clock notifier.\n");
++
+ 
+ 	ret = sdhci_pltfm_register(pdev, &sdhci_zynq_pdata);
+-	if (ret == 0) {
+-		prop = of_get_property(np, "xlnx,has-cd", NULL);
+-		if (prop == NULL) {
+-			host = platform_get_drvdata(pdev);
+-			host->quirks |= SDHCI_QUIRK_BROKEN_CARD_DETECTION;
+-		} else if (!(u32) be32_to_cpup(prop))  {
+-			host = platform_get_drvdata(pdev);
+-			host->quirks |= SDHCI_QUIRK_BROKEN_CARD_DETECTION;
+-		}
+-	} else {
++	if (ret) {
+ 		dev_err(&pdev->dev, "Platform registration failed\n");
++		goto clk_notif_unreg;
+ 	}
+ 
++	host = platform_get_drvdata(pdev);
++	pltfm_host = sdhci_priv(host);
++	pltfm_host->priv = xsdhcips;
++
++	prop = of_get_property(np, "xlnx,has-cd", NULL);
++	if (prop == NULL || (!(u32) be32_to_cpup(prop)))
++		host->quirks |= SDHCI_QUIRK_BROKEN_CARD_DETECTION;
++
++	return 0;
++
++clk_notif_unreg:
++	clk_notifier_unregister(xsdhcips->devclk,
++			&xsdhcips->clk_rate_change_nb);
++	clk_disable_unprepare(xsdhcips->devclk);
++clk_dis_aper:
++	clk_disable_unprepare(xsdhcips->aperclk);
++clk_put:
++	clk_put(xsdhcips->devclk);
++clk_put_aper:
++	clk_put(xsdhcips->aperclk);
++err_free:
++	kfree(xsdhcips);
++
+ 	return ret;
+ }
+ 
+ static int __devexit sdhci_zynq_remove(struct platform_device *pdev)
+ {
++	struct sdhci_host *host = platform_get_drvdata(pdev);
++	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
++	struct xsdhcips *xsdhcips = pltfm_host->priv;
++
++	clk_notifier_unregister(xsdhcips->devclk,
++			&xsdhcips->clk_rate_change_nb);
++	clk_disable_unprepare(xsdhcips->devclk);
++	clk_disable_unprepare(xsdhcips->aperclk);
++	clk_put(xsdhcips->devclk);
++	clk_put(xsdhcips->aperclk);
++	kfree(xsdhcips);
++
+ 	return sdhci_pltfm_unregister(pdev);
+ }
+ 
+-- 
+1.7.1
+

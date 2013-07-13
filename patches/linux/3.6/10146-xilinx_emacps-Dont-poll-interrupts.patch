@@ -1,0 +1,59 @@
+From 8c5e47575ddd6cb91851490fead2fde50fd61dcf Mon Sep 17 00:00:00 2001
+From: Peter Crosthwaite <peter.crosthwaite@xilinx.com>
+Date: Tue, 11 Dec 2012 16:22:24 +1000
+Subject: [PATCH] xilinx_emacps: Dont poll interrupts
+
+Don't loop the interrupt service logic in the ISR. Currently it polls for
+subsequent interrupts after servicing the first. This is not an error, but is
+non-ideal for two reasons:
+
+Firstly, there was a condition where the higher levels of interrupt control
+could requeue the ISR while it was still acting. The first invocation would
+then service the new interrupt and the second ISR invocation would be a NOP.
+
+Secondly, there is no bound on the length of time the driver spends in ISR
+context. ISRs ideally have a deterministic duration.
+
+Fixed by just unlooping. Each ISR is now a oneshot. Interrupts that re-trigger
+during servicing are handled by a subsequent incovation of the ISR.
+
+Signed-off-by: Peter Crosthwaite <peter.crosthwaite@xilinx.com>
+Tested-by: Wendy Liang <wendy.liang@xilinx.com>
+---
+ drivers/net/ethernet/xilinx/xilinx_emacps.c |   20 ++++++++------------
+ 1 files changed, 8 insertions(+), 12 deletions(-)
+
+diff --git a/drivers/net/ethernet/xilinx/xilinx_emacps.c b/drivers/net/ethernet/xilinx/xilinx_emacps.c
+index 3ddd39d..c6ceb09 100644
+--- a/drivers/net/ethernet/xilinx/xilinx_emacps.c
++++ b/drivers/net/ethernet/xilinx/xilinx_emacps.c
+@@ -1753,18 +1753,14 @@ static irqreturn_t xemacps_interrupt(int irq, void *dev_id)
+ 	}
+ 	xemacps_write(lp->baseaddr, XEMACPS_ISR_OFFSET, regisr);
+ 
+-	while (regisr) {
+-		if (regisr & (XEMACPS_IXR_TXCOMPL_MASK |
+-				XEMACPS_IXR_TX_ERR_MASK)) {
+-			xemacps_tx_poll(ndev);
+-		} else {
+-			xemacps_write(lp->baseaddr, XEMACPS_IDR_OFFSET,
+-					(XEMACPS_IXR_FRAMERX_MASK |
+-					XEMACPS_IXR_RX_ERR_MASK));
+-			napi_schedule(&lp->napi);
+-		}
+-		regisr = xemacps_read(lp->baseaddr, XEMACPS_ISR_OFFSET);
+-		xemacps_write(lp->baseaddr, XEMACPS_ISR_OFFSET, regisr);
++	if (regisr & (XEMACPS_IXR_TXCOMPL_MASK |
++			XEMACPS_IXR_TX_ERR_MASK)) {
++		xemacps_tx_poll(ndev);
++	} else {
++		xemacps_write(lp->baseaddr, XEMACPS_IDR_OFFSET,
++				(XEMACPS_IXR_FRAMERX_MASK |
++				XEMACPS_IXR_RX_ERR_MASK));
++		napi_schedule(&lp->napi);
+ 	}
+ 	spin_unlock(&lp->lock);
+ 
+-- 
+1.7.1
+

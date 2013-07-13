@@ -1,0 +1,135 @@
+From f3aee56019588d7125ca9365ce2cdb0594be69f9 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Tue, 2 Aug 2011 16:47:43 +0200
+Subject: [PATCH] zynq: Use compiled-in DTB as we do it for Microblaze
+
+This is easier way how to include DTB to all image formats.
+Linux just take correct pointer and we don't need
+to care about atags.
+
+It will also simplify handling in our scripts.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+
+zynq: boot external dtb by default
+
+Boot the built-in dtb if external dtb address is not provided.
+
+DTB boot order:
+ * External dtb
+ * built-in dtb
+
+Signed-off-by: Jason Wu <jason.wu@petalogix.com>
+---
+ arch/arm/Makefile             |   11 +++++++++++
+ arch/arm/boot/Makefile        |   22 ++++++++++++++++++++++
+ arch/arm/boot/linked_dtb.S    |    3 +++
+ arch/arm/kernel/setup.c       |    5 +++++
+ arch/arm/kernel/vmlinux.lds.S |   10 ++++++++++
+ 5 files changed, 51 insertions(+), 0 deletions(-)
+ create mode 100644 arch/arm/boot/linked_dtb.S
+
+diff --git a/arch/arm/Makefile b/arch/arm/Makefile
+index c74af11..d170cb5 100644
+--- a/arch/arm/Makefile
++++ b/arch/arm/Makefile
+@@ -256,6 +256,17 @@ core-y				+= arch/arm/kernel/ arch/arm/mm/ arch/arm/common/
+ core-y				+= arch/arm/net/
+ core-y				+= $(machdirs) $(platdirs)
+ 
++boot := arch/arm/boot
++
++# Are we making a simpleImage.<boardname> target? If so, crack out the boardname
++DTB:=$(subst simpleImage.,,$(filter simpleImage.%, $(MAKECMDGOALS)))
++
++ifneq ($(DTB),)
++	core-y	+= $(boot)/
++endif
++
++export DTB
++
+ drivers-$(CONFIG_OPROFILE)      += arch/arm/oprofile/
+ 
+ libs-y				:= arch/arm/lib/ $(libs-y)
+diff --git a/arch/arm/boot/Makefile b/arch/arm/boot/Makefile
+index c877087..5d7b93e 100644
+--- a/arch/arm/boot/Makefile
++++ b/arch/arm/boot/Makefile
+@@ -11,6 +11,28 @@
+ # Copyright (C) 1995-2002 Russell King
+ #
+ 
++obj-y += linked_dtb.o
++
++# Ensure system.dtb exists
++$(obj)/linked_dtb.o: $(obj)/system.dtb
++
++# Generate system.dtb from $(DTB).dtb
++ifneq ($(DTB),system)
++$(obj)/system.dtb: $(obj)/$(DTB).dtb
++	$(call if_changed,cp)
++endif
++
++quiet_cmd_cp = CP      $< $@$2
++	cmd_cp = cat $< >$@$2 || (rm -f $@ && echo false)
++
++# Rule to build device tree blobs
++DTC_FLAGS := -p 1024
++
++$(obj)/%.dtb: $(src)/dts/%.dts FORCE
++	$(call cmd,dtc)
++
++MKIMAGE         := $(srctree)/scripts/mkuboot.sh
++
+ ifneq ($(MACHINE),)
+ include $(srctree)/$(MACHINE)/Makefile.boot
+ endif
+diff --git a/arch/arm/boot/linked_dtb.S b/arch/arm/boot/linked_dtb.S
+new file mode 100644
+index 0000000..6f03737
+--- /dev/null
++++ b/arch/arm/boot/linked_dtb.S
+@@ -0,0 +1,3 @@
++.section __fdt_blob,"a"
++.incbin "arch/arm/boot/system.dtb"
++
+diff --git a/arch/arm/kernel/setup.c b/arch/arm/kernel/setup.c
+index a81dcec..3c1572f 100644
+--- a/arch/arm/kernel/setup.c
++++ b/arch/arm/kernel/setup.c
+@@ -940,6 +940,11 @@ static int __init meminfo_cmp(const void *_a, const void *_b)
+ void __init setup_arch(char **cmdline_p)
+ {
+ 	struct machine_desc *mdesc;
++#ifdef CONFIG_ARCH_ZYNQ
++	extern u32 _fdt_start[];
++	 if (!__atags_pointer)
++		__atags_pointer = virt_to_phys(_fdt_start);
++#endif
+ 
+ 	setup_processor();
+ 	mdesc = setup_machine_fdt(__atags_pointer);
+diff --git a/arch/arm/kernel/vmlinux.lds.S b/arch/arm/kernel/vmlinux.lds.S
+index 36ff15b..9dfd4c9 100644
+--- a/arch/arm/kernel/vmlinux.lds.S
++++ b/arch/arm/kernel/vmlinux.lds.S
+@@ -187,6 +187,16 @@ SECTIONS
+ 	PERCPU_SECTION(L1_CACHE_BYTES)
+ #endif
+ 
++#ifdef CONFIG_ARCH_ZYNQ
++	. = ALIGN (4) ;
++	__fdt_blob : AT(ADDR(__fdt_blob) - LOAD_OFFSET) {
++		_fdt_start = . ;		/* place for fdt blob */
++		*(__fdt_blob) ;			/* Any link-placed DTB */
++	        . = _fdt_start + 0x8000;	/* Pad up to 16kbyte */
++		_fdt_end = . ;
++	}
++#endif
++
+ #ifdef CONFIG_XIP_KERNEL
+ 	__data_loc = ALIGN(4);		/* location in binary */
+ 	. = PAGE_OFFSET + TEXT_OFFSET;
+-- 
+1.7.1
+

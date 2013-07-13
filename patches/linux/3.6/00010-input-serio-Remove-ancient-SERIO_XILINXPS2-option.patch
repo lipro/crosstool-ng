@@ -1,0 +1,46 @@
+From f09ebb3391868274c11525456180504d216f79b9 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Mon, 8 Oct 2012 13:34:36 +0200
+Subject: [PATCH] input: serio: Remove ancient SERIO_XILINXPS2 option
+
+The driver was merged to mainline with
+SERIO_XILINX_XPS_PS2 Kconfig option.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ drivers/input/serio/Kconfig  |    6 ------
+ drivers/input/serio/Makefile |    1 -
+ 2 files changed, 0 insertions(+), 7 deletions(-)
+
+diff --git a/drivers/input/serio/Kconfig b/drivers/input/serio/Kconfig
+index 7780147..e43d3e0 100644
+--- a/drivers/input/serio/Kconfig
++++ b/drivers/input/serio/Kconfig
+@@ -177,12 +177,6 @@ config SERIO_LIBPS2
+ 	  To compile this driver as a module, choose M here: the
+ 	  module will be called libps2.
+ 
+-config SERIO_XILINXPS2
+-	tristate "Xilinx OPB PS/2 Controller Support"
+-	depends on XILINX_DRIVERS && SERIO
+-	help
+-	  This driver supports OPB PS/2 IP from Xilinx EDK.
+-
+ config SERIO_XILINX_XPS_PS2
+ 	tristate "Xilinx XPS PS/2 Controller Support"
+ 	depends on XILINX_DRIVERS && SERIO
+diff --git a/drivers/input/serio/Makefile b/drivers/input/serio/Makefile
+index cc4c273..bf2f3b2 100644
+--- a/drivers/input/serio/Makefile
++++ b/drivers/input/serio/Makefile
+@@ -21,7 +21,6 @@ obj-$(CONFIG_SERIO_PCIPS2)	+= pcips2.o
+ obj-$(CONFIG_SERIO_PS2MULT)	+= ps2mult.o
+ obj-$(CONFIG_SERIO_MACEPS2)	+= maceps2.o
+ obj-$(CONFIG_SERIO_LIBPS2)	+= libps2.o
+-obj-$(CONFIG_SERIO_XILINXPS2)		+= xilinx_ps2/
+ obj-$(CONFIG_SERIO_XILINX_XPS_PS2)	+= xilinx_ps2.o
+ obj-$(CONFIG_SERIO_RAW)		+= serio_raw.o
+ obj-$(CONFIG_SERIO_AMS_DELTA)	+= ams_delta_serio.o
+-- 
+1.7.1
+

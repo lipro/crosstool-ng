@@ -1,0 +1,63 @@
+From cab6e8d1814d4572dd305df5afe7887070ee60d0 Mon Sep 17 00:00:00 2001
+From: Peter Crosthwaite <peter.crosthwaite@xilinx.com>
+Date: Mon, 3 Dec 2012 18:11:10 +1000
+Subject: [PATCH] xilinx_axienet: Service completion interrupts ASAP
+
+The packet completion interrupts for TX and RX should be serviced before
+the packets are consumed. This ensures against the degenerate case when a
+new completion interrupt is raised after the handler has exited but before
+the interrupts are cleared. In this case its possible for the ISR to clear
+an unhandled interrupt (leading to potential deadlock).
+
+Signed-off-by: Peter Crosthwaite <peter.crosthwaite@xilinx.com>
+Tested-by: Jason Wu <huanyu@xilinx.com>
+Acked-by: Michal Simek <michal.simek@xilinx.com>
+---
+ drivers/net/ethernet/xilinx/xilinx_axienet_main.c |    6 ++++--
+ 1 files changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/net/ethernet/xilinx/xilinx_axienet_main.c b/drivers/net/ethernet/xilinx/xilinx_axienet_main.c
+index 82f10e9..9d6abf3 100644
+--- a/drivers/net/ethernet/xilinx/xilinx_axienet_main.c
++++ b/drivers/net/ethernet/xilinx/xilinx_axienet_main.c
+@@ -819,6 +819,7 @@ static irqreturn_t axienet_tx_irq(int irq, void *_ndev)
+ 
+ 	status = axienet_dma_in32(lp, XAXIDMA_TX_SR_OFFSET);
+ 	if (status & (XAXIDMA_IRQ_IOC_MASK | XAXIDMA_IRQ_DELAY_MASK)) {
++		axienet_dma_out32(lp, XAXIDMA_TX_SR_OFFSET, status);
+ 		axienet_start_xmit_done(lp->ndev);
+ 		goto out;
+ 	}
+@@ -842,9 +843,9 @@ static irqreturn_t axienet_tx_irq(int irq, void *_ndev)
+ 		axienet_dma_out32(lp, XAXIDMA_RX_CR_OFFSET, cr);
+ 
+ 		tasklet_schedule(&lp->dma_err_tasklet);
++		axienet_dma_out32(lp, XAXIDMA_TX_SR_OFFSET, status);
+ 	}
+ out:
+-	axienet_dma_out32(lp, XAXIDMA_TX_SR_OFFSET, status);
+ 	return IRQ_HANDLED;
+ }
+ 
+@@ -867,6 +868,7 @@ static irqreturn_t axienet_rx_irq(int irq, void *_ndev)
+ 
+ 	status = axienet_dma_in32(lp, XAXIDMA_RX_SR_OFFSET);
+ 	if (status & (XAXIDMA_IRQ_IOC_MASK | XAXIDMA_IRQ_DELAY_MASK)) {
++		axienet_dma_out32(lp, XAXIDMA_RX_SR_OFFSET, status);
+ 		axienet_recv(lp->ndev);
+ 		goto out;
+ 	}
+@@ -890,9 +892,9 @@ static irqreturn_t axienet_rx_irq(int irq, void *_ndev)
+ 		axienet_dma_out32(lp, XAXIDMA_RX_CR_OFFSET, cr);
+ 
+ 		tasklet_schedule(&lp->dma_err_tasklet);
++		axienet_dma_out32(lp, XAXIDMA_RX_SR_OFFSET, status);
+ 	}
+ out:
+-	axienet_dma_out32(lp, XAXIDMA_RX_SR_OFFSET, status);
+ 	return IRQ_HANDLED;
+ }
+ 
+-- 
+1.7.1
+

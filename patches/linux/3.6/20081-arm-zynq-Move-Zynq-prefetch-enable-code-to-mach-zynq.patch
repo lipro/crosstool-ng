@@ -1,0 +1,80 @@
+From ded699deeb454be1adcc0b0868927a8a29d02e50 Mon Sep 17 00:00:00 2001
+From: Soren Brinkmann <soren.brinkmann@xilinx.com>
+Date: Thu, 13 Dec 2012 14:57:22 -0800
+Subject: [PATCH] arm: zynq: Move Zynq prefetch enable code to mach-zynq
+
+The code setting the prefetch bits in the A9's aux control
+registers resided in mm/proc-v7.S.
+Since the corresponding config option is specific to Zynq the
+code is moved into Zynq's init code.
+
+Signed-off-by: Soren Brinkmann <soren.brinkmann@xilinx.com>
+Acked-by: John Linn <john.linn@xilinx.com>
+---
+ arch/arm/mach-zynq/common.c |   22 ++++++++++++++++++++++
+ arch/arm/mm/proc-v7.S       |    9 ---------
+ 2 files changed, 22 insertions(+), 9 deletions(-)
+
+diff --git a/arch/arm/mach-zynq/common.c b/arch/arm/mach-zynq/common.c
+index d3f3256..9abbd5f 100644
+--- a/arch/arm/mach-zynq/common.c
++++ b/arch/arm/mach-zynq/common.c
+@@ -189,6 +189,27 @@ static void __init xilinx_irq_init(void)
+ 	of_irq_init(zynq_dt_irq_match);
+ }
+ 
++#ifdef CONFIG_XILINX_L1_PREFETCH
++static void __init xilinx_data_prefetch_enable(void *info)
++{
++	/*
++	 * Enable prefetching in aux control register. L2 prefetch must
++	 * only be enabled if the slave supports it (PL310 does)
++	 */
++	asm volatile ("mrc   p15, 0, r1, c1, c0, 1\n"
++		      "orr   r1, r1, #6\n"
++		      "mcr   p15, 0, r1, c1, c0, 1\n"
++		      : : : "r1");
++}
++
++static void __init xilinx_init_late(void)
++{
++	on_each_cpu(xilinx_data_prefetch_enable, NULL, 0);
++}
++#else
++#define xilinx_init_late	NULL
++#endif
++
+ /**
+  * xilinx_init_machine() - System specific initialization, intended to be
+  *			   called from board specific initialization.
+@@ -212,6 +233,7 @@ MACHINE_START(XILINX_EP107, "Xilinx Zynq Platform")
+ 	.init_irq	= xilinx_irq_init,
+ 	.handle_irq	= gic_handle_irq,
+ 	.init_machine	= xilinx_init_machine,
++	.init_late	= xilinx_init_late,
+ 	.timer		= &xttcpss_sys_timer,
+ 	.dt_compat	= xilinx_dt_match,
+ 	.reserve	= xilinx_memory_init,
+diff --git a/arch/arm/mm/proc-v7.S b/arch/arm/mm/proc-v7.S
+index 292a31a..c2e2b66 100644
+--- a/arch/arm/mm/proc-v7.S
++++ b/arch/arm/mm/proc-v7.S
+@@ -244,15 +244,6 @@ __v7_setup:
+ 1:
+ #endif
+ 
+-#ifdef CONFIG_XILINX_L1_PREFETCH
+-	/* Enable prefetching in aux control register. L2 prefetch must 
+-	 * only be enabled if the slave supports it (PL310 does)
+-	 */
+-	mrc   p15, 0, r0, c1, c0, 1     @ read aux control register
+-	orr   r0, r0, #0x6              @ modify
+-	mcr   p15, 0, r0, c1, c0, 1     @ write aux control register
+-#endif
+-
+ 3:	mov	r10, #0
+ 	mcr	p15, 0, r10, c7, c5, 0		@ I+BTB cache invalidate
+ 	dsb
+-- 
+1.7.1
+

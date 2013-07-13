@@ -1,0 +1,27 @@
+From 36d06777654c838d0804c4eb1b7101501579dc4a Mon Sep 17 00:00:00 2001
+From: Alexey Brodkin <Alexey.Brodkin@synopsys.com>
+Date: Thu, 7 Feb 2013 18:26:15 +0400
+Subject: [PATCH] xilinx: Documentation/devicetree - add description for "port-number" property
+
+This property is used by xsysace device (drivers/block/xsysace.c).
+
+Signed-off-by: Alexey Brodkin <abrodkin@synopsys.com>
+---
+ Documentation/devicetree/bindings/xilinx.txt |    1 +
+ 1 files changed, 1 insertions(+), 0 deletions(-)
+
+diff --git a/Documentation/devicetree/bindings/xilinx.txt b/Documentation/devicetree/bindings/xilinx.txt
+index 299d092..7fe7e9d 100644
+--- a/Documentation/devicetree/bindings/xilinx.txt
++++ b/Documentation/devicetree/bindings/xilinx.txt
+@@ -253,6 +253,7 @@
+ 
+       Optional properties:
+        - 8-bit (empty) : Set this property for SystemACE in 8 bit mode
++       - port-number = <port_number> : Set port number for particular device
+ 
+       iii) Xilinx EMAC and Xilinx TEMAC
+ 
+-- 
+1.7.1
+

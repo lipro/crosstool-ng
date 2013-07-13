@@ -1,0 +1,37 @@
+From f921a2ca196a096a47de174821dd6a8cba4347eb Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Mon, 22 Oct 2012 13:56:40 +0200
+Subject: [PATCH] arm: zynq: Rename xilinx_dt_irq_match to zynq_dt_irq_match
+
+Corrent name.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ arch/arm/mach-zynq/common.c |    4 ++--
+ 1 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/mach-zynq/common.c b/arch/arm/mach-zynq/common.c
+index b76a4f5..bddb20a 100644
+--- a/arch/arm/mach-zynq/common.c
++++ b/arch/arm/mach-zynq/common.c
+@@ -43,7 +43,7 @@ static struct of_device_id zynq_of_bus_ids[] __initdata = {
+ 	{}
+ };
+ 
+-static const struct of_device_id xilinx_dt_irq_match[] __initconst = {
++static const struct of_device_id zynq_dt_irq_match[] __initconst = {
+ 	{ .compatible = "arm,cortex-a9-gic", .data = gic_of_init },
+ 	{ }
+ };
+@@ -203,7 +203,7 @@ early_initcall(xilinx_l2c_init);
+  */
+ void __init xilinx_irq_init(void)
+ {
+-	of_irq_init(xilinx_dt_irq_match);
++	of_irq_init(zynq_dt_irq_match);
+ 	/* This is probably the ugliest hack possible but this is why:
+ 	 * Clock init needs to be done before timer init, so the timer can use
+ 	 * COMMON_CLK. All __initcall types are called after time_init().
+-- 
+1.7.1
+

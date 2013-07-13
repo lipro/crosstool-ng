@@ -1,0 +1,71 @@
+From 66e551c0ddf1e70cd39a99c6be052cde79e36e57 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Fri, 19 Oct 2012 13:08:42 +0200
+Subject: [PATCH] usb: otg: Resort xilinx usb otg driver
+
+No functional changes.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ drivers/usb/otg/Kconfig  |   25 +++++++++++++------------
+ drivers/usb/otg/Makefile |    2 +-
+ 2 files changed, 14 insertions(+), 13 deletions(-)
+
+diff --git a/drivers/usb/otg/Kconfig b/drivers/usb/otg/Kconfig
+index 80d2adb..c23f5c4 100644
+--- a/drivers/usb/otg/Kconfig
++++ b/drivers/usb/otg/Kconfig
+@@ -108,18 +108,6 @@ config AB8500_USB
+ 	  This transceiver supports high and full speed devices plus,
+ 	  in host mode, low speed.
+ 
+-config USB_XUSBPS_OTG
+-	tristate "Xilinx USB PS OTG dual-role support"
+-	depends on USB && (ARCH_XILINX || ARCH_ZYNQ) && USB_EHCI_XUSBPS && USB_GADGET_XUSBPS && USB_OTG
+-	select USB_OTG_UTILS
+-	help
+-	  Say Y here if you want to build Xilinx USB PS OTG
+-	  driver in kernel. This driver implements role
+-	  switch between EHCI host driver and USB gadget driver.
+-
+-	  To compile this driver as a module, choose M here: the
+-	  module will be called xilinx_usbps_otg.
+-
+ config FSL_USB2_OTG
+ 	bool "Freescale USB OTG Transceiver Driver"
+ 	depends on USB_EHCI_FSL && USB_GADGET_FSL_USB2 && USB_SUSPEND
+@@ -150,4 +138,17 @@ config USB_MV_OTG
+ 
+ 	  To compile this driver as a module, choose M here.
+ 
++config USB_XUSBPS_OTG
++	tristate "Xilinx USB PS OTG dual-role support"
++	depends on USB && ARCH_ZYNQ && USB_EHCI_XUSBPS && USB_GADGET_XUSBPS && USB_OTG
++	select USB_OTG_UTILS
++	help
++	  Say Y here if you want to build Xilinx USB PS OTG
++	  driver in kernel. This driver implements role
++	  switch between EHCI host driver and USB gadget driver.
++
++	  To compile this driver as a module, choose M here: the
++	  module will be called xilinx_usbps_otg.
++
++
+ endif # USB || OTG
+diff --git a/drivers/usb/otg/Makefile b/drivers/usb/otg/Makefile
+index d85ef5d..e44d33e 100644
+--- a/drivers/usb/otg/Makefile
++++ b/drivers/usb/otg/Makefile
+@@ -18,8 +18,8 @@ obj-$(CONFIG_USB_ULPI)		+= ulpi.o
+ obj-$(CONFIG_USB_ULPI_VIEWPORT)	+= ulpi_viewport.o
+ obj-$(CONFIG_USB_MSM_OTG)	+= msm_otg.o
+ obj-$(CONFIG_AB8500_USB)	+= ab8500-usb.o
+-obj-$(CONFIG_USB_XUSBPS_OTG)	+= xilinx_usbps_otg.o
+ fsl_usb2_otg-objs		:= fsl_otg.o otg_fsm.o
+ obj-$(CONFIG_FSL_USB2_OTG)	+= fsl_usb2_otg.o
+ obj-$(CONFIG_USB_MXS_PHY)	+= mxs-phy.o
+ obj-$(CONFIG_USB_MV_OTG)	+= mv_otg.o
++obj-$(CONFIG_USB_XUSBPS_OTG)	+= xilinx_usbps_otg.o
+-- 
+1.7.1
+

@@ -1,0 +1,55 @@
+From 7d6a4cd62c6e7e0c8884d934873d815cf6bee687 Mon Sep 17 00:00:00 2001
+From: SrikanthT <sthokal@xilinx.com>
+Date: Sat, 13 Oct 2012 01:06:39 +0530
+Subject: [PATCH] Xilinx: ARM: DMA: Flush-on-fsync value do not update correctly
+
+This patch updates the flush-on-fsync values correctly.
+
+Signed-off-by: SrikanthT <sthokal@xilinx.com>
+---
+ drivers/dma/xilinx_dma.c |   15 ++++++++++++---
+ 1 files changed, 12 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/dma/xilinx_dma.c b/drivers/dma/xilinx_dma.c
+index 681026b..7d9cf22 100644
+--- a/drivers/dma/xilinx_dma.c
++++ b/drivers/dma/xilinx_dma.c
+@@ -140,6 +140,11 @@
+ #define XILINX_DMA_FTR_HAS_SG_SHIFT    8          /* Has SG shift */
+ #define XILINX_DMA_FTR_STSCNTRL_STRM   0x00010000 /* Optional feature for dma */
+ 
++/* Feature encodings for VDMA
++ */
++#define XILINX_VDMA_FTR_FLUSH_MASK     0x00000600 /* Flush-on-FSync Mask */
++#define XILINX_VDMA_FTR_FLUSH_SHIFT    9          /* Flush-on-FSync shift */
++
+ /* Delay loop counter to prevent hardware failure
+  */
+ #define XILINX_DMA_RESET_LOOP            1000000
+@@ -1639,9 +1644,8 @@ static int __devinit xilinx_dma_chan_probe(struct xilinx_dma_device *xdev,
+ 	if (value)
+ 		device_id = be32_to_cpup(value);
+ 
+-	value = (int *)of_get_property(node, "xlnx,flush-fsync", NULL);
+-	if (value)
+-		flush_fsync = be32_to_cpup(value);
++	flush_fsync = (xdev->feature & XILINX_VDMA_FTR_FLUSH_MASK) >>
++				XILINX_VDMA_FTR_FLUSH_SHIFT;
+ 
+ 	if (feature & XILINX_DMA_IP_CDMA) {
+ 		chan->direction = DMA_MEM_TO_MEM;
+@@ -1867,6 +1871,11 @@ static int __devinit xilinx_dma_of_probe(struct platform_device *op)
+ 		if (value)
+ 			num_frames	= be32_to_cpup(value);
+ 
++		value = (int *)of_get_property(node, "xlnx,flush-fsync", NULL);
++		if (value)
++			xdev->feature |= be32_to_cpup(value) <<
++				XILINX_VDMA_FTR_FLUSH_SHIFT;
++
+ 		dma_cap_set(DMA_SLAVE, xdev->common.cap_mask);
+ 		dma_cap_set(DMA_PRIVATE, xdev->common.cap_mask);
+ 		xdev->common.device_prep_slave_sg = xilinx_vdma_prep_slave_sg;
+-- 
+1.7.1
+

@@ -1,0 +1,35 @@
+From 3dabe6c0901c715e7eb6f4c2dd7ed013b2947745 Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Mon, 12 Nov 2012 11:32:27 +0100
+Subject: [PATCH] pmods: Fix section mismatch
+
+Warning log:
+WARNING: drivers/pmods/built-in.o(.devinit.text+0x1bc): Section mismatch in reference from
+the function gpio_pmodoled_of_probe() to the function .init.text:add_gpio_pmodoled_device_to_bus()
+The function __devinit gpio_pmodoled_of_probe() references
+a function __init add_gpio_pmodoled_device_to_bus().
+If add_gpio_pmodoled_device_to_bus is only used by gpio_pmodoled_of_probe then
+annotate add_gpio_pmodoled_device_to_bus with a matching annotation.
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+---
+ drivers/pmods/pmodoled-gpio.c |    3 ++-
+ 1 files changed, 2 insertions(+), 1 deletions(-)
+
+diff --git a/drivers/pmods/pmodoled-gpio.c b/drivers/pmods/pmodoled-gpio.c
+index c051d57..5cd330b 100644
+--- a/drivers/pmods/pmodoled-gpio.c
++++ b/drivers/pmods/pmodoled-gpio.c
+@@ -231,7 +231,8 @@ struct file_operations gpio_pmodoled_cdev_fops = {
+ 	.release = gpio_pmodoled_close,
+ };
+ 
+-static int __init add_gpio_pmodoled_device_to_bus(struct gpio_pmodoled_device *dev)
++static int __devinit add_gpio_pmodoled_device_to_bus(
++					      struct gpio_pmodoled_device *dev)
+ {
+ 	struct spi_master *spi_master;
+ 	struct spi_device *spi_device;
+-- 
+1.7.1
+

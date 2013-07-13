@@ -1,0 +1,40 @@
+From c432004a890b9e019542888a44fdc17aefeb85d4 Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Fri, 2 Nov 2012 13:29:40 +0100
+Subject: [PATCH] arm: zynq: Remove moduleparam.h from pl330
+
+It is already included by module.h.
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+Acked-by: Peter Crosthwaite <peter.crosthwaite@xilinx.com>
+---
+ arch/arm/mach-zynq/pl330.c           |    1 -
+ arch/arm/mach-zynq/test/pl330_test.c |    1 -
+ 2 files changed, 0 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/mach-zynq/pl330.c b/arch/arm/mach-zynq/pl330.c
+index a37a8aa..193f0d5 100644
+--- a/arch/arm/mach-zynq/pl330.c
++++ b/arch/arm/mach-zynq/pl330.c
+@@ -84,7 +84,6 @@
+ 
+ #include <linux/init.h>
+ #include <linux/module.h>
+-#include <linux/moduleparam.h>
+ #include <linux/platform_device.h>
+ #include <linux/interrupt.h>
+ #include <linux/dma-mapping.h>
+diff --git a/arch/arm/mach-zynq/test/pl330_test.c b/arch/arm/mach-zynq/test/pl330_test.c
+index 448e941..5bad311 100644
+--- a/arch/arm/mach-zynq/test/pl330_test.c
++++ b/arch/arm/mach-zynq/test/pl330_test.c
+@@ -1,6 +1,5 @@
+ #include <linux/init.h>
+ #include <linux/module.h>
+-#include <linux/moduleparam.h>
+ 
+ #include <linux/platform_device.h>
+ 
+-- 
+1.7.1
+

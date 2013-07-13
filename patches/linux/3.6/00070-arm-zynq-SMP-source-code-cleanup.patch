@@ -1,0 +1,42 @@
+From 8b1c25693f12d2f166dc7435b0db0104e2ea7793 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Fri, 6 Jul 2012 11:40:56 +0200
+Subject: [PATCH] arm: zynq: SMP source code cleanup
+
+Remove trailing white spaces.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ arch/arm/mach-zynq/platsmp.c |    6 +++---
+ 1 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/arch/arm/mach-zynq/platsmp.c b/arch/arm/mach-zynq/platsmp.c
+index eb05a17..6c12ff3 100644
+--- a/arch/arm/mach-zynq/platsmp.c
++++ b/arch/arm/mach-zynq/platsmp.c
+@@ -98,7 +98,7 @@ int zynq_cpu1_start(u32 address)
+ 	if (!(address & 3) && (!address || (address >= 0xC))) {
+ 		__raw_writel(SLCR_UNLOCK, slcr + 0x8); /* UNLOCK SLCR */
+ 		__raw_writel(0x22, slcr + 0x244); /* stop CLK and reset CPU1 */
+-	
++
+ 		/*
+ 		 * This is elegant way how to jump to any address
+ 		 * 0x0: Load address at 0x8 to r0
+@@ -119,11 +119,11 @@ int zynq_cpu1_start(u32 address)
+ 			__raw_writel(0xe1a0f000, zero + 0x4);/* 4:mov pc, r0 */
+ 			__raw_writel(address, zero + 0x8);/* 8:.word address */
+ 		}
+-	
++
+ 		flush_cache_all();
+ 		outer_flush_all();
+ 		wmb();
+-	
++
+ 		__raw_writel(0x20, slcr + 0x244); /* enable CPU1 */
+ 		__raw_writel(0x0, slcr + 0x244); /* enable CLK for CPU1 */
+ 
+-- 
+1.7.1
+

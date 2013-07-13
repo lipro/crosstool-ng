@@ -1,0 +1,29 @@
+From a1e5d2cfa6e74308644ae5f681f6bf8317981f5e Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Thu, 31 May 2012 09:41:08 +0200
+Subject: [PATCH] remoteproc: Keep return value from previous code
+
+Just keep return value from previous code because
+cpu_up can return 0 which means probing OK.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ drivers/remoteproc/zynq_remoteproc.c |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/drivers/remoteproc/zynq_remoteproc.c b/drivers/remoteproc/zynq_remoteproc.c
+index 85748e5..92dd654 100644
+--- a/drivers/remoteproc/zynq_remoteproc.c
++++ b/drivers/remoteproc/zynq_remoteproc.c
+@@ -303,7 +303,7 @@ irq_fault:
+ 	clear_irq(pdev);
+ 
+ 	/* Cpu can't be power on - for example in nosmp mode */
+-	ret = cpu_up(1);
++	ret |= cpu_up(1);
+ 	if (ret)
+ 		dev_err(&pdev->dev, "Can't power on cpu1 %d\n", ret);
+ 
+-- 
+1.7.1
+

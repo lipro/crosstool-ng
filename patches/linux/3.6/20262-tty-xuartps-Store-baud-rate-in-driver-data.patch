@@ -1,0 +1,37 @@
+From a5f64c758ebda53e8ce3a319abf28290d570cd0e Mon Sep 17 00:00:00 2001
+From: Soren Brinkmann <soren.brinkmann@xilinx.com>
+Date: Tue, 19 Mar 2013 13:10:24 -0700
+Subject: [PATCH] tty: xuartps: Store baud rate in driver data
+
+Store the current baudrate in struct xuartps.
+This data is used in some parts of the driver
+but was never initialized correctly.
+
+Signed-off-by: Soren Brinkmann <soren.brinkmann@xilinx.com>
+---
+ drivers/tty/serial/xilinx_uartps.c |    2 ++
+ 1 files changed, 2 insertions(+), 0 deletions(-)
+
+diff --git a/drivers/tty/serial/xilinx_uartps.c b/drivers/tty/serial/xilinx_uartps.c
+index e97aa8d..494b24f 100644
+--- a/drivers/tty/serial/xilinx_uartps.c
++++ b/drivers/tty/serial/xilinx_uartps.c
+@@ -397,6 +397,7 @@ static unsigned int xuartps_set_baud_rate(struct uart_port *port,
+ 	u32 cd, bdiv;
+ 	u32 mreg;
+ 	int div8;
++	struct xuartps *xuartps = port->private_data;
+ 
+ 	calc_baud = xuartps_calc_baud_divs(port->uartclk, baud, &bdiv, &cd,
+ 			&div8);
+@@ -410,6 +411,7 @@ static unsigned int xuartps_set_baud_rate(struct uart_port *port,
+ 	xuartps_writel(mreg, XUARTPS_MR_OFFSET);
+ 	xuartps_writel(cd, XUARTPS_BAUDGEN_OFFSET);
+ 	xuartps_writel(bdiv, XUARTPS_BAUDDIV_OFFSET);
++	xuartps->baud = baud;
+ 
+ 	return calc_baud;
+ }
+-- 
+1.7.1
+

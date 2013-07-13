@@ -1,0 +1,119 @@
+From 950f65b07b6cae06e8f2f909fa08a96cb499cc31 Mon Sep 17 00:00:00 2001
+From: Jagannadha Sutradharudu Teki <jagannadha.sutradharudu-teki@xilinx.com>
+Date: Fri, 15 Feb 2013 19:14:18 +0530
+Subject: [PATCH] xilinx: afx: udpate device tree flash partitions
+
+The u-boot was changed and now Linux device tree
+flash partitions are being cleaned up to allow
+for a bitstream to be up high in flash.
+
+Signed-off-by: Jagannadha Sutradharudu Teki <jaganna@xilinx.com>
+---
+ arch/arm/boot/dts/zynq-afx-nand.dts |   33 +++++++++++++++------------------
+ arch/arm/boot/dts/zynq-afx-nor.dts  |   35 ++++++++++++++---------------------
+ 2 files changed, 29 insertions(+), 39 deletions(-)
+
+diff --git a/arch/arm/boot/dts/zynq-afx-nand.dts b/arch/arm/boot/dts/zynq-afx-nand.dts
+index 03dbfae..7bf0d4b 100644
+--- a/arch/arm/boot/dts/zynq-afx-nand.dts
++++ b/arch/arm/boot/dts/zynq-afx-nand.dts
+@@ -114,29 +114,26 @@
+ 				#address-cells = <0x1>;
+ 				#size-cells = <0x1>;
+ 
+-				partition@0 {
+-					label = "nand-fsbl-uboot-bit";
+-					reg = <0x0 0x500000>;
+-					};
+-
+-				partition@1 {
++				partition@nand-fsbl-uboot {
++					label = "nand-fsbl-uboot";
++					reg = <0x0 0x100000>;
++				};
++				partition@nand-linux {
+ 					label = "nand-linux";
+-					reg = <0x500000 0x300000>;
++					reg = <0x100000 0x500000>;
+ 				};
+-
+-				partition@2 {
+-					label = "nand-devicetree";
+-					reg = <0x800000 0x100000>;
++				partition@nand-device-tree {
++					label = "nand-device-tree";
++					reg = <0x600000 0x20000>;
+ 				};
+-
+-				partition@3 {
+-					label = "nand-ramdisk";
+-					reg = <0x900000 0x400000>;
++				partition@nand-rootfs {
++					label = "nand-rootfs";
++					reg = <0x620000 0x5E0000>;
+ 				};
++				partition@nand-bitstream {
++					label = "nand-bitstream";
++					reg = <0xC00000 0x400000>;
+ 
+-				partition@4 {
+-					label = "nand-scratch";
+-					reg = <0xd00000 0x200000>;
+ 				};
+ 			};
+ 		};
+diff --git a/arch/arm/boot/dts/zynq-afx-nor.dts b/arch/arm/boot/dts/zynq-afx-nor.dts
+index b2d3901..4739984 100644
+--- a/arch/arm/boot/dts/zynq-afx-nor.dts
++++ b/arch/arm/boot/dts/zynq-afx-nor.dts
+@@ -113,33 +113,26 @@
+ 				reg = <0xE2000000 0x2000000>; /* 32MB */
+ 				#address-cells = <1>;
+ 				#size-cells = <1>;
+-				partition@0 {
+-					label = "nor-fsbl";
+-					reg = <0x0 0x80000>; /* 512K */
+-				};
+-				partition@1 {
+-					label = "nor-u-boot";
+-					reg = <0x80000 0x80000>; /* 512K */
++
++				partition@nor-fsbl-uboot {
++					label = "nor-fsbl-uboot";
++					reg = <0x0 0x100000>;
+ 				};
+-				partition@2 {
++				partition@nor-linux {
+ 					label = "nor-linux";
+-					reg = <0x100000 0x500000>; /* 5MB */
++					reg = <0x100000 0x500000>;
+ 				};
+-				partition@3 {
++				partition@nor-device-tree {
+ 					label = "nor-device-tree";
+-					reg = <0x600000 0x20000>; /* 128K */
+-				};
+-				partition@4 {
+-					label = "nor-user";
+-					reg = <0x620000 0x8E0000>; /* 8875K */
++					reg = <0x600000 0x20000>;
+ 				};
+-				partition@5 {
+-					label = "nor-scratch";
+-					reg = <0xF00000 0x100000>; /* 1MB */
+-				};
+-				partition@6 {
++				partition@nor-rootfs {
+ 					label = "nor-rootfs";
+-					reg = <0x1000000 0x1000000>; /* 16MB */
++					reg = <0x620000 0x5E0000>;
++				};
++				partition@nor-bitstream {
++					label = "nor-bitstream";
++					reg = <0xC00000 0x400000>;
+ 				};
+ 			};
+ 		};
+-- 
+1.7.1
+

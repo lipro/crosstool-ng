@@ -1,0 +1,29 @@
+From 821fd7b37cf1cc6f7afc78a969353fba40ee6701 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Fri, 22 Jun 2012 07:02:25 +0200
+Subject: [PATCH] xilinx_wdt: Hack SETTIMEOUT
+
+Just to keep busybox watchdog happy. Timeout must be more than 30 seconds.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ drivers/watchdog/of_xilinx_wdt.c |    3 +++
+ 1 files changed, 3 insertions(+), 0 deletions(-)
+
+diff --git a/drivers/watchdog/of_xilinx_wdt.c b/drivers/watchdog/of_xilinx_wdt.c
+index 294fb4e..b04322f 100644
+--- a/drivers/watchdog/of_xilinx_wdt.c
++++ b/drivers/watchdog/of_xilinx_wdt.c
+@@ -263,6 +263,9 @@ static long xwdt_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
+ 		xwdt_keepalive();
+ 		return 0;
+ 
++	case WDIOC_SETTIMEOUT:
++		printk(KERN_INFO "This feature is not implemented yet!\n");
++
+ 	case WDIOC_GETTIMEOUT:
+ 		if (no_timeout)
+ 			return -ENOTTY;
+-- 
+1.7.1
+

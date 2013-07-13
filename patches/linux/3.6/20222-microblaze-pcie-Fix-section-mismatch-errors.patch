@@ -1,0 +1,89 @@
+From 6ee36719355dca681bfeb3756a2f2a6abb6b776b Mon Sep 17 00:00:00 2001
+From: Srikanth Thokala <srikanth.thokala@xilinx.com>
+Date: Fri, 8 Mar 2013 17:59:14 +0530
+Subject: [PATCH] microblaze: pcie: Fix section mismatch errors
+
+This patch fix section mismatch errors.
+
+WARNING: vmlinux.o(.text+0x81d4): Section mismatch in reference from
+the function pcibios_allocate_bus_resources() to the function .init.text:reparent_resources()
+The function pcibios_allocate_bus_resources() references
+the function __init reparent_resources().
+This is often because pcibios_allocate_bus_resources lacks a __init
+annotation or the annotation of reparent_resources is wrong.
+
+WARNING: vmlinux.o(.text+0x88d8): Section mismatch in reference from
+the function pcibios_finish_adding_to_bus() to the function .devinit.text:pcibios_claim_one_bus()
+The function pcibios_finish_adding_to_bus() references
+the function __devinit pcibios_claim_one_bus().
+This is often because pcibios_finish_adding_to_bus lacks a __devinit
+annotation or the annotation of pcibios_claim_one_bus is wrong.
+
+WARNING: vmlinux.o(.text+0x8df0): Section mismatch in reference from
+the function fixup_xilinx_axipcie_bridge() to the variable .devinit.data:xilinx_axipcie_match
+The function fixup_xilinx_axipcie_bridge() references
+the variable __devinitdata xilinx_axipcie_match.
+This is often because fixup_xilinx_axipcie_bridge lacks a __devinitdata
+annotation or the annotation of xilinx_axipcie_match is wrong.
+
+Signed-off-by: Srikanth Thokala <sthokal@xilinx.com>
+---
+ arch/microblaze/pci/pci-common.c     |    5 ++---
+ arch/microblaze/pci/xilinx_axipcie.c |    4 ++--
+ 2 files changed, 4 insertions(+), 5 deletions(-)
+
+diff --git a/arch/microblaze/pci/pci-common.c b/arch/microblaze/pci/pci-common.c
+index 58c974b..cbdf8a1 100644
+--- a/arch/microblaze/pci/pci-common.c
++++ b/arch/microblaze/pci/pci-common.c
+@@ -1064,7 +1064,7 @@ EXPORT_SYMBOL(pcibios_align_resource);
+  * Reparent resource children of pr that conflict with res
+  * under res, and make res replace those children.
+  */
+-static int __init reparent_resources(struct resource *parent,
++static int reparent_resources(struct resource *parent,
+ 				     struct resource *res)
+ {
+ 	struct resource *p, **pp;
+@@ -1359,7 +1359,7 @@ void __init pcibios_resource_survey(void)
+  * rest of the code later, for now, keep it as-is as our main
+  * resource allocation function doesn't deal with sub-trees yet.
+  */
+-void __devinit pcibios_claim_one_bus(struct pci_bus *bus)
++void pcibios_claim_one_bus(struct pci_bus *bus)
+ {
+ 	struct pci_dev *dev;
+ 	struct pci_bus *child_bus;
+@@ -1387,7 +1387,6 @@ void __devinit pcibios_claim_one_bus(struct pci_bus *bus)
+ 	list_for_each_entry(child_bus, &bus->children, node)
+ 		pcibios_claim_one_bus(child_bus);
+ }
+-EXPORT_SYMBOL_GPL(pcibios_claim_one_bus);
+ 
+ 
+ /* pcibios_finish_adding_to_bus
+diff --git a/arch/microblaze/pci/xilinx_axipcie.c b/arch/microblaze/pci/xilinx_axipcie.c
+index 895ed15..f34660a 100644
+--- a/arch/microblaze/pci/xilinx_axipcie.c
++++ b/arch/microblaze/pci/xilinx_axipcie.c
+@@ -41,7 +41,7 @@
+ static struct xilinx_axipcie_port *xilinx_axipcie_ports;
+ static unsigned int xilinx_axipcie_port_count;
+ 
+-static struct of_device_id xilinx_axipcie_match[] __devinitdata = {
++static const struct of_device_id xilinx_axipcie_match[] = {
+ 	{ .compatible = "xlnx,axi-pcie-1.05.a" ,},
+ 	{}
+ };
+@@ -824,7 +824,7 @@ void pcibios_set_master(struct pci_dev *dev)
+ static int __init xilinx_find_axipcie_nodes(void)
+ {
+ 	struct device_node *np;
+-	struct of_device_id *matches = xilinx_axipcie_match;
++	const struct of_device_id *matches = xilinx_axipcie_match;
+ 	int error = 0;
+ 
+ 	printk(KERN_INFO "Initialising Xilinx PCI Express root"
+-- 
+1.7.1
+

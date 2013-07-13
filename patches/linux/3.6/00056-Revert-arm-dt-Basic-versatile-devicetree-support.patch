@@ -1,0 +1,46 @@
+From d2e40437150114f650724399416bec15f966ebbd Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Mon, 8 Oct 2012 16:03:30 +0200
+Subject: [PATCH] Revert "arm/dt: Basic versatile devicetree support"
+
+This reverts commit a88f0aee0c210d3b7ea9b2c4c6043b0d79c57e6c.
+---
+ arch/arm/mach-versatile/versatile_ab.c |    5 -----
+ arch/arm/mach-versatile/versatile_pb.c |    5 -----
+ 2 files changed, 0 insertions(+), 10 deletions(-)
+
+diff --git a/arch/arm/mach-versatile/versatile_ab.c b/arch/arm/mach-versatile/versatile_ab.c
+index 506bf45..98f6549 100644
+--- a/arch/arm/mach-versatile/versatile_ab.c
++++ b/arch/arm/mach-versatile/versatile_ab.c
+@@ -33,11 +33,6 @@
+ 
+ #include "core.h"
+ 
+-static const char *versatile_ab_match[] __initdata = {
+-	"arm,versatile-ab",
+-	NULL,
+-};
+-
+ MACHINE_START(VERSATILE_AB, "ARM-Versatile AB")
+ 	/* Maintainer: ARM Ltd/Deep Blue Solutions Ltd */
+ 	.atag_offset	= 0x100,
+diff --git a/arch/arm/mach-versatile/versatile_pb.c b/arch/arm/mach-versatile/versatile_pb.c
+index caa98f5..1973833 100644
+--- a/arch/arm/mach-versatile/versatile_pb.c
++++ b/arch/arm/mach-versatile/versatile_pb.c
+@@ -101,11 +101,6 @@ static void __init versatile_pb_init(void)
+ 	}
+ }
+ 
+-static const char *versatile_pb_match[] __initdata = {
+-	"arm,versatile-pb",
+-	NULL,
+-};
+-
+ MACHINE_START(VERSATILE_PB, "ARM-Versatile PB")
+ 	/* Maintainer: ARM Ltd/Deep Blue Solutions Ltd */
+ 	.atag_offset	= 0x100,
+-- 
+1.7.1
+

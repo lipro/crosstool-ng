@@ -1,0 +1,29 @@
+From ef9b601a15dc86a291899ec85da23d247ebadc32 Mon Sep 17 00:00:00 2001
+From: Dave Tubbs <dave.tubbs@portalislc.com>
+Date: Mon, 4 Mar 2013 12:30:52 +0100
+Subject: [PATCH] usb: Correction to c67x00 TD data length mask
+
+TD data length is 10 bits, correct TD_PORTLENMASK_DL. Reference
+Cypress Semiconductor BIOS User's Manual 1.2, page 3-10
+
+Signed-off-by: Dave Tubbs <dave.tubbs@portalislc.com>
+---
+ drivers/usb/c67x00/c67x00-sched.c |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/drivers/usb/c67x00/c67x00-sched.c b/drivers/usb/c67x00/c67x00-sched.c
+index a03fbc1..aa2262f 100644
+--- a/drivers/usb/c67x00/c67x00-sched.c
++++ b/drivers/usb/c67x00/c67x00-sched.c
+@@ -100,7 +100,7 @@ struct c67x00_urb_priv {
+ #define TD_PIDEP_OFFSET		0x04
+ #define TD_PIDEPMASK_PID	0xF0
+ #define TD_PIDEPMASK_EP		0x0F
+-#define TD_PORTLENMASK_DL	0x02FF
++#define TD_PORTLENMASK_DL	0x03FF
+ #define TD_PORTLENMASK_PN	0xC000
+ 
+ #define TD_STATUS_OFFSET	0x07
+-- 
+1.7.1
+

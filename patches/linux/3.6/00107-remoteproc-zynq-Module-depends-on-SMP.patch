@@ -1,0 +1,33 @@
+From f1f83dc6e32def66dca39739097d18fce73edc63 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Mon, 25 Jun 2012 11:05:03 +0200
+Subject: [PATCH] remoteproc: zynq: Module depends on SMP
+
+There is dependency on SMP because of IPI.
+Enable HOTPLUG by default.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ drivers/remoteproc/Kconfig |    4 ++--
+ 1 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/remoteproc/Kconfig b/drivers/remoteproc/Kconfig
+index 6825246..d86b991 100644
+--- a/drivers/remoteproc/Kconfig
++++ b/drivers/remoteproc/Kconfig
+@@ -29,10 +29,10 @@ config OMAP_REMOTEPROC
+ 
+ config ZYNQ_REMOTEPROC
+ 	tristate "ZYNQ remoteproc support"
+-	depends on ARCH_ZYNQ
++	depends on ARCH_ZYNQ && SMP
+ 	select REMOTEPROC
+ 	select RPMSG
+-	select HOTPLUG_CPU if SMP
++	select HOTPLUG_CPU
+ 	default m
+ 	help
+ 	  Say y here to support Xilinx ZynQ remote processors (the second
+-- 
+1.7.1
+

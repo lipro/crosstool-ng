@@ -1,0 +1,29 @@
+From 753276aa99e5b06459580a8727d449a8571e2d80 Mon Sep 17 00:00:00 2001
+From: Soren Brinkmann <soren.brinkmann@xilinx.com>
+Date: Mon, 17 Dec 2012 10:27:03 -0800
+Subject: [PATCH] arm: zynq: common: Declare counter variable unsigned
+
+Declaring a variable as unsigned to match the type we get from
+the ARRAY_SIZE macro we compare it with.
+
+Signed-off-by: Soren Brinkmann <soren.brinkmann@xilinx.com>
+---
+ arch/arm/mach-zynq/common.c |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/arch/arm/mach-zynq/common.c b/arch/arm/mach-zynq/common.c
+index 343b1e6..d3f3256 100644
+--- a/arch/arm/mach-zynq/common.c
++++ b/arch/arm/mach-zynq/common.c
+@@ -134,7 +134,7 @@ static void __init xilinx_opp_init(void)
+ 	int ret = 0;
+ 	long freq;
+ 	struct clk *cpuclk = clk_get_sys("CPU_6OR4X_CLK", NULL);
+-	int i;
++	unsigned int i;
+ 
+ 	if (IS_ERR(pdev)) {
+ 		pr_warn("Xilinx OOP init: No device. DVFS not available.");
+-- 
+1.7.1
+

@@ -1,0 +1,79 @@
+From 5c5ad1a3c45a57128cc1c3e3af8025fb2d84bc25 Mon Sep 17 00:00:00 2001
+From: Soren Brinkmann <soren.brinkmann@xilinx.com>
+Date: Tue, 11 Dec 2012 17:47:12 -0800
+Subject: [PATCH] clk: zynq: Add const qualifiers
+
+Declaring the clk_ops structs for Zynq clocks const where missing.
+
+Signed-off-by: Soren Brinkmann <soren.brinkmann@xilinx.com>
+Acked-by: Michal Simek <michal.simek@xilinx.com>
+---
+ drivers/clk/zynq/clk621.c         |    2 +-
+ drivers/clk/zynq/peripheral_clk.c |   10 +++++-----
+ 2 files changed, 6 insertions(+), 6 deletions(-)
+
+diff --git a/drivers/clk/zynq/clk621.c b/drivers/clk/zynq/clk621.c
+index 9c04475..f835bc1 100644
+--- a/drivers/clk/zynq/clk621.c
++++ b/drivers/clk/zynq/clk621.c
+@@ -113,7 +113,7 @@ static int zynq_clk621_set_rate(struct clk_hw *hw, unsigned long rate,
+ 	return -EINVAL;
+ }
+ 
+-static struct clk_ops zynq_clk621_ops = {
++static const struct clk_ops zynq_clk621_ops = {
+ 	.set_rate = zynq_clk621_set_rate,
+ 	.round_rate = zynq_clk621_round_rate,
+ 	.recalc_rate = zynq_clk621_recalc_rate
+diff --git a/drivers/clk/zynq/peripheral_clk.c b/drivers/clk/zynq/peripheral_clk.c
+index c3c47ae..3dea914 100644
+--- a/drivers/clk/zynq/peripheral_clk.c
++++ b/drivers/clk/zynq/peripheral_clk.c
+@@ -378,7 +378,7 @@ static u8 zynq_periphclk_get_parent(struct clk_hw *hw)
+  * Returns clk_register() return value or errpointer.
+  */
+ static struct clk *clk_register_zynq_common(const char *name,
+-		void __iomem *clkctrl, struct clk_ops *ops,
++		void __iomem *clkctrl, const struct clk_ops *ops,
+ 		const char **pnames, u8 num_parents, spinlock_t *lock)
+ {
+ 	struct clk *ret;
+@@ -411,7 +411,7 @@ static struct clk *clk_register_zynq_common(const char *name,
+ }
+ 
+ /* Clock ops structs for the different peripheral clock types */
+-static struct clk_ops zynq_periphclk_gd1m_ops = {
++static const struct clk_ops zynq_periphclk_gd1m_ops = {
+ 	.enable = zynq_periphclk_gate1_enable,
+ 	.disable = zynq_periphclk_gate1_disable,
+ 	.is_enabled = zynq_periphclk_gate1_is_enabled,
+@@ -422,7 +422,7 @@ static struct clk_ops zynq_periphclk_gd1m_ops = {
+ 	.recalc_rate = zynq_periphclk_div1_recalc_rate
+ };
+ 
+-static struct clk_ops zynq_periphclk_gd2m_ops = {
++static const struct clk_ops zynq_periphclk_gd2m_ops = {
+ 	.enable = zynq_periphclk_gate1_enable,
+ 	.disable = zynq_periphclk_gate1_disable,
+ 	.is_enabled = zynq_periphclk_gate1_is_enabled,
+@@ -433,7 +433,7 @@ static struct clk_ops zynq_periphclk_gd2m_ops = {
+ 	.recalc_rate = zynq_periphclk_div2_recalc_rate
+ };
+ 
+-static struct clk_ops zynq_periphclk_d2m_ops = {
++static const struct clk_ops zynq_periphclk_d2m_ops = {
+ 	.set_parent = zynq_periphclk_set_parent,
+ 	.get_parent = zynq_periphclk_get_parent,
+ 	.set_rate = zynq_periphclk_div2_set_rate,
+@@ -441,7 +441,7 @@ static struct clk_ops zynq_periphclk_d2m_ops = {
+ 	.recalc_rate = zynq_periphclk_div2_recalc_rate
+ };
+ 
+-static struct clk_ops zynq_periphclk_d1m_ops = {
++static const struct clk_ops zynq_periphclk_d1m_ops = {
+ 	.set_parent = zynq_periphclk_set_parent,
+ 	.get_parent = zynq_periphclk_get_parent,
+ 	.set_rate = zynq_periphclk_div1_set_rate,
+-- 
+1.7.1
+

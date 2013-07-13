@@ -1,0 +1,30 @@
+From ba05e005b715a73dae2fa7b76a106041edbbc9ea Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Mon, 11 Mar 2013 14:23:27 +0100
+Subject: [PATCH] arm: zynq: Fix compilation warning in suspend code
+
+This should be the part of this patch:
+"arm: zynq: Suspend support"
+(sha1: 74c679a6809cda93ac7de54fe2ae632974c25409)
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+---
+ arch/arm/mach-zynq/common.h |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/arch/arm/mach-zynq/common.h b/arch/arm/mach-zynq/common.h
+index bef7527..19ec642 100644
+--- a/arch/arm/mach-zynq/common.h
++++ b/arch/arm/mach-zynq/common.h
+@@ -38,7 +38,7 @@ extern void __iomem *scu_base;
+ #ifdef CONFIG_SUSPEND
+ int zynq_pm_late_init(void);
+ #else
+-static int zynq_pm_late_init(void)
++static inline int zynq_pm_late_init(void)
+ {
+ 	return 0;
+ }
+-- 
+1.7.1
+

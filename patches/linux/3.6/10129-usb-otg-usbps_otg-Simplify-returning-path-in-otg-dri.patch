@@ -1,0 +1,61 @@
+From 9ba54e01cb8fffbdcb3db49f053d2af2d7e28229 Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Thu, 22 Nov 2012 15:07:53 +0100
+Subject: [PATCH] usb: otg: usbps_otg: Simplify returning path in otg driver
+
+Return directly from driver and do not use done label.
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+---
+ drivers/usb/otg/xilinx_usbps_otg.c |   18 +++++++-----------
+ 1 files changed, 7 insertions(+), 11 deletions(-)
+
+diff --git a/drivers/usb/otg/xilinx_usbps_otg.c b/drivers/usb/otg/xilinx_usbps_otg.c
+index 92330ce..edc5655 100644
+--- a/drivers/usb/otg/xilinx_usbps_otg.c
++++ b/drivers/usb/otg/xilinx_usbps_otg.c
+@@ -1928,26 +1928,22 @@ static int xusbps_otg_probe(struct platform_device *pdev)
+ 	struct xusbps_usb2_platform_data *pdata;
+ 
+ 	pdata = pdev->dev.platform_data;
+-	if (!pdata) {
+-		retval = -ENODEV;
+-		goto done;
+-	}
++	if (!pdata)
++		return -ENODEV;
+ 
+ 	retval = 0;
+ 	dev_dbg(&pdev->dev, "\notg controller is detected.\n");
+ 
+ 	xotg = kzalloc(sizeof *xotg, GFP_KERNEL);
+-	if (xotg == NULL) {
+-		retval = -ENOMEM;
+-		goto done;
+-	}
++	if (xotg == NULL)
++		return -ENOMEM;
++
+ 	the_transceiver = xotg;
+ 
+ 	xotg->otg.otg = kzalloc(sizeof(struct usb_otg), GFP_KERNEL);
+ 	if (!xotg->otg.otg) {
+ 		kfree(xotg);
+-		retval = -ENOMEM;
+-		goto done;
++		return -ENOMEM;
+ 	}
+ 
+ 	xotg->base = pdata->regs;
+@@ -2042,7 +2038,7 @@ static int xusbps_otg_probe(struct platform_device *pdev)
+ err:
+ 	if (the_transceiver)
+ 		xusbps_otg_remove(pdev);
+-done:
++
+ 	return retval;
+ }
+ 
+-- 
+1.7.1
+

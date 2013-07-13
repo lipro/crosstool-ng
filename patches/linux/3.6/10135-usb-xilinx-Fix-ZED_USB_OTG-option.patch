@@ -1,0 +1,131 @@
+From 21467f0a2980257dcddaae7675e6a82ec990dc74 Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Mon, 19 Nov 2012 13:06:23 +0100
+Subject: [PATCH] usb: xilinx: Fix ZED_USB_OTG option
+
+Do not select option if USB_SUPPORT is enabled because
+this option depends on it.
+Add dependency on XUSBPS_OTG.
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+---
+ drivers/usb/host/ehci-hcd.c          |    6 ------
+ drivers/usb/host/ehci-xilinx-usbps.c |   30 +++++++-----------------------
+ drivers/usb/host/ehci.h              |    3 ---
+ drivers/usb/otg/Kconfig              |   13 -------------
+ 4 files changed, 7 insertions(+), 45 deletions(-)
+
+diff --git a/drivers/usb/host/ehci-hcd.c b/drivers/usb/host/ehci-hcd.c
+index 5dfc00c..7e15704 100644
+--- a/drivers/usb/host/ehci-hcd.c
++++ b/drivers/usb/host/ehci-hcd.c
+@@ -671,12 +671,6 @@ static int ehci_run (struct usb_hcd *hcd)
+ 	/* Modifying FIFO Burst Threshold value from 2 to 8 */
+ 	temp = readl(non_ehci + 0x164);
+ 	ehci_writel(ehci, 0x00080000, non_ehci + 0x164);
+-#if defined(CONFIG_XILINX_ZED_USB_OTG)
+-	if (ehci->ulpi) {
+-		struct usb_phy *phy = ehci->ulpi;
+-		otg_set_vbus(phy->otg, 1);
+-	}
+-#endif
+ #endif
+ 	/* GRR this is run-once init(), being done every time the HC starts.
+ 	 * So long as they're part of class devices, we can't do it init()
+diff --git a/drivers/usb/host/ehci-xilinx-usbps.c b/drivers/usb/host/ehci-xilinx-usbps.c
+index b5a0090..af2e86b 100644
+--- a/drivers/usb/host/ehci-xilinx-usbps.c
++++ b/drivers/usb/host/ehci-xilinx-usbps.c
+@@ -23,9 +23,6 @@
+ #include <linux/platform_device.h>
+ #include <linux/xilinx_devices.h>
+ #include <linux/usb/otg.h>
+-#ifdef CONFIG_XILINX_ZED_USB_OTG
+-#include <linux/usb/ulpi.h>
+-#endif
+ #include <linux/usb/xilinx_usbps_otg.h>
+ 
+ #include "ehci-xilinx-usbps.h"
+@@ -168,15 +165,6 @@ static int usb_hcd_xusbps_probe(const struct hc_driver *driver,
+ #ifdef CONFIG_USB_XUSBPS_OTG
+ 	ehci = hcd_to_ehci(hcd);
+ 	if (pdata->otg) {
+-#ifdef CONFIG_XILINX_ZED_USB_OTG
+-		pr_info ("%s: Have OTG assigned.\n", __func__);
+-
+-		retval = usb_phy_init(pdata->otg);
+-		if (retval) {
+-			dev_err(&pdev->dev, "Unable to init transceiver, probably missing\n");
+-			return ENODEV;
+-		}
+-#endif
+ 		hcd->phy = pdata->otg;
+ 		retval = otg_set_host(hcd->phy->otg,
+ 				&ehci_to_hcd(ehci)->self);
+@@ -195,20 +183,16 @@ static int usb_hcd_xusbps_probe(const struct hc_driver *driver,
+ 
+ 		usb_remove_hcd(hcd);
+ 	} else {
+-#ifdef CONFIG_XILINX_ZED_USB_OTG
+-		pr_info ("%s: No OTG assigned!\n", __func__);
+-		pdata->otg = otg_ulpi_create(&ulpi_viewport_access_ops,
+-			ULPI_OTG_DRVVBUS | ULPI_OTG_DRVVBUS_EXT);
+-		if (pdata->otg) {
+-			pdata->otg->io_priv = hcd->regs + XUSBPS_SOC_USB_ULPIVP;
+-			ehci->ulpi = pdata->otg;
+-		}
+-		pr_info ("%s: OTG now assigned!\n", __func__);
+-#endif
+-
+ 		retval = usb_add_hcd(hcd, irq, IRQF_DISABLED | IRQF_SHARED);
+ 		if (retval != 0)
+ 			goto err2;
++
++		/*
++		 * Enable vbus on ULPI - zedboard requirement
++		 * to get host mode to work
++		 */
++		if (pdata->ulpi)
++			otg_set_vbus(pdata->ulpi->otg, 1);
+ 	}
+ #else
+ 	/* Don't need to set host mode here. It will be done by tdi_reset() */
+diff --git a/drivers/usb/host/ehci.h b/drivers/usb/host/ehci.h
+index 0a19e47..1c6fe46 100644
+--- a/drivers/usb/host/ehci.h
++++ b/drivers/usb/host/ehci.h
+@@ -179,9 +179,6 @@ struct ehci_hcd {			/* one per controller */
+ 	 * other external transceivers should be software-transparent
+ 	 */
+ 	void (*start_hnp)(struct ehci_hcd *ehci);
+-#ifdef CONFIG_XILINX_ZED_USB_OTG
+-	struct otg_transceiver	*ulpi;
+-#endif
+ #endif
+ 
+ 	/* per-HC memory pools (could be per-bus, but ...) */
+diff --git a/drivers/usb/otg/Kconfig b/drivers/usb/otg/Kconfig
+index 95279b5..99a8e3c 100644
+--- a/drivers/usb/otg/Kconfig
++++ b/drivers/usb/otg/Kconfig
+@@ -150,17 +150,4 @@ config USB_XUSBPS_OTG
+ 	  To compile this driver as a module, choose M here: the
+ 	  module will be called xilinx_usbps_otg.
+ 
+-config XILINX_ZED_USB_OTG
+-	bool "Using USB OTG on the Digilent ZED board"
+-	default n
+-	depends on USB_SUPPORT
+-	select USB_XUSBPS_OTG
+-	select USB_ULPI if USB_SUPPORT
+-	select USB_ULPI_VIEWPORT if USB_SUPPORT
+-	help
+-	  Select this option if using the USB OTG port on the Digilent ZED board
+-	  as a USB on-the-go port. This option is necessary to properly
+-	  initialize the TUSB1210 USB PHY used on the ZED board as an
+-	  on-the-go USB port that can supply power to a USB slave device.
+-
+ endif # USB || OTG
+-- 
+1.7.1
+
