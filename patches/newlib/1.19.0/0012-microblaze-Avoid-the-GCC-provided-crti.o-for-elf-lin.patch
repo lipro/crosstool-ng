@@ -1,0 +1,23 @@
+From 25162aa9d4886b0af625e5d1b94a849341fface0 Mon Sep 17 00:00:00 2001
+From: Edgar E. Iglesias <edgar.iglesias@gmail.com>
+Date: Thu, 5 Jan 2012 01:53:39 +0100
+Subject: [PATCH 12/17] microblaze: Avoid the GCC provided crti.o for elf-linux-gloss
+
+Signed-off-by: Edgar E. Iglesias <edgar.iglesias@gmail.com>
+---
+ libgloss/microblaze/elf-gloss-linux.specs |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/libgloss/microblaze/elf-gloss-linux.specs b/libgloss/microblaze/elf-gloss-linux.specs
+index cedf2db..be05f17 100644
+--- a/libgloss/microblaze/elf-gloss-linux.specs
++++ b/libgloss/microblaze/elf-gloss-linux.specs
+@@ -11,4 +11,4 @@
+ -start-group -lgloss-linux -lxil-linux -lc -lm -end-group
+ 
+ *startfile:
+-linux-crt0%O%s crti%O%s crtbegin%O%s
++linux-crt0%O%s crtbegin%O%s
+-- 
+1.7.1
+

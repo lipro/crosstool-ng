@@ -1,0 +1,1053 @@
+From b00a16f98ced8125e9690ffd1c5ca50a76592c83 Mon Sep 17 00:00:00 2001
+From: David Holsgrove <david.holsgrove@petalogix.com>
+Date: Wed, 12 Oct 2011 11:56:40 +1000
+Subject: [PATCH 07/17] libgloss: Merge xilinx libxil into newlib libgloss
+
+Signed-off-by: David Holsgrove <david.holsgrove@petalogix.com>
+---
+ libgloss/microblaze/Makefile.in  |    2 +-
+ libgloss/microblaze/close.c      |   25 ++++
+ libgloss/microblaze/errno.c      |   17 +++
+ libgloss/microblaze/fstat.c      |   30 +++++
+ libgloss/microblaze/getpid.c     |   25 ++++
+ libgloss/microblaze/isatty.c     |   27 ++++
+ libgloss/microblaze/kill.c       |   28 ++++
+ libgloss/microblaze/longjmp.S    |   51 ++++++++
+ libgloss/microblaze/lseek.c      |   31 +++++
+ libgloss/microblaze/moddi3.S     |  100 +++++++++++++++
+ libgloss/microblaze/open.c       |   31 +++++
+ libgloss/microblaze/print.c      |   27 ++++
+ libgloss/microblaze/putnum.c     |   41 ++++++
+ libgloss/microblaze/read.c       |   41 ++++++
+ libgloss/microblaze/setjmp.S     |   50 +++++++
+ libgloss/microblaze/stat.c       |   30 +++++
+ libgloss/microblaze/unlink.c     |   28 ++++
+ libgloss/microblaze/write.c      |   39 ++++++
+ libgloss/microblaze/xil_printf.c |  262 ++++++++++++++++++++++++++++++++++++++
+ 19 files changed, 884 insertions(+), 1 deletions(-)
+ create mode 100644 libgloss/microblaze/close.c
+ create mode 100644 libgloss/microblaze/errno.c
+ create mode 100644 libgloss/microblaze/fstat.c
+ create mode 100644 libgloss/microblaze/getpid.c
+ create mode 100644 libgloss/microblaze/isatty.c
+ create mode 100644 libgloss/microblaze/kill.c
+ create mode 100644 libgloss/microblaze/longjmp.S
+ create mode 100644 libgloss/microblaze/lseek.c
+ create mode 100644 libgloss/microblaze/moddi3.S
+ create mode 100644 libgloss/microblaze/open.c
+ create mode 100644 libgloss/microblaze/print.c
+ create mode 100644 libgloss/microblaze/putnum.c
+ create mode 100644 libgloss/microblaze/read.c
+ create mode 100644 libgloss/microblaze/setjmp.S
+ create mode 100644 libgloss/microblaze/stat.c
+ create mode 100644 libgloss/microblaze/unlink.c
+ create mode 100644 libgloss/microblaze/write.c
+ create mode 100644 libgloss/microblaze/xil_printf.c
+
+diff --git a/libgloss/microblaze/Makefile.in b/libgloss/microblaze/Makefile.in
+index 2b93be2..fd7e590 100644
+--- a/libgloss/microblaze/Makefile.in
++++ b/libgloss/microblaze/Makefile.in
+@@ -77,7 +77,7 @@ OBJCOPY = `if [ -f ${objroot}/../binutils/objcopy ] ; \
+ 
+ CRT = crt0.o crt1.o crt2.o crt3.o crt4.o crtinit.o pgcrtinit.o sim-crtinit.o sim-pgcrtinit.o
+ LIB = libgloss.a
+-OBJS = sbrk.o timer.o _exception_handler.o _hw_exception_handler.o _interrupt_handler.o _program_clean.o _program_init.o xil_malloc.o xil_sbrk.o 
++OBJS = fstat.o getpid.o isatty.o kill.o lseek.o open.o print.o putnum.o sbrk.o stat.o unlink.o write.o read.o close.o moddi3.o timer.o xil_printf.o errno.o _exception_handler.o _hw_exception_handler.o _interrupt_handler.o _program_clean.o _program_init.o xil_malloc.o xil_sbrk.o setjmp.o longjmp.o
+ SCRIPTS	= xilinx.ld
+ 
+ # Tiny Linux BSP.
+diff --git a/libgloss/microblaze/close.c b/libgloss/microblaze/close.c
+new file mode 100644
+index 0000000..7aafcea
+--- /dev/null
++++ b/libgloss/microblaze/close.c
+@@ -0,0 +1,25 @@
++/* close.c -- close a file descriptor.
++ *
++ * Copyright (c) 1995 Cygnus Support
++ *
++ * The authors hereby grant permission to use, copy, modify, distribute,
++ * and license this software and its documentation for any purpose, provided
++ * that existing copyright notices are retained in all copies and that this
++ * notice is included verbatim in any distributions. No written agreement,
++ * license, or royalty fee is required for any of the authorized uses.
++ * Modifications to this software may be copyrighted by their authors
++ * and need not follow the licensing terms described here, provided that
++ * the new terms are clearly indicated on the first page of each file where
++ * they apply.
++ */
++#include "glue.h"
++
++/*
++ * close -- We don't need to do anything, but pretend we did.
++ */
++int
++_DEFUN (close ,(fd),
++       int fd)
++{
++  return (0);
++}
+diff --git a/libgloss/microblaze/errno.c b/libgloss/microblaze/errno.c
+new file mode 100644
+index 0000000..9d09fce
+--- /dev/null
++++ b/libgloss/microblaze/errno.c
+@@ -0,0 +1,17 @@
++/* The errno variable is stored in the reentrancy structure.  This
++   function returns its address for use by the macro errno defined in
++   errno.h.  */
++
++#include <errno.h>
++#include <reent.h>
++
++#ifndef _REENT_ONLY
++
++int *
++__errno ()
++{
++  return &_REENT->_errno;
++}
++
++#endif
++
+diff --git a/libgloss/microblaze/fstat.c b/libgloss/microblaze/fstat.c
+new file mode 100644
+index 0000000..8082d63
+--- /dev/null
++++ b/libgloss/microblaze/fstat.c
+@@ -0,0 +1,30 @@
++/* fstat.c -- get status of a file.
++ *
++ * Copyright (c) 1995 Cygnus Support
++ *
++ * The authors hereby grant permission to use, copy, modify, distribute,
++ * and license this software and its documentation for any purpose, provided
++ * that existing copyright notices are retained in all copies and that this
++ * notice is included verbatim in any distributions. No written agreement,
++ * license, or royalty fee is required for any of the authorized uses.
++ * Modifications to this software may be copyrighted by their authors
++ * and need not follow the licensing terms described here, provided that
++ * the new terms are clearly indicated on the first page of each file where
++ * they apply.
++ */
++#include <sys/stat.h>
++#include "glue.h"
++
++/*
++ * fstat -- Since we have no file system, we just return an error.
++ */
++int
++_DEFUN (fstat, (fd, buf),
++       int fd _AND
++       struct stat *buf)
++{
++  buf->st_mode = S_IFCHR;	/* Always pretend to be a tty */
++  buf->st_blksize = 0;
++
++  return (0);
++}
+diff --git a/libgloss/microblaze/getpid.c b/libgloss/microblaze/getpid.c
+new file mode 100644
+index 0000000..07f7f92
+--- /dev/null
++++ b/libgloss/microblaze/getpid.c
+@@ -0,0 +1,25 @@
++/* getpid.c -- get the current process id.
++ *
++ * Copyright (c) 1995 Cygnus Support
++ *
++ * The authors hereby grant permission to use, copy, modify, distribute,
++ * and license this software and its documentation for any purpose, provided
++ * that existing copyright notices are retained in all copies and that this
++ * notice is included verbatim in any distributions. No written agreement,
++ * license, or royalty fee is required for any of the authorized uses.
++ * Modifications to this software may be copyrighted by their authors
++ * and need not follow the licensing terms described here, provided that
++ * the new terms are clearly indicated on the first page of each file where
++ * they apply.
++ */
++#include "glue.h"
++
++/*
++ * getpid -- only one process, so just return 1.
++ */
++int
++_DEFUN (getpid, (),
++        )
++{
++  return __MYPID;
++}
+diff --git a/libgloss/microblaze/isatty.c b/libgloss/microblaze/isatty.c
+new file mode 100644
+index 0000000..2d66cd6
+--- /dev/null
++++ b/libgloss/microblaze/isatty.c
+@@ -0,0 +1,27 @@
++/* isatty.c -- chek the terminal device.
++ * 
++ * Copyright (c) 1995 Cygnus Support
++ *
++ * The authors hereby grant permission to use, copy, modify, distribute,
++ * and license this software and its documentation for any purpose, provided
++ * that existing copyright notices are retained in all copies and that this
++ * notice is included verbatim in any distributions. No written agreement,
++ * license, or royalty fee is required for any of the authorized uses.
++ * Modifications to this software may be copyrighted by their authors
++ * and need not follow the licensing terms described here, provided that
++ * the new terms are clearly indicated on the first page of each file where
++ * they apply.
++ */
++#include "glue.h"
++
++/*
++ * isatty -- returns 1 if connected to a terminal device,
++ *           returns 0 if not. Since we're hooked up to a
++ *           serial port, we'll say yes _AND return a 1.
++ */
++int
++_DEFUN (isatty, (fd),
++       int fd)
++{
++  return (1);
++}
+diff --git a/libgloss/microblaze/kill.c b/libgloss/microblaze/kill.c
+new file mode 100644
+index 0000000..afc1257
+--- /dev/null
++++ b/libgloss/microblaze/kill.c
+@@ -0,0 +1,28 @@
++/* kill.c -- remove a process.
++ *
++ * Copyright (c) 1995 Cygnus Support
++ *
++ * The authors hereby grant permission to use, copy, modify, distribute,
++ * and license this software and its documentation for any purpose, provided
++ * that existing copyright notices are retained in all copies and that this
++ * notice is included verbatim in any distributions. No written agreement,
++ * license, or royalty fee is required for any of the authorized uses.
++ * Modifications to this software may be copyrighted by their authors
++ * and need not follow the licensing terms described here, provided that
++ * the new terms are clearly indicated on the first page of each file where
++ * they apply.
++ */
++#include "glue.h"
++
++/*
++ * kill -- go out via exit...
++ */
++int
++_DEFUN (kill, (pid, sig),
++        int pid _AND 
++        int sig)
++{
++  if(pid == __MYPID)
++    _exit(sig);
++  return 0;
++}
+diff --git a/libgloss/microblaze/longjmp.S b/libgloss/microblaze/longjmp.S
+new file mode 100644
+index 0000000..1b661fe
+--- /dev/null
++++ b/libgloss/microblaze/longjmp.S
+@@ -0,0 +1,51 @@
++/* 
++ * longjmp - non-local jump to a saved stack context
++ * args    - r5 - jmp_buf
++ *           r6 - val
++ *
++ * jmpbuf frame structure
++ * ---------------------
++ *
++ *      +-------------+         + 0
++ *      |     r1      |
++ *      +-------------+         + 4    
++ *      |     r13     |
++ *      |      .      |
++ *      |      .      |
++ *      |      .      |
++ *      |     r31     |         
++ *      +-------------+         + 80
++ *      |      .      |
++ *      |      .      |        
++ */        
++
++    
++.globl longjmp
++.section .text
++.align 2  
++.ent longjmp    
++longjmp:
++    lwi     r1, r5, 0
++    lwi     r13, r5, 4
++    lwi     r14, r5, 8
++    lwi     r15, r5, 12       
++    lwi     r16, r5, 16
++    lwi     r17, r5, 20
++    lwi     r18, r5, 24       
++    lwi     r19, r5, 28
++    lwi     r20, r5, 32
++    lwi     r21, r5, 36
++    lwi     r22, r5, 40
++    lwi     r23, r5, 44
++    lwi     r24, r5, 48
++    lwi     r25, r5, 52
++    lwi     r26, r5, 56
++    lwi     r27, r5, 60                        
++    lwi     r28, r5, 64                        
++    lwi     r29, r5, 68                        
++    lwi     r30, r5, 72
++    lwi     r31, r5, 76                                            
++
++    rtsd    r15, 8
++    or      r3, r0, r6
++.end longjmp    
+diff --git a/libgloss/microblaze/lseek.c b/libgloss/microblaze/lseek.c
+new file mode 100644
+index 0000000..1df36f5
+--- /dev/null
++++ b/libgloss/microblaze/lseek.c
+@@ -0,0 +1,31 @@
++/* lseek.c -- move read/write pointer.
++ *
++ * Copyright (c) 1995 Cygnus Support
++ *
++ * The authors hereby grant permission to use, copy, modify, distribute,
++ * and license this software and its documentation for any purpose, provided
++ * that existing copyright notices are retained in all copies and that this
++ * notice is included verbatim in any distributions. No written agreement,
++ * license, or royalty fee is required for any of the authorized uses.
++ * Modifications to this software may be copyrighted by their authors
++ * and need not follow the licensing terms described here, provided that
++ * the new terms are clearly indicated on the first page of each file where
++ * they apply.
++ */
++#include <sys/types.h>
++#include <errno.h>
++#include "glue.h"
++
++/*
++ * lseek --  Since a serial port is non-seekable, we return an error.
++ */
++off_t
++_DEFUN (lseek, (fd,  offset, whence),
++       int fd _AND
++       off_t offset _AND
++       int whence)
++{
++  errno = ESPIPE;
++  return ((off_t)-1);
++}
++
+diff --git a/libgloss/microblaze/moddi3.S b/libgloss/microblaze/moddi3.S
+new file mode 100644
+index 0000000..f0143a0
+--- /dev/null
++++ b/libgloss/microblaze/moddi3.S
+@@ -0,0 +1,100 @@
++/*
++ * Copyright (c) 2010 Xilinx, Inc.  All rights reserved. 
++ * 
++ * Xilinx, Inc. 
++ * 
++ * moddi3.S 
++ * 
++ * Modulo operation for 64 bit integers.
++ *	Input :	Op1[H] in Reg r5
++ *		Op1[L] in Reg r6		
++ *		Op2[H] in Reg r7
++ *		Op2[L] in Reg r8	
++ *	Output: Result (Op1 % op2) [H] in Reg r3
++ *		Result (Op1 % op2) [L] in Reg r4	
++ * 
++ */
++
++	.globl	__moddi3
++	.ent	__moddi3
++__moddi3:
++	.frame	r1,0,r15	
++
++/* Change the stack pointer value and Save callee saved regs */
++	addik	r1,r1,-24
++	swi	r25,r1,0
++	swi	r26,r1,4
++	swi	r27,r1,8	# used for sign
++	swi	r28,r1,12	# used for loop count
++	swi	r29,r1,16	# Used for div value High
++	swi	r30,r1,20	# Used for div value Low
++
++/* Check for Zero Value in the divisor/dividend */
++	OR	r9,r5,r6			/* Check for the op1 being zero */
++	BEQID	r9,$LaResult_Is_Zero		/* Result is zero */
++	OR	r9,r7,r8			/* Check for the dividend being zero */
++	BEQI	r9,$LaDiv_By_Zero	        /* Div_by_Zero */
++	BGEId	r5,$La1_Pos 
++	XOR	r27,r5,r7			/* Get the sign of the result */
++	RSUBI	r6,r6,0				/* Make dividend positive */
++	RSUBIC	r5,r5,0				/* Make dividend positive */
++$La1_Pos:
++	BGEI	r7,$La2_Pos
++	RSUBI	r8,r8,0				/* Make Divisor Positive */
++	RSUBIC	r9,r9,0				/* Make Divisor Positive */
++$La2_Pos:
++	ADDIK	r4,r0,0				/* Clear mod low */
++	ADDIK	r3,r0,0                	        /* Clear mod high */
++	ADDIK	r29,r0,0			/* clear div high */
++	ADDIK	r30,r0,0			/* clear div low */
++	ADDIK	r28,r0,64			/* Initialize the loop count */
++/* First part try to find the first '1' in the r5/r6 */
++$LaDIV1:
++	ADD	r6,r6,r6
++	ADDC	r5,r5,r5			/* left shift logical r5 */
++	BGEID	r5,$LaDIV1			
++	ADDIK	r28,r28,-1
++$LaDIV2:
++	ADD	r6,r6,r6
++	ADDC	r5,r5,r5	/* left shift logical r5/r6 get the '1' into the Carry */
++	ADDC	r4,r4,r4	/* Move that bit into the Mod register */
++	ADDC	r3,r3,r3	/* Move carry into high mod register */
++	rsub	r18,r7,r3	/* Compare the High Parts of Mod and Divisor */
++	bnei	r18,$L_High_EQ
++	rsub	r18,r6,r4	/* Compare Low Parts only if Mod[h] == Divisor[h] */
++$L_High_EQ:	
++	rSUB	r26,r8,r4	/* Subtract divisor[L] from Mod[L] */
++	rsubc	r25,r7,r3	/* Subtract divisor[H] from Mod[H] */
++	BLTi	r25,$LaMOD_TOO_SMALL
++	OR	r3,r0,r25	/* move r25 to mod [h] */
++	OR	r4,r0,r26	/* move r26 to mod [l] */
++	ADDI	r30,r30,1
++	ADDC	r29,r29,r0
++$LaMOD_TOO_SMALL:
++	ADDIK	r28,r28,-1
++	BEQi	r28,$LaLOOP_END
++	ADD	r30,r30,r30		/* Shift in the '1' into div [low] */
++	ADDC	r29,r29,r29		/* Move the carry generated into high */
++	BRI	$LaDIV2   /* Div2 */
++$LaLOOP_END:
++	BGEI	r27,$LaRETURN_HERE
++	rsubi	r30,r30,0
++	rsubc	r29,r29,r0
++	BRI	$LaRETURN_HERE
++$LaDiv_By_Zero:
++$LaResult_Is_Zero:
++	or	r29,r0,r0	/* set result to 0 [High] */
++	or	r30,r0,r0	/* set result to 0 [Low] */
++$LaRETURN_HERE:
++/* Restore values of CSRs and that of r29 and the divisor and the dividend */
++	
++	lwi	r25,r1,0
++	lwi	r26,r1,4
++	lwi	r27,r1,8
++	lwi	r28,r1,12
++	lwi	r29,r1,16
++	lwi	r30,r1,20
++	rtsd	r15,8
++	addik r1,r1,24
++        .end __moddi3
++	
+diff --git a/libgloss/microblaze/open.c b/libgloss/microblaze/open.c
+new file mode 100644
+index 0000000..468b11c
+--- /dev/null
++++ b/libgloss/microblaze/open.c
+@@ -0,0 +1,31 @@
++/* open.c -- open a file.
++ * 
++ * Copyright (c) 1995 Cygnus Support
++ *
++ * The authors hereby grant permission to use, copy, modify, distribute,
++ * and license this software and its documentation for any purpose, provided
++ * that existing copyright notices are retained in all copies and that this
++ * notice is included verbatim in any distributions. No written agreement,
++ * license, or royalty fee is required for any of the authorized uses.
++ * Modifications to this software may be copyrighted by their authors
++ * and need not follow the licensing terms described here, provided that
++ * the new terms are clearly indicated on the first page of each file where
++ * they apply.
++ */
++#include <errno.h>
++#include "glue.h"
++
++/*
++ * open -- open a file descriptor. We don't have a filesystem, so
++ *         we return an error.
++ */
++int
++_DEFUN (open, (buf, flags, mode),
++       const char *buf _AND
++       int flags _AND
++       int mode)
++{
++  errno = EIO;
++  return (-1);
++}
++
+diff --git a/libgloss/microblaze/print.c b/libgloss/microblaze/print.c
+new file mode 100644
+index 0000000..8f78ff2
+--- /dev/null
++++ b/libgloss/microblaze/print.c
+@@ -0,0 +1,27 @@
++/* print.c -- print a string on the output device.
++ *
++ * Copyright (c) 1995 Cygnus Support
++ *
++ * The authors hereby grant permission to use, copy, modify, distribute,
++ * and license this software and its documentation for any purpose, provided
++ * that existing copyright notices are retained in all copies and that this
++ * notice is included verbatim in any distributions. No written agreement,
++ * license, or royalty fee is required for any of the authorized uses.
++ * Modifications to this software may be copyrighted by their authors
++ * and need not follow the licensing terms described here, provided that
++ * the new terms are clearly indicated on the first page of each file where
++ * they apply.
++ */
++#include "glue.h"
++
++/*
++ * print -- do a raw print of a string
++ */ 
++void
++_DEFUN (print, (ptr),
++char *ptr)
++{
++  while (*ptr) {
++    outbyte (*ptr++);
++  }
++}
+diff --git a/libgloss/microblaze/putnum.c b/libgloss/microblaze/putnum.c
+new file mode 100644
+index 0000000..842e10f
+--- /dev/null
++++ b/libgloss/microblaze/putnum.c
+@@ -0,0 +1,41 @@
++/* putnum.c -- put a hex number on the output device.
++ * 
++ * Copyright (c) 1995 Cygnus Support
++ *
++ * The authors hereby grant permission to use, copy, modify, distribute,
++ * and license this software and its documentation for any purpose, provided
++ * that existing copyright notices are retained in all copies and that this
++ * notice is included verbatim in any distributions. No written agreement,
++ * license, or royalty fee is required for any of the authorized uses.
++ * Modifications to this software may be copyrighted by their authors
++ * and need not follow the licensing terms described here, provided that
++ * the new terms are clearly indicated on the first page of each file where
++ * they apply.
++ */
++#include "glue.h"
++
++/*
++ * putnum -- print a 32 bit number in hex
++ */
++void
++_DEFUN (putnum, (num),
++	unsigned int num)
++{
++  char  buf[9];
++  int   cnt;
++  char  *ptr;
++  int   digit;
++  
++  ptr = buf;
++  for (cnt = 7 ; cnt >= 0 ; cnt--) {
++    digit = (num >> (cnt * 4)) & 0xf;
++    
++    if (digit <= 9)
++      *ptr++ = (char) ('0' + digit);
++    else
++      *ptr++ = (char) ('a' - 10 + digit);
++  }
++
++  *ptr = (char) 0;
++  print (buf);
++}
+diff --git a/libgloss/microblaze/read.c b/libgloss/microblaze/read.c
+new file mode 100644
+index 0000000..398db7a
+--- /dev/null
++++ b/libgloss/microblaze/read.c
+@@ -0,0 +1,41 @@
++////////////////////////////////////////////////////////////////////////////////
++// Copyright (c) 2004 Xilinx, Inc.  All rights reserved. 
++// 
++// Xilinx, Inc. 
++// XILINX IS PROVIDING THIS DESIGN, CODE, OR INFORMATION "AS IS" AS A 
++// COURTESY TO YOU.  BY PROVIDING THIS DESIGN, CODE, OR INFORMATION AS 
++// ONE POSSIBLE   IMPLEMENTATION OF THIS FEATURE, APPLICATION OR 
++// STANDARD, XILINX IS MAKING NO REPRESENTATION THAT THIS IMPLEMENTATION 
++// IS FREE FROM ANY CLAIMS OF INFRINGEMENT, AND YOU ARE RESPONSIBLE 
++// FOR OBTAINING ANY RIGHTS YOU MAY REQUIRE FOR YOUR IMPLEMENTATION. 
++// XILINX EXPRESSLY DISCLAIMS ANY WARRANTY WHATSOEVER WITH RESPECT TO 
++// THE ADEQUACY OF THE IMPLEMENTATION, INCLUDING BUT NOT LIMITED TO 
++// ANY WARRANTIES OR REPRESENTATIONS THAT THIS IMPLEMENTATION IS FREE 
++// FROM CLAIMS OF INFRINGEMENT, IMPLIED WARRANTIES OF MERCHANTABILITY 
++// AND FITNESS FOR A PARTICULAR PURPOSE.
++//
++// $Id: read.c,v 1.1.2.7 2006/08/01 00:54:29 vasanth Exp $
++////////////////////////////////////////////////////////////////////////////////
++
++/* read.c -- read bytes from a input device.
++ */
++
++extern char inbyte(void);
++
++/*
++ * read  -- read bytes from the serial port. Ignore fd, since
++ *          we only have stdin.
++ */
++int
++read (int fd, char* buf, int nbytes)
++{
++  int i = 0;
++
++  for (i = 0; i < nbytes; i++) {
++    *(buf + i) = inbyte();
++    if ((*(buf + i) == '\n' || *(buf + i) == '\r')) 
++        break;
++  }
++  
++  return (i + 1);
++}
+diff --git a/libgloss/microblaze/setjmp.S b/libgloss/microblaze/setjmp.S
+new file mode 100644
+index 0000000..21e27e0
+--- /dev/null
++++ b/libgloss/microblaze/setjmp.S
+@@ -0,0 +1,50 @@
++/* 
++ * setjmp  - save stack context for non-local goto
++ * args    - r5 - jmp_buf
++ *    
++ * jmpbuf frame structure
++ * ---------------------
++ *
++ *      +-------------+         + 0
++ *      |     r1      |
++ *      +-------------+         + 4    
++ *      |     r13     |
++ *      |      .      |
++ *      |      .      |
++ *      |      .      |
++ *      |     r31     |         
++ *      +-------------+         + 80
++ *      |      .      |
++ *      |      .      |        
++ */        
++
++    
++.globl setjmp
++.section .text
++.align 2  
++.ent setjmp    
++setjmp:
++    swi     r1, r5, 0
++    swi     r13, r5, 4
++    swi     r14, r5, 8
++    swi     r15, r5, 12       
++    swi     r16, r5, 16
++    swi     r17, r5, 20
++    swi     r18, r5, 24       
++    swi     r19, r5, 28
++    swi     r20, r5, 32
++    swi     r21, r5, 36
++    swi     r22, r5, 40
++    swi     r23, r5, 44
++    swi     r24, r5, 48
++    swi     r25, r5, 52
++    swi     r26, r5, 56
++    swi     r27, r5, 60                        
++    swi     r28, r5, 64                        
++    swi     r29, r5, 68                        
++    swi     r30, r5, 72
++    swi     r31, r5, 76                                            
++
++    rtsd    r15, 8
++    or      r3, r0, r0
++.end setjmp    
+diff --git a/libgloss/microblaze/stat.c b/libgloss/microblaze/stat.c
+new file mode 100644
+index 0000000..ebb7de3
+--- /dev/null
++++ b/libgloss/microblaze/stat.c
+@@ -0,0 +1,30 @@
++/* stat.c -- Get the status of a file.
++ *
++ * Copyright (c) 1995 Cygnus Support
++ *
++ * The authors hereby grant permission to use, copy, modify, distribute,
++ * and license this software and its documentation for any purpose, provided
++ * that existing copyright notices are retained in all copies and that this
++ * notice is included verbatim in any distributions. No written agreement,
++ * license, or royalty fee is required for any of the authorized uses.
++ * Modifications to this software may be copyrighted by their authors
++ * and need not follow the licensing terms described here, provided that
++ * the new terms are clearly indicated on the first page of each file where
++ * they apply.
++ */
++#include <sys/stat.h>
++#include <errno.h>
++#include "glue.h"
++
++/*
++ * stat -- Since we have no file system, we just return an error.
++ */
++int
++_DEFUN (stat, (path, buf),
++       const char *path _AND
++       struct stat *buf)
++{
++  errno = EIO;
++  return (-1);
++}
++
+diff --git a/libgloss/microblaze/unlink.c b/libgloss/microblaze/unlink.c
+new file mode 100644
+index 0000000..15ea7e8
+--- /dev/null
++++ b/libgloss/microblaze/unlink.c
+@@ -0,0 +1,28 @@
++/* unlink.c -- remove a file.
++ * 
++ * Copyright (c) 1995 Cygnus Support
++ *
++ * The authors hereby grant permission to use, copy, modify, distribute,
++ * and license this software and its documentation for any purpose, provided
++ * that existing copyright notices are retained in all copies and that this
++ * notice is included verbatim in any distributions. No written agreement,
++ * license, or royalty fee is required for any of the authorized uses.
++ * Modifications to this software may be copyrighted by their authors
++ * and need not follow the licensing terms described here, provided that
++ * the new terms are clearly indicated on the first page of each file where
++ * they apply.
++ */
++#include <errno.h>
++#include "glue.h"
++
++/*
++ * unlink -- since we have no file system, 
++ *           we just return an error.
++ */
++int
++_DEFUN (unlink, (path),
++        char * path)
++{
++  errno = EIO;
++  return (-1);
++}
+diff --git a/libgloss/microblaze/write.c b/libgloss/microblaze/write.c
+new file mode 100644
+index 0000000..292a68e
+--- /dev/null
++++ b/libgloss/microblaze/write.c
+@@ -0,0 +1,39 @@
++/* write.c -- write bytes to an output device.
++ *
++ * Copyright (c) 1995 Cygnus Support
++ *
++ * The authors hereby grant permission to use, copy, modify, distribute,
++ * and license this software and its documentation for any purpose, provided
++ * that existing copyright notices are retained in all copies and that this
++ * notice is included verbatim in any distributions. No written agreement,
++ * license, or royalty fee is required for any of the authorized uses.
++ * Modifications to this software may be copyrighted by their authors
++ * and need not follow the licensing terms described here, provided that
++ * the new terms are clearly indicated on the first page of each file where
++ * they apply.
++ */
++#include "glue.h"
++
++extern int  _EXFUN (outbyte, (char x));
++
++/*
++ * write -- write bytes to the serial port. Ignore fd, since
++ *          stdout and stderr are the same. Since we have no filesystem,
++ *          open will only return an error.
++ */
++int
++_DEFUN (write, (fd, buf, nbytes),
++       int fd _AND
++       char *buf _AND
++       int nbytes)
++{
++  int i;
++
++  for (i = 0; i < nbytes; i++) {
++    if (*(buf + i) == '\n') {
++      outbyte ('\r');
++    }
++    outbyte (*(buf + i));
++  }
++  return (nbytes);
++}
+diff --git a/libgloss/microblaze/xil_printf.c b/libgloss/microblaze/xil_printf.c
+new file mode 100644
+index 0000000..824899d
+--- /dev/null
++++ b/libgloss/microblaze/xil_printf.c
+@@ -0,0 +1,262 @@
++/*---------------------------------------------------*/
++/* Modified from :                                   */
++/* Public Domain version of printf                   */
++/* Rud Merriam, Compsult, Inc. Houston, Tx.          */
++/* For Embedded Systems Programming, 1991            */
++/*                                                   */
++/*---------------------------------------------------*/
++
++#include <ctype.h>
++#include <string.h>
++#include <stdarg.h>
++
++extern void outbyte (char);
++
++/*----------------------------------------------------*/
++/* Use the following parameter passing structure to   */
++/* make xil_printf re-entrant.                        */
++/*----------------------------------------------------*/
++typedef struct params_s {
++    int len;
++    int num1;
++    int num2;
++    char pad_character;
++    int do_padding;
++    int left_flag;
++} params_t;
++
++/*---------------------------------------------------*/
++/* The purpose of this routine is to output data the */
++/* same as the standard printf function without the  */
++/* overhead most run-time libraries involve. Usually */
++/* the printf brings in many kilobytes of code and   */
++/* that is unacceptable in most embedded systems.    */
++/*---------------------------------------------------*/
++
++typedef char* charptr;
++typedef int (*func_ptr)(int c);
++
++/*---------------------------------------------------*/
++/*                                                   */
++/* This routine puts pad characters into the output  */
++/* buffer.                                           */
++/*                                                   */
++static void padding( const int l_flag, params_t *par)
++{
++    int i;
++
++    if (par->do_padding && l_flag && (par->len < par->num1))
++        for (i=par->len; i<par->num1; i++)
++            outbyte( par->pad_character);
++}
++
++/*---------------------------------------------------*/
++/*                                                   */
++/* This routine moves a string to the output buffer  */
++/* as directed by the padding and positioning flags. */
++/*                                                   */
++static void outs( charptr lp, params_t *par)
++{
++    /* pad on left if needed                         */
++    par->len = strlen( lp);
++    padding( !(par->left_flag), par);
++
++    /* Move string to the buffer                     */
++    while (*lp && (par->num2)--)
++        outbyte( *lp++);
++
++    /* Pad on right if needed                        */
++    /* CR 439175 - elided next stmt. Seemed bogus.   */
++    /* par->len = strlen( lp);                       */
++    padding( par->left_flag, par);
++}
++
++/*---------------------------------------------------*/
++/*                                                   */
++/* This routine moves a number to the output buffer  */
++/* as directed by the padding and positioning flags. */
++/*                                                   */
++
++static void outnum( const long n, const long base, params_t *par)
++{
++    charptr cp;
++    int negative;
++    char outbuf[32];
++    const char digits[] = "0123456789ABCDEF";
++    unsigned long num;
++
++    /* Check if number is negative                   */
++    if (base == 10 && n < 0L) {
++        negative = 1;
++        num = -(n);
++    }
++    else{
++        num = (n);
++        negative = 0;
++    }
++   
++    /* Build number (backwards) in outbuf            */
++    cp = outbuf;
++    do {
++        *cp++ = digits[(int)(num % base)];
++    } while ((num /= base) > 0);
++    if (negative)
++        *cp++ = '-';
++    *cp-- = 0;
++
++    /* Move the converted number to the buffer and   */
++    /* add in the padding where needed.              */
++    par->len = strlen(outbuf);
++    padding( !(par->left_flag), par);
++    while (cp >= outbuf)
++        outbyte( *cp--);
++    padding( par->left_flag, par);
++}
++
++/*---------------------------------------------------*/
++/*                                                   */
++/* This routine gets a number from the format        */
++/* string.                                           */
++/*                                                   */
++static int getnum( charptr* linep)
++{
++    int n;
++    charptr cp;
++
++    n = 0;
++    cp = *linep;
++    while (isdigit(*cp))
++        n = n*10 + ((*cp++) - '0');
++    *linep = cp;
++    return(n);
++}
++
++/*---------------------------------------------------*/
++/*                                                   */
++/* This routine operates just like a printf/sprintf  */
++/* routine. It outputs a set of data under the       */
++/* control of a formatting string. Not all of the    */
++/* standard C format control are supported. The ones */
++/* provided are primarily those needed for embedded  */
++/* systems work. Primarily the floaing point         */
++/* routines are omitted. Other formats could be      */
++/* added easily by following the examples shown for  */
++/* the supported formats.                            */
++/*                                                   */
++
++/* void esp_printf( const func_ptr f_ptr,
++   const charptr ctrl1, ...) */
++void xil_printf( const charptr ctrl1, ...)
++{
++
++    int long_flag;
++    int dot_flag;
++
++    params_t par;
++
++    char ch;
++    va_list argp;
++    charptr ctrl = ctrl1;
++
++    va_start( argp, ctrl1);
++
++    for ( ; *ctrl; ctrl++) {
++
++        /* move format string chars to buffer until a  */
++        /* format control is found.                    */
++        if (*ctrl != '%') {
++            outbyte(*ctrl);
++            continue;
++        }
++
++        /* initialize all the flags for this format.   */
++        dot_flag   = long_flag = par.left_flag = par.do_padding = 0;
++        par.pad_character = ' ';
++        par.num2=32767;
++
++ try_next:
++        ch = *(++ctrl);
++
++        if (isdigit(ch)) {
++            if (dot_flag)
++                par.num2 = getnum(&ctrl);
++            else {
++                if (ch == '0')
++                    par.pad_character = '0';
++
++                par.num1 = getnum(&ctrl);
++                par.do_padding = 1;
++            }
++            ctrl--;
++            goto try_next;
++        }
++
++        switch (tolower(ch)) {
++            case '%':
++                outbyte( '%');
++                continue;
++
++            case '-':
++                par.left_flag = 1;
++                break;
++
++            case '.':
++                dot_flag = 1;
++                break;
++
++            case 'l':
++                long_flag = 1;
++                break;
++
++            case 'd':
++                if (long_flag || ch == 'D') {
++                    outnum( va_arg(argp, long), 10L, &par);
++                    continue;
++                }
++                else {
++                    outnum( va_arg(argp, int), 10L, &par);
++                    continue;
++                }
++            case 'x':
++                outnum((long)va_arg(argp, int), 16L, &par);
++                continue;
++
++            case 's':
++                outs( va_arg( argp, charptr), &par);
++                continue;
++
++            case 'c':
++                outbyte( va_arg( argp, int));
++                continue;
++
++            case '\\':
++                switch (*ctrl) {
++                    case 'a':
++                        outbyte( 0x07);
++                        break;
++                    case 'h':
++                        outbyte( 0x08);
++                        break;
++                    case 'r':
++                        outbyte( 0x0D);
++                        break;
++                    case 'n':
++                        outbyte( 0x0D);
++                        outbyte( 0x0A);
++                        break;
++                    default:
++                        outbyte( *ctrl);
++                        break;
++                }
++                ctrl++;
++                break;
++
++            default:
++                continue;
++        }
++        goto try_next;
++    }
++    va_end( argp);
++}
++
++/*---------------------------------------------------*/
+-- 
+1.7.1
+
