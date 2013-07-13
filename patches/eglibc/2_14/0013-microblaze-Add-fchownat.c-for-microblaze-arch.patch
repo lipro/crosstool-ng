@@ -1,0 +1,21 @@
+From f469be1c0eb338c4207f8e79c5d67567a2d76c9e Mon Sep 17 00:00:00 2001
+From: David Holsgrove <david.holsgrove@petalogix.com>
+Date: Thu, 26 Jan 2012 16:25:10 +1000
+Subject: [PATCH 13/41] microblaze: Add fchownat.c for microblaze arch
+
+Signed-off-by: David Holsgrove <david.holsgrove@petalogix.com>
+---
+ sysdeps/unix/sysv/linux/microblaze/fchownat.c |    1 +
+ 1 files changed, 1 insertions(+), 0 deletions(-)
+ create mode 100644 sysdeps/unix/sysv/linux/microblaze/fchownat.c
+
+diff --git a/sysdeps/unix/sysv/linux/microblaze/fchownat.c b/sysdeps/unix/sysv/linux/microblaze/fchownat.c
+new file mode 100644
+index 0000000..dfed76a
+--- /dev/null
++++ b/sysdeps/unix/sysv/linux/microblaze/fchownat.c
+@@ -0,0 +1 @@
++#include <sysdeps/unix/sysv/linux/i386/fchownat.c>
+-- 
+1.7.1
+

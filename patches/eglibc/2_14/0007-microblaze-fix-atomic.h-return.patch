@@ -1,0 +1,138 @@
+From af1e166417cc6f709f52095f91165bf13ff24c9b Mon Sep 17 00:00:00 2001
+From: David Holsgrove <david.holsgrove@petalogix.com>
+Date: Wed, 25 Jan 2012 14:22:02 +1000
+Subject: [PATCH 07/41] microblaze: fix atomic.h return
+
+Signed-off-by: David Holsgrove <david.holsgrove@petalogix.com>
+---
+ .../unix/sysv/linux/microblaze/bits/atomic.h       |   63 --------------------
+ sysdeps/microblaze/bits/atomic.h                   |   30 +++++-----
+ 2 files changed, 15 insertions(+), 78 deletions(-)
+ delete mode 100644 nptl/sysdeps/unix/sysv/linux/microblaze/bits/atomic.h
+
+diff --git a/nptl/sysdeps/unix/sysv/linux/microblaze/bits/atomic.h b/nptl/sysdeps/unix/sysv/linux/microblaze/bits/atomic.h
+deleted file mode 100644
+index e106e24..0000000
+--- a/nptl/sysdeps/unix/sysv/linux/microblaze/bits/atomic.h
++++ /dev/null
+@@ -1,63 +0,0 @@
+-/* Copyright (C) 2002, 2003, 2004, 2005 Free Software Foundation, Inc.
+-   This file is part of the GNU C Library.
+-
+-   The GNU C Library is free software; you can redistribute it and/or
+-   modify it under the terms of the GNU Lesser General Public
+-   License as published by the Free Software Foundation; either
+-   version 2.1 of the License, or (at your option) any later version.
+-
+-   The GNU C Library is distributed in the hope that it will be useful,
+-   but WITHOUT ANY WARRANTY; without even the implied warranty of
+-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+-   Lesser General Public License for more details.
+-
+-   You should have received a copy of the GNU Lesser General Public
+-   License along with the GNU C Library; if not, write to the Free
+-   Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
+-   02111-1307 USA.  */
+-
+-#include <stdint.h>
+-#include <sysdep.h>
+-
+-
+-typedef int8_t atomic8_t;
+-typedef uint8_t uatomic8_t;
+-typedef int_fast8_t atomic_fast8_t;
+-typedef uint_fast8_t uatomic_fast8_t;
+-
+-typedef int32_t atomic32_t;
+-typedef uint32_t uatomic32_t;
+-typedef int_fast32_t atomic_fast32_t;
+-typedef uint_fast32_t uatomic_fast32_t;
+-
+-typedef intptr_t atomicptr_t;
+-typedef uintptr_t uatomicptr_t;
+-typedef intmax_t atomic_max_t;
+-typedef uintmax_t uatomic_max_t;
+-
+-void __microblaze_link_error (void);
+-
+-/* Atomic compare and exchange.  This sequence relies on the kernel to
+-   provide a compare and exchange operation which is atomic on the
+-   current architecture  */
+-
+-#define __arch_compare_and_exchange_val_8_acq(mem, newval, oldval) \
+-  ({ __microblaze_link_error (); oldval; })
+-
+-#define __arch_compare_and_exchange_val_16_acq(mem, newval, oldval) \
+-  ({ __microblaze_link_error (); oldval; })
+-
+-/* It doesn't matter what register is used for a_oldval2, but we must
+-   specify one to work around GCC PR rtl-optimization/21223.  Otherwise
+-   it may cause a_oldval or a_tmp to be moved to a different register.  */
+-
+-/* REVISIT: Not really atomic */
+-/* REVISIT: Already defined in sysdeps/microblaze/bits/atomic.h */
+-#define __arch_compare_and_exchange_val_32_acq(mem, newval, oldval)	\
+-   ({ __typeof (*mem) result;						\
+-      result = *mem;            					\
+-      if (result == oldval) *mem = newval;            		\
+-      result; })
+-
+-#define __arch_compare_and_exchange_val_64_acq(mem, newval, oldval) \
+-  ({ __microblaze_link_error (); oldval; })
+diff --git a/sysdeps/microblaze/bits/atomic.h b/sysdeps/microblaze/bits/atomic.h
+index 365872c..da0e941 100644
+--- a/sysdeps/microblaze/bits/atomic.h
++++ b/sysdeps/microblaze/bits/atomic.h
+@@ -35,13 +35,13 @@ typedef uintptr_t uatomicptr_t;
+ typedef intmax_t atomic_max_t;
+ typedef uintmax_t uatomic_max_t;
+ 
+-void __microblaze_link_error (void);
++//void __microblaze_link_error (void);
+ 
+ /* REVISIT: This is not atomic, we need to use a swap instruction */
+-#define atomic_exchange_acq(mem, newvalue)				\
+-   ({ __typeof (*mem) result;						\
+-      result = *mem;            					\
+-      *mem = newvalue;            					\
++#define atomic_exchange_acq(mem, newvalue)          \
++   ({ __typeof (*mem) result;                       \
++      result = *mem;                                \
++      *mem = newvalue;                              \
+       result; })
+ 
+ /* Atomic compare and exchange.  These sequences are not actually atomic;
+@@ -49,20 +49,20 @@ void __microblaze_link_error (void);
+    swaps.  */
+ 
+ #define __arch_compare_and_exchange_val_8_acq(mem, newval, oldval) 	\
+-   ({ __typeof (*mem) result;						\
+-      result = *mem;            					\
+-      if (result == oldval) *mem = newval;            		\
+-      result; })
++   ({ __typeof (*mem) archmem = (*mem);           \
++      __typeof (oldval) archold = (oldval);       \
++      if (archmem == oldval) *mem = newval;       \
++      archold; })
+ 
+ #define __arch_compare_and_exchange_val_16_acq(mem, newval, oldval)     \
+-  ({ __microblaze_link_error (); oldval; })
++  (abort (), (__typeof (*mem)) 0)
+ 
+ /* REVISIT : This is not atomic */
+ #define __arch_compare_and_exchange_val_32_acq(mem, newval, oldval)	\
+-   ({ __typeof (*mem) result;						\
+-      result = *mem;            					\
+-      if (result == oldval) *mem = newval;            		\
+-      result; })
++   ({ __typeof (*mem) archmem = (*mem);           \
++      __typeof (oldval) archold = (oldval);       \
++      if (archmem == oldval) *mem = newval;       \
++      archold; })
+ 
+ #define __arch_compare_and_exchange_val_64_acq(mem, newval, oldval) \
+-  ({ __microblaze_link_error (); oldval; })
++  (abort (), (__typeof (*mem)) 0)
+-- 
+1.7.1
+

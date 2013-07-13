@@ -1,0 +1,108 @@
+From 0fb21549b76eb215fa6d90e8d08a9dd202237152 Mon Sep 17 00:00:00 2001
+From: David Holsgrove <david.holsgrove@petalogix.com>
+Date: Wed, 4 Jan 2012 13:56:48 +1000
+Subject: [PATCH 03/41] Port microblaze so_scripts and configure additions
+
+Signed-off-by: David Holsgrove <david.holsgrove@petalogix.com>
+---
+ configure                            |    1 +
+ scripts/config.sub                   |    4 ++--
+ so_scripts/libc.so                   |    5 +++++
+ so_scripts/libpthread.so             |    5 +++++
+ sysdeps/unix/sysv/linux/configure    |    5 +++++
+ sysdeps/unix/sysv/linux/configure.in |    5 +++++
+ 6 files changed, 23 insertions(+), 2 deletions(-)
+ create mode 100644 so_scripts/libc.so
+ create mode 100644 so_scripts/libpthread.so
+
+diff --git a/configure b/configure
+index ababc09..986e122 100755
+--- a/configure
++++ b/configure
+@@ -4245,6 +4245,7 @@ i[34567]86)	base_machine=i386 machine=i386/$machine ;;
+ ia64)		base_machine=ia64 machine=ia64 ;;
+ m88???)		base_machine=m88k machine=m88k/$machine ;;
+ m88k)		base_machine=m88k machine=m88k/m88100 ;;
++microblaze*)	base_machine=microblaze machine=microblaze ;;
+ powerpc)	base_machine=powerpc machine=powerpc/powerpc32 ;;
+ powerpc64)	base_machine=powerpc machine=powerpc/powerpc64 ;;
+ s390)           base_machine=s390 machine=s390/s390-32 ;;
+diff --git a/scripts/config.sub b/scripts/config.sub
+index 459eb41..3814d0c 100755
+--- a/scripts/config.sub
++++ b/scripts/config.sub
+@@ -260,7 +260,7 @@ case $basic_machine in
+ 	| ip2k | iq2000 \
+ 	| lm32 \
+ 	| m32c | m32r | m32rle | m68000 | m68k | m88k \
+-	| maxq | mb | microblaze | mcore | mep | metag \
++	| maxq | mb | microblaze | microblazee[lb] | mcore | mep | metag \
+ 	| mips | mipsbe | mipseb | mipsel | mipsle \
+ 	| mips16 \
+ 	| mips64 | mips64el \
+@@ -357,7 +357,7 @@ case $basic_machine in
+ 	| lm32-* \
+ 	| m32c-* | m32r-* | m32rle-* \
+ 	| m68000-* | m680[012346]0-* | m68360-* | m683?2-* | m68k-* \
+-	| m88110-* | m88k-* | maxq-* | mcore-* | metag-* | microblaze-* \
++	| m88110-* | m88k-* | maxq-* | mcore-* | metag-* | microblaze*-* \
+ 	| mips-* | mipsbe-* | mipseb-* | mipsel-* | mipsle-* \
+ 	| mips16-* \
+ 	| mips64-* | mips64el-* \
+diff --git a/so_scripts/libc.so b/so_scripts/libc.so
+new file mode 100644
+index 0000000..b525e69
+--- /dev/null
++++ b/so_scripts/libc.so
+@@ -0,0 +1,5 @@
++/* GNU ld script
++   Use the shared library, but some functions are only in
++   the static library, so try that secondarily.  */
++OUTPUT_FORMAT(elf32-microblaze)
++GROUP ( libc.so.6 libc_nonshared.a )
+diff --git a/so_scripts/libpthread.so b/so_scripts/libpthread.so
+new file mode 100644
+index 0000000..f7c49aa
+--- /dev/null
++++ b/so_scripts/libpthread.so
+@@ -0,0 +1,5 @@
++/* GNU ld script
++   Use the shared library, but some functions are only in
++   the static library, so try that secondarily.  */
++OUTPUT_FORMAT(elf32-microblaze)
++GROUP ( libpthread.so.0 libpthread_nonshared.a )
+diff --git a/sysdeps/unix/sysv/linux/configure b/sysdeps/unix/sysv/linux/configure
+index fad0ed1..87166ce 100644
+--- a/sysdeps/unix/sysv/linux/configure
++++ b/sysdeps/unix/sysv/linux/configure
+@@ -223,6 +223,11 @@ case "$machine" in
+     arch_minimum_kernel=2.0.10
+     libc_cv_gcc_unwind_find_fde=yes
+     ;;
++  microblaze*)
++    arch_minimum_kernel=2.0.10
++    libc_cv_gcc_unwind_find_fde=yes
++    libc_cv_fpie=no
++    ;;
+   powerpc/powerpc32)
+     libc_cv_gcc_unwind_find_fde=yes
+     arch_minimum_kernel=2.0.10
+diff --git a/sysdeps/unix/sysv/linux/configure.in b/sysdeps/unix/sysv/linux/configure.in
+index 3f1daab..3e79037 100644
+--- a/sysdeps/unix/sysv/linux/configure.in
++++ b/sysdeps/unix/sysv/linux/configure.in
+@@ -62,6 +62,11 @@ case "$machine" in
+     arch_minimum_kernel=2.0.10
+     libc_cv_gcc_unwind_find_fde=yes
+     ;;
++  microblaze*)
++    arch_minimum_kernel=2.0.10
++    libc_cv_gcc_unwind_find_fde=yes
++    libc_cv_fpie=no
++    ;;
+   powerpc/powerpc32)
+     libc_cv_gcc_unwind_find_fde=yes
+     arch_minimum_kernel=2.0.10
+-- 
+1.7.1
+

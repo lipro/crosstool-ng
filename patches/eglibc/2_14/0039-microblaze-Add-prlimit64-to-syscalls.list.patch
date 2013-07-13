@@ -1,0 +1,28 @@
+From c163d0da08eec67b97b28888d00a5f676e214838 Mon Sep 17 00:00:00 2001
+From: David Holsgrove <david.holsgrove@petalogix.com>
+Date: Mon, 8 Oct 2012 18:03:22 +1000
+Subject: [PATCH 39/41] microblaze: Add prlimit64 to syscalls.list
+
+Prevents undefined reference to `prlimit64' when linking to libc.so.6
+
+Comparing to powerpc, we also seem to be missing fanotify_mark
+
+Signed-off-by: David Holsgrove <david.holsgrove@petalogix.com>
+---
+ sysdeps/unix/sysv/linux/microblaze/syscalls.list |    3 +++
+ 1 files changed, 3 insertions(+), 0 deletions(-)
+
+diff --git a/sysdeps/unix/sysv/linux/microblaze/syscalls.list b/sysdeps/unix/sysv/linux/microblaze/syscalls.list
+index 98d3066..c69d83b 100644
+--- a/sysdeps/unix/sysv/linux/microblaze/syscalls.list
++++ b/sysdeps/unix/sysv/linux/microblaze/syscalls.list
+@@ -3,3 +3,6 @@
+ cacheflush	EXTRA	cacheflush	i:iiii	__cacheflush	cacheflush
+ oldgetrlimit	EXTRA	getrlimit	i:ip	__old_getrlimit	getrlimit@GLIBC_2.0
+ oldsetrlimit	EXTRA	setrlimit	i:ip	__old_setrlimit	setrlimit@GLIBC_2.0
++
++prlimit64	EXTRA	prlimit64	i:iipp	prlimit64
++fanotify_mark	EXTRA	fanotify_mark	i:iiiiis	fanotify_mark
+-- 
+1.7.1
+
