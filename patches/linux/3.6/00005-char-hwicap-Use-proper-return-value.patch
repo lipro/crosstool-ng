@@ -1,0 +1,40 @@
+From a43f26e2cf30d90388176302be33428c4d96cdc7 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Mon, 8 Oct 2012 13:13:11 +0200
+Subject: [PATCH] char: hwicap: Use proper return value
+
+Revert the part of commit
+"Xilinx: hwicap: cleanup polling timeout."
+(sha1: 63104f67d1b647cadf6f356094637355d6979258)
+because EBUSY is better reaction then EIO.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ drivers/char/xilinx_hwicap/buffer_icap.c |    4 ++--
+ 1 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/char/xilinx_hwicap/buffer_icap.c b/drivers/char/xilinx_hwicap/buffer_icap.c
+index cc4e29a..05d8977 100644
+--- a/drivers/char/xilinx_hwicap/buffer_icap.c
++++ b/drivers/char/xilinx_hwicap/buffer_icap.c
+@@ -205,7 +205,7 @@ static int buffer_icap_device_read(struct hwicap_drvdata *drvdata,
+ 	while (buffer_icap_busy(base_address)) {
+ 		retries++;
+ 		if (retries > XHI_MAX_RETRIES)
+-			return -EIO;
++			return -EBUSY;
+ 	}
+ 	return 0;
+ 
+@@ -239,7 +239,7 @@ static int buffer_icap_device_write(struct hwicap_drvdata *drvdata,
+ 	while (buffer_icap_busy(base_address)) {
+ 		retries++;
+ 		if (retries > XHI_MAX_RETRIES)
+-			return -EIO;
++			return -EBUSY;
+ 	}
+ 	return 0;
+ 
+-- 
+1.7.1
+

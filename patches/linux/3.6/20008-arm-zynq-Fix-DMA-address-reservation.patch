@@ -1,0 +1,34 @@
+From e5e837dd202794530da7a2929cdf150a6ba964f1 Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Mon, 10 Dec 2012 17:25:01 +0100
+Subject: [PATCH] arm: zynq: Fix DMA address reservation
+
+This is not going to be revisit of this dma address reservation.
+The intention of this patch is remove compilation bug
+when CONFIG_ARM_PATCH_PHYS_VIRT=y is selected.
+
+Log:
+arch/arm/mach-zynq/common.c: In function 'xilinx_memory_init':
+arch/arm/mach-zynq/common.c:108:6: warning: "CONFIG_PHYS_OFFSET" is not defined [-Wundef]
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+---
+ arch/arm/mach-zynq/common.c |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/arch/arm/mach-zynq/common.c b/arch/arm/mach-zynq/common.c
+index 22a267d..efd8312 100644
+--- a/arch/arm/mach-zynq/common.c
++++ b/arch/arm/mach-zynq/common.c
+@@ -105,7 +105,7 @@ void __init xilinx_map_io(void)
+  */
+ void __init xilinx_memory_init()
+ {
+-#if (CONFIG_PHYS_OFFSET == 0)
++#if defined(CONFIG_PHYS_OFFSET) && (CONFIG_PHYS_OFFSET == 0)
+ 	/* Reserve the 0-0x4000 addresses (before page tables and kernel)
+ 	 * which can't be used for DMA
+ 	 */
+-- 
+1.7.1
+

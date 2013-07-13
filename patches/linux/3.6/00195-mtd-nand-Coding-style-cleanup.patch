@@ -1,0 +1,37 @@
+From 19dc4a622045f9e3463c11d03c80bee57a646dad Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Mon, 22 Oct 2012 15:37:37 +0200
+Subject: [PATCH] mtd: nand: Coding style cleanup
+
+Remove trailing white space.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ drivers/mtd/nand/xilinx_nandpss.c |    4 ++--
+ 1 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/mtd/nand/xilinx_nandpss.c b/drivers/mtd/nand/xilinx_nandpss.c
+index d8bc174..4bba115 100644
+--- a/drivers/mtd/nand/xilinx_nandpss.c
++++ b/drivers/mtd/nand/xilinx_nandpss.c
+@@ -1185,7 +1185,7 @@ static int __devinit xnandpss_probe(struct platform_device *pdev)
+ 		nand_chip->ecc.read_oob = xnandpss_read_oob;
+ 		nand_chip->ecc.write_oob = xnandpss_write_oob;
+ 		nand_chip->ecc.strength = 1;
+-	
++
+ 		switch (mtd->writesize) {
+ 		case 512:
+ 			ecc_page_size = 0x1;
+@@ -1302,7 +1302,7 @@ static int __devexit xnandpss_remove(struct platform_device *pdev)
+ }
+ 
+ #ifdef CONFIG_OF
+-static struct xnand_platform_data xnandpss_config; 
++static struct xnand_platform_data xnandpss_config;
+ 
+ /* Match table for device tree binding */
+ static const struct of_device_id __devinitconst xnandpss_of_match[] = {
+-- 
+1.7.1
+

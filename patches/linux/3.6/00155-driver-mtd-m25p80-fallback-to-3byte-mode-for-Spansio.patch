@@ -1,0 +1,59 @@
+From 2cc8e81ace3efcf5821a2dbc73a2e313ce7607db Mon Sep 17 00:00:00 2001
+From: Jason Wu <jason.wu@petalogix.com>
+Date: Mon, 20 Aug 2012 15:52:32 +1000
+Subject: [PATCH] driver:mtd:m25p80: fallback to 3byte mode for Spansion flashes
+
+Read the bank register to make sure the spi flash is in 4byte mode. If it
+fails to set it to 4byte mode, fallback to 3-byte address mode.
+
+Signed-off-by: Jason Wu <jason.wu@petalogix.com>
+---
+ drivers/mtd/devices/m25p80.c |   18 ++++++++++++++++--
+ 1 files changed, 16 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/mtd/devices/m25p80.c b/drivers/mtd/devices/m25p80.c
+index 9d11fde..94772a7 100644
+--- a/drivers/mtd/devices/m25p80.c
++++ b/drivers/mtd/devices/m25p80.c
+@@ -66,6 +66,7 @@
+ 
+ /* Used for Spansion flashes only. */
+ #define	OPCODE_BRWR		0x17	/* Bank register write */
++#define	OPCODE_BRRD		0x16	/* Bank register write */
+ 
+ /* Status Register bits. */
+ #define	SR_WIP			1	/* Write in progress */
+@@ -173,6 +174,9 @@ static inline int write_disable(struct m25p *flash)
+  */
+ static inline int set_4byte(struct m25p *flash, u32 jedec_id, int enable)
+ {
++	int ret;
++	u8 val;
++
+ 	switch (JEDEC_MFR(jedec_id)) {
+ 	case CFI_MFR_MACRONIX:
+ 		flash->command[0] = enable ? OPCODE_EN4B : OPCODE_EX4B;
+@@ -180,8 +184,18 @@ static inline int set_4byte(struct m25p *flash, u32 jedec_id, int enable)
+ 	default:
+ 		/* Spansion style */
+ 		flash->command[0] = OPCODE_BRWR;
+-		flash->command[1] = enable << 7;
+-		return spi_write(flash->spi, flash->command, 2);
++		flash->command[1] = enable << 7 ;
++		ret = spi_write(flash->spi, flash->command, 2);
++
++		/* verify the 4 byte mode is enabled */
++		flash->command[0] = OPCODE_BRRD;
++		spi_write_then_read(flash->spi, flash->command, 1, &val, 1);
++		if (val != enable << 7) {
++			dev_warn(&flash->spi->dev, "fallback to 3-byte address mode\n");
++			dev_warn(&flash->spi->dev, "maximum accessible size is 16MB\n");
++			flash->addr_width = 3;
++		}
++		return ret;
+ 	}
+ }
+ 
+-- 
+1.7.1
+

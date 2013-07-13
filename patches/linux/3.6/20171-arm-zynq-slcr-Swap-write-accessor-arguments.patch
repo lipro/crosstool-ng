@@ -1,0 +1,73 @@
+From 6ed6fc260e4ba56765a2a29407e3bc75c30c92d9 Mon Sep 17 00:00:00 2001
+From: Soren Brinkmann <soren.brinkmann@xilinx.com>
+Date: Mon, 4 Feb 2013 11:05:06 +0100
+Subject: [PATCH] arm: zynq: slcr: Swap write accessor arguments
+
+Follow the argument order of (__raw_)write* accessors in the
+xslcr_write function - hence swapping the offset and value argument.
+
+Signed-off-by: Soren Brinkmann <soren.brinkmann@xilinx.com>
+---
+ arch/arm/mach-zynq/include/mach/slcr.h |    2 +-
+ arch/arm/mach-zynq/slcr.c              |   12 ++++++------
+ 2 files changed, 7 insertions(+), 7 deletions(-)
+
+diff --git a/arch/arm/mach-zynq/include/mach/slcr.h b/arch/arm/mach-zynq/include/mach/slcr.h
+index a921406..7795012 100644
+--- a/arch/arm/mach-zynq/include/mach/slcr.h
++++ b/arch/arm/mach-zynq/include/mach/slcr.h
+@@ -15,7 +15,7 @@
+ #ifndef __MACH_SLCR_H__
+ #define __MACH_SLCR_H__
+ 
+-extern void xslcr_write(u32 offset, u32 val);
++extern void xslcr_write(u32 val, u32 offset);
+ extern u32 xslcr_read(u32 offset);
+ 
+ extern void xslcr_system_reset(void);
+diff --git a/arch/arm/mach-zynq/slcr.c b/arch/arm/mach-zynq/slcr.c
+index 1fbb32f..6d1c3b7 100644
+--- a/arch/arm/mach-zynq/slcr.c
++++ b/arch/arm/mach-zynq/slcr.c
+@@ -1616,7 +1616,7 @@ void xslcr_system_reset(void)
+  * @offset:	Register offset in SLCR block
+  * @val:	Value to write to the register
+  **/
+-void xslcr_write(u32 offset, u32 val)
++void xslcr_write(u32 val, u32 offset)
+ {
+ 	xslcr_writereg(slcr->regs + offset, val);
+ }
+@@ -1642,13 +1642,13 @@ void xslcr_init_preload_fpga(void)
+ {
+ 
+ 	/* Assert FPGA top level output resets */
+-	xslcr_write(XSLCR_FPGA_RST_CTRL_OFFSET, 0xF);
++	xslcr_write(0xF, XSLCR_FPGA_RST_CTRL_OFFSET);
+ 
+ 	/* Disable level shifters */
+-	xslcr_write(XSLCR_LVL_SHFTR_EN_OFFSET, 0x0);
++	xslcr_write(0, XSLCR_LVL_SHFTR_EN_OFFSET);
+ 
+ 	/* Enable output level shifters */
+-	xslcr_write(XSLCR_LVL_SHFTR_EN_OFFSET, 0xA);
++	xslcr_write(0xA, XSLCR_LVL_SHFTR_EN_OFFSET);
+ }
+ EXPORT_SYMBOL(xslcr_init_preload_fpga);
+ 
+@@ -1659,10 +1659,10 @@ void xslcr_init_postload_fpga(void)
+ {
+ 
+ 	/* Enable level shifters */
+-	xslcr_write(XSLCR_LVL_SHFTR_EN_OFFSET, 0xF);
++	xslcr_write(0xf, XSLCR_LVL_SHFTR_EN_OFFSET);
+ 
+ 	/* Deassert AXI interface resets */
+-	xslcr_write(XSLCR_FPGA_RST_CTRL_OFFSET, 0x0);
++	xslcr_write(0, XSLCR_FPGA_RST_CTRL_OFFSET);
+ }
+ EXPORT_SYMBOL(xslcr_init_postload_fpga);
+ 
+-- 
+1.7.1
+

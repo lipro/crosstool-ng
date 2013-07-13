@@ -1,0 +1,29 @@
+From 061d3121e6a862a41f44b751158496a8c54b3b83 Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Tue, 13 Nov 2012 10:49:10 +0100
+Subject: [PATCH] nand: Remove ARCH_XILINX reference
+
+Remove old unused ARCH_XILINX platform name.
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+Acked-by: John Linn <john.linn@xilinx.com>
+---
+ drivers/mtd/nand/Kconfig |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/drivers/mtd/nand/Kconfig b/drivers/mtd/nand/Kconfig
+index 86fea96..d049aef 100644
+--- a/drivers/mtd/nand/Kconfig
++++ b/drivers/mtd/nand/Kconfig
+@@ -596,7 +596,7 @@ config MTD_NAND_NUC900
+ 
+ config MTD_NAND_XILINX_PSS
+ 	tristate "Xilinx PSS NAND flash Driver"
+-	depends on MTD_NAND && (ARCH_XILINX || ARCH_ZYNQ)
++	depends on MTD_NAND && ARCH_ZYNQ
+ 	help
+ 	  This enables access to the NAND flash device on Xilinx PSS.
+ 
+-- 
+1.7.1
+

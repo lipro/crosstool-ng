@@ -1,0 +1,28 @@
+From 9422c36a1d085f36a8e973f0481abb22a6e71ee4 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Mon, 22 Oct 2012 13:46:35 +0200
+Subject: [PATCH] arm: zynq: Remove xttcpss_sys_timer declaration
+
+It is already done in common.h.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ arch/arm/mach-zynq/board_zc770.c |    2 --
+ 1 files changed, 0 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/mach-zynq/board_zc770.c b/arch/arm/mach-zynq/board_zc770.c
+index 6c97cf7..fc5b836 100644
+--- a/arch/arm/mach-zynq/board_zc770.c
++++ b/arch/arm/mach-zynq/board_zc770.c
+@@ -24,8 +24,6 @@
+ 
+ #define USB_RST_GPIO	7
+ 
+-extern struct sys_timer xttcpss_sys_timer;
+-
+ static void __init board_zc770_init(void)
+ {
+ 
+-- 
+1.7.1
+

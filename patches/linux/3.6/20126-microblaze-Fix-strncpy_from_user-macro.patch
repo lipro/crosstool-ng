@@ -1,0 +1,44 @@
+From bbec399b7148ac7799d6554fa10dbb5284d6adc5 Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Wed, 16 Jan 2013 18:53:22 +0100
+Subject: [PATCH] microblaze: Fix strncpy_from_user macro
+
+Problem happens when len in strncpy_from_user is setup
+and passing string has len-1 chars + \0 terminated
+character. In this case was returned incorrect length
+of the string.
+It should always retunrs the length of the string
+(not including the trailing NULL).
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+---
+ arch/microblaze/lib/uaccess_old.S |    9 ++++-----
+ 1 files changed, 4 insertions(+), 5 deletions(-)
+
+diff --git a/arch/microblaze/lib/uaccess_old.S b/arch/microblaze/lib/uaccess_old.S
+index f085995..0e8cc27 100644
+--- a/arch/microblaze/lib/uaccess_old.S
++++ b/arch/microblaze/lib/uaccess_old.S
+@@ -38,15 +38,14 @@ __strncpy_user:
+ 	addik	r3,r7,0		/* temp_count = len */
+ 1:
+ 	lbu	r4,r6,r0
++	beqid	r4,2f
+ 	sb	r4,r5,r0
+ 
+-	addik	r3,r3,-1
+-	beqi	r3,2f		/* break on len */
+-
+ 	addik	r5,r5,1
+-	bneid	r4,1b
+ 	addik	r6,r6,1		/* delay slot */
+-	addik	r3,r3,1		/* undo "temp_count--" */
++
++	addik	r3,r3,-1
++	bnei	r3,1b		/* break on len */
+ 2:
+ 	rsubk	r3,r3,r7	/* temp_count = len - temp_count */
+ 3:
+-- 
+1.7.1
+

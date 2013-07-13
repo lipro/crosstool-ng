@@ -1,0 +1,30 @@
+From 77808581b24e27c380e34140926a9d28819d0812 Mon Sep 17 00:00:00 2001
+From: Soren Brinkmann <soren.brinkmann@xilinx.com>
+Date: Mon, 17 Dec 2012 10:27:02 -0800
+Subject: [PATCH] arm: zynq: platform_devices: Add headers
+
+Adding mach/pdev.h and common.h to avoid sparse warning about
+undeclared functions.
+
+Signed-off-by: Soren Brinkmann <soren.brinkmann@xilinx.com>
+---
+ arch/arm/mach-zynq/platform_devices.c |    2 ++
+ 1 files changed, 2 insertions(+), 0 deletions(-)
+
+diff --git a/arch/arm/mach-zynq/platform_devices.c b/arch/arm/mach-zynq/platform_devices.c
+index 18fe0ba..5af2667 100644
+--- a/arch/arm/mach-zynq/platform_devices.c
++++ b/arch/arm/mach-zynq/platform_devices.c
+@@ -22,7 +22,9 @@
+ #include <linux/amba/xilinx_dma.h>
+ #include <linux/xilinx_devices.h>
+ #include <mach/dma.h>
++#include <mach/pdev.h>
+ #include <asm/pmu.h>
++#include "common.h"
+ 
+ #define DMAC0_BASE		(0xF8003000)
+ #define IRQ_DMAC0_ABORT		45
+-- 
+1.7.1
+

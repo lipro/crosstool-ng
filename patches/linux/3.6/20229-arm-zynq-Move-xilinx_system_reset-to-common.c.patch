@@ -1,0 +1,48 @@
+From c6022c50b3933b2b2a3233af3ff7e280fef4a531 Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Tue, 12 Mar 2013 12:04:23 +0100
+Subject: [PATCH] arm: zynq: Move xilinx_system_reset to common.c
+
+Move this function out of header.
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+---
+ arch/arm/mach-zynq/common.c |    5 +++++
+ arch/arm/mach-zynq/common.h |    5 -----
+ 2 files changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/arch/arm/mach-zynq/common.c b/arch/arm/mach-zynq/common.c
+index 482f8e6..26112e1 100644
+--- a/arch/arm/mach-zynq/common.c
++++ b/arch/arm/mach-zynq/common.c
+@@ -226,6 +226,11 @@ static void __init xilinx_init_machine(void)
+ 	of_platform_populate(NULL, of_default_bus_match_table, NULL, NULL);
+ }
+ 
++static void xilinx_system_reset(char mode, const char *cmd)
++{
++	xslcr_system_reset();
++}
++
+ static const char * const xilinx_dt_match[] = {
+ 	"xlnx,zynq-zc702",
+ 	"xlnx,zynq-zc706",
+diff --git a/arch/arm/mach-zynq/common.h b/arch/arm/mach-zynq/common.h
+index 19ec642..6999af9 100644
+--- a/arch/arm/mach-zynq/common.h
++++ b/arch/arm/mach-zynq/common.h
+@@ -24,11 +24,6 @@ void platform_device_init(void);
+ 
+ int __cpuinit zynq_cpun_start(u32 address, int cpu);
+ 
+-static inline void xilinx_system_reset(char mode, const char *cmd)
+-{
+-	xslcr_system_reset();
+-}
+-
+ /* multiplatform use core.h for this purpose */
+ extern void secondary_startup(void);
+ 
+-- 
+1.7.1
+

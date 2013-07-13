@@ -1,0 +1,90 @@
+From c686075c73991ea18dd343b6ff9478031d4a8fd1 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Thu, 16 Aug 2012 15:53:35 +0200
+Subject: [PATCH] microblaze: Fix bug with passing command line
+
+When u-boot passes control over to Linux it places the Linux command
+line between to the end of __init_end. When space between
+__init_end and __bss_start is not COMMAND_LINE_SIZE then
+the part of cmdline can be lost.
+In extreme case if __init_end == __bss_start u-boot can't pass
+any cmdline to Linux kernel.
+
+This patch fix this issue by copying cmd line directly to
+cmd_line char array which is placed in data section.
+
+Reported-by: David Mc Andrew <david.mcandrew@xilinx.com>
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ arch/microblaze/kernel/head.S  |   14 +++++++++-----
+ arch/microblaze/kernel/setup.c |   13 ++++++-------
+ 2 files changed, 15 insertions(+), 12 deletions(-)
+
+diff --git a/arch/microblaze/kernel/head.S b/arch/microblaze/kernel/head.S
+index 98b17f9..eef84de 100644
+--- a/arch/microblaze/kernel/head.S
++++ b/arch/microblaze/kernel/head.S
+@@ -109,20 +109,24 @@ no_fdt_arg:
+ #ifndef CONFIG_CMDLINE_BOOL
+ /*
+  * handling command line
+- * copy command line to __init_end. There is space for storing command line.
++ * copy command line directly to cmd_line placed in data section.
+  */
++	beqid	r5, skip	/* Skip if NULL pointer */
+ 	or	r6, r0, r0		/* incremment */
+-	ori	r4, r0, __init_end	/* load address of command line */
++	ori	r4, r0, cmd_line	/* load address of command line */
+ 	tophys(r4,r4)			/* convert to phys address */
+ 	ori	r3, r0, COMMAND_LINE_SIZE - 1 /* number of loops */
+ _copy_command_line:
+-	lbu	r2, r5, r6 /* r2=r5+r6 - r5 contain pointer to command line */
+-	sb	r2, r4, r6		/* addr[r4+r6]= r2*/
++	/* r2=r5+r6 - r5 contain pointer to command line */
++	lbu		r2, r5, r6
++	beqid	r2, skip		/* Skip if no data */
++	sb		r2, r4, r6		/* addr[r4+r6]= r2*/
+ 	addik	r6, r6, 1		/* increment counting */
+ 	bgtid	r3, _copy_command_line	/* loop for all entries       */
+-	addik	r3, r3, -1		/* descrement loop */
++	addik	r3, r3, -1		/* decrement loop */
+ 	addik	r5, r4, 0		/* add new space for command line */
+ 	tovirt(r5,r5)
++skip:
+ #endif /* CONFIG_CMDLINE_BOOL */
+ 
+ #ifdef NOT_COMPILE
+diff --git a/arch/microblaze/kernel/setup.c b/arch/microblaze/kernel/setup.c
+index 4da971d..9dbc9ec 100644
+--- a/arch/microblaze/kernel/setup.c
++++ b/arch/microblaze/kernel/setup.c
+@@ -40,7 +40,12 @@ DEFINE_PER_CPU(unsigned int, R11_SAVE);	/* Temp variable for entry */
+ DEFINE_PER_CPU(unsigned int, CURRENT_SAVE);	/* Saved current pointer */
+ 
+ unsigned int boot_cpuid;
+-char cmd_line[COMMAND_LINE_SIZE];
++/*
++ * Placed cmd_line to .data section because can be initialized from
++ * ASM code. Default position is BSS section which is cleared
++ * in machine_early_init().
++ */
++char cmd_line[COMMAND_LINE_SIZE] __attribute__ ((section(".data")));
+ 
+ void __init setup_arch(char **cmdline_p)
+ {
+@@ -130,12 +135,6 @@ void __init machine_early_init(const char *cmdline, unsigned int ram,
+ 	memset(__bss_start, 0, __bss_stop-__bss_start);
+ 	memset(_ssbss, 0, _esbss-_ssbss);
+ 
+-	/* Copy command line passed from bootloader */
+-#ifndef CONFIG_CMDLINE_BOOL
+-	if (cmdline && cmdline[0] != '\0')
+-		strlcpy(cmd_line, cmdline, COMMAND_LINE_SIZE);
+-#endif
+-
+ 	lockdep_init();
+ 
+ /* initialize device tree for usage in early_printk */
+-- 
+1.7.1
+

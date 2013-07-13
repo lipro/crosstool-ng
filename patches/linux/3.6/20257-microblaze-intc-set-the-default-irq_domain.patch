@@ -1,0 +1,28 @@
+From 4666f8f3a1a71c35592ce1205768ba1db951d0e2 Mon Sep 17 00:00:00 2001
+From: Dan Christensen <opello@opello.org>
+Date: Sun, 17 Mar 2013 04:48:56 -0500
+Subject: [PATCH] microblaze: intc: set the default irq_domain
+
+Register the irq_domain created during initialization as the default so
+that device drivers can pass NULL to irq_create_mapping and get a
+virtual irq to pass to request_irq.
+
+Signed-off-by: Dan Christensen <opello@opello.org>
+---
+ arch/microblaze/kernel/intc.c |    2 ++
+ 1 files changed, 2 insertions(+), 0 deletions(-)
+
+diff --git a/arch/microblaze/kernel/intc.c b/arch/microblaze/kernel/intc.c
+index 7b4c644..e3980b5 100644
+--- a/arch/microblaze/kernel/intc.c
++++ b/arch/microblaze/kernel/intc.c
+@@ -172,4 +172,6 @@ void __init init_IRQ(void)
+ 	 * and commits this patch.  ~~gcl */
+ 	root_domain = irq_domain_add_linear(intc, nr_irq, &xintc_irq_domain_ops,
+ 							(void *)intr_mask);
++
++	irq_set_default_host(root_domain);
+ }
+-- 
+1.7.1
+

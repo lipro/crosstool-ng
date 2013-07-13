@@ -1,0 +1,55 @@
+From 23767eb028bf9188a6ab98cdd64cf88d8bf52e09 Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Tue, 11 Dec 2012 17:07:13 +0100
+Subject: [PATCH] arm: zynq: Fix sparse errors in platsmp.c
+
+Warning log:
+arch/arm/mach-zynq/platsmp.c:60:3: warning: incorrect type in argument 1 (different address spaces)
+arch/arm/mach-zynq/platsmp.c:60:3:    expected void const volatile [noderef] <asn:2>*<noident>
+arch/arm/mach-zynq/platsmp.c:60:3:    got unsigned char [usertype] *
+...
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+---
+ arch/arm/mach-zynq/platsmp.c |   10 +++++-----
+ 1 files changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/arch/arm/mach-zynq/platsmp.c b/arch/arm/mach-zynq/platsmp.c
+index cbe3df7..c8e86de 100644
+--- a/arch/arm/mach-zynq/platsmp.c
++++ b/arch/arm/mach-zynq/platsmp.c
+@@ -32,10 +32,10 @@ extern void secondary_startup(void);
+ static DEFINE_SPINLOCK(boot_lock);
+ 
+ /* Store pointer to ioremap area which points to address 0x0 */
+-static u8 *zero;
++static u8 __iomem *zero;
+ 
+-static u32 mem_backup[3];
+-static u32 mem_backup_done;
++static unsigned int mem_backup[3];
++static unsigned int mem_backup_done;
+ 
+ /* Secondary CPU kernel startup is a 2 step process. The primary CPU
+  * starts the secondary CPU by giving it the address of the kernel and
+@@ -77,7 +77,7 @@ void __cpuinit platform_secondary_init(unsigned int cpu)
+ #define SLCR_UNLOCK	0xDF0D
+ #define SLCR_LOCK	0x767B
+ 
+-static u8 *slcr;
++static u8 __iomem *slcr;
+ 
+ int zynq_cpu1_start(u32 address)
+ {
+@@ -201,7 +201,7 @@ void __init platform_smp_prepare_cpus(unsigned int max_cpus)
+ 	}
+ #else
+ 	/* The first three addresses at zero are already mapped */
+-	zero = (u8 *)CONFIG_PAGE_OFFSET;
++	zero = (__force u8 __iomem *)CONFIG_PAGE_OFFSET;
+ #endif
+ 
+ 	/*
+-- 
+1.7.1
+

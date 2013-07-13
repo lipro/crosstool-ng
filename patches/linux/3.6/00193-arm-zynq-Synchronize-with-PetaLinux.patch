@@ -1,0 +1,35 @@
+From 41aa02b89e744d37f325a8ac6b6d6692fcabcb13 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Mon, 22 Oct 2012 15:09:34 +0200
+Subject: [PATCH] arm: zynq: Synchronize with PetaLinux
+
+Remove unused addresses and synchronize comment.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ arch/arm/mach-zynq/include/mach/zynq_soc.h |    6 +++---
+ 1 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/arch/arm/mach-zynq/include/mach/zynq_soc.h b/arch/arm/mach-zynq/include/mach/zynq_soc.h
+index 85a7d21..4f17df2 100644
+--- a/arch/arm/mach-zynq/include/mach/zynq_soc.h
++++ b/arch/arm/mach-zynq/include/mach/zynq_soc.h
+@@ -19,12 +19,12 @@
+ 
+ /* For now, all mappings are flat (physical = virtual)
+  */
++
++/* Virtual address must be inside vmalloc area - this is weird - better
++ * to create virtual mapping on the fly */
+ #define UART0_PHYS			0xE0000000
+ #define UART0_VIRT			0xFE000000
+ 
+-//#define UART1_PHYS			0xE0001000
+-//#define UART1_VIRT			0xFE001000
+-
+ #define SCU_PERIPH_PHYS			0xF8F00000
+ #define SCU_PERIPH_VIRT			SCU_PERIPH_PHYS
+ 
+-- 
+1.7.1
+

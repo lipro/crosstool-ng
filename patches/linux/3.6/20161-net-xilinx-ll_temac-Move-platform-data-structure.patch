@@ -1,0 +1,77 @@
+From 48d4e14f1ba4827b292b19c59d5a6f5e76c46b06 Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Fri, 1 Feb 2013 14:11:44 +0100
+Subject: [PATCH] net: xilinx: ll_temac: Move platform data structure
+
+Move it directly to the driver and do not add it to
+common files. It is used only in one location.
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+---
+ .../ethernet/xilinx/xilinx_lltemac/xlltemac_main.c |   16 +++++++++++++++-
+ include/linux/xilinx_devices.h                     |   15 ---------------
+ 2 files changed, 15 insertions(+), 16 deletions(-)
+
+diff --git a/drivers/net/ethernet/xilinx/xilinx_lltemac/xlltemac_main.c b/drivers/net/ethernet/xilinx/xilinx_lltemac/xlltemac_main.c
+index 4f72f9d..92cac64 100644
+--- a/drivers/net/ethernet/xilinx/xilinx_lltemac/xlltemac_main.c
++++ b/drivers/net/ethernet/xilinx/xilinx_lltemac/xlltemac_main.c
+@@ -27,7 +27,6 @@
+ #include <linux/mii.h>
+ #include <linux/delay.h>
+ #include <linux/dma-mapping.h>
+-#include <linux/xilinx_devices.h>
+ #include <asm/io.h>
+ #include <linux/ethtool.h>
+ #include <linux/vmalloc.h>
+@@ -142,6 +141,21 @@
+ #define BdGetRxLen(BdPtr) \
+     (XLlDma_mBdRead((BdPtr), XLLDMA_BD_USR4_OFFSET) & 0x3fff)
+ 
++/* LLTEMAC platform data */
++struct xlltemac_platform_data {
++	u8 tx_csum;
++	u8 rx_csum;
++	u8 phy_type;
++	u8 dcr_host;
++	u8 ll_dev_type;
++	u32 ll_dev_baseaddress;
++	u32 ll_dev_dma_rx_irq;
++	u32 ll_dev_dma_tx_irq;
++	u32 ll_dev_fifo_irq;
++
++	u8 mac_addr[6];
++};
++
+ /*
+  * Our private per device data.  When a net_device is allocated we will
+  * ask for enough extra space for this.
+diff --git a/include/linux/xilinx_devices.h b/include/linux/xilinx_devices.h
+index f493aae..4db514f 100644
+--- a/include/linux/xilinx_devices.h
++++ b/include/linux/xilinx_devices.h
+@@ -20,21 +20,6 @@
+ #include <linux/version.h>
+ #include <linux/platform_device.h>
+ 
+-/* LLTEMAC platform data */
+-struct xlltemac_platform_data {
+-	u8 tx_csum;
+-	u8 rx_csum;
+-	u8 phy_type;
+-	u8 dcr_host;
+-	u8 ll_dev_type;
+-	u32 ll_dev_baseaddress;
+-	u32 ll_dev_dma_rx_irq;
+-	u32 ll_dev_dma_tx_irq;
+-	u32 ll_dev_fifo_irq;
+-
+-	u8 mac_addr[6];
+-};
+-
+ /*- PS USB Controller IP -*/
+ enum xusbps_usb2_operating_modes {
+ 	XUSBPS_USB2_MPH_HOST,
+-- 
+1.7.1
+

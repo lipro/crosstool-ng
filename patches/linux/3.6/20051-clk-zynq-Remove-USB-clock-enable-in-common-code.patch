@@ -1,0 +1,32 @@
+From 55d8a71073060c83cf513aa77154d9278b9b121f Mon Sep 17 00:00:00 2001
+From: Soren Brinkmann <soren.brinkmann@xilinx.com>
+Date: Mon, 10 Dec 2012 13:55:56 -0800
+Subject: [PATCH] clk: zynq: Remove USB clock enable in common code
+
+USB drivers should take care of the USB clocks now.
+
+Signed-off-by: Soren Brinkmann <soren.brinkmann@xilinx.com>
+---
+ drivers/clk/zynq/clk.c |    2 --
+ 1 files changed, 0 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/clk/zynq/clk.c b/drivers/clk/zynq/clk.c
+index ec6af5d..d3e87d7 100644
+--- a/drivers/clk/zynq/clk.c
++++ b/drivers/clk/zynq/clk.c
+@@ -303,12 +303,10 @@ void __init zynq_clock_init(void)
+ 			(void __iomem *)SLCR_APER_CLK_CTRL, 2, 0,
+ 			&aperclk_lock);
+ 	zynq_clkdev_add(NULL, "USB0_APER", clk);
+-	clk_prepare_enable(clk); /* remove once all USB drivers are ported */
+ 	clk = clk_register_gate(NULL, "USB1_CPU1X", "CPU_1X_CLK", 0,
+ 			(void __iomem *)SLCR_APER_CLK_CTRL, 3, 0,
+ 			&aperclk_lock);
+ 	zynq_clkdev_add(NULL, "USB1_APER", clk);
+-	clk_prepare_enable(clk); /* remove once all USB drivers are ported */
+ 	clk = clk_register_gate(NULL, "GEM0_CPU1X", "CPU_1X_CLK", 0,
+ 			(void __iomem *)SLCR_APER_CLK_CTRL, 6, 0,
+ 			&aperclk_lock);
+-- 
+1.7.1
+

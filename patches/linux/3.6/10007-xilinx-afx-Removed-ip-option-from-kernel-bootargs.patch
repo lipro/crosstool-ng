@@ -1,0 +1,30 @@
+From adc749494a88b4e40485339ea8c77879f946f13d Mon Sep 17 00:00:00 2001
+From: Jagannadha Sutradharudu Teki <jagannadha.sutradharudu-teki@xilinx.com>
+Date: Tue, 6 Nov 2012 16:36:03 +0530
+Subject: [PATCH] xilinx: afx: Removed ip option from kernel bootargs
+
+There is no ethernet support on AFX boards, hence removed it
+from kernel bootargs.
+
+Signed-off-by: Jagannadha Sutradharudu Teki <jaganna@xilinx.com>
+Acked-by: Michal Simek <michal.simek@xilinx.com>
+---
+ arch/arm/boot/dts/zynq-afx.dts |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/arch/arm/boot/dts/zynq-afx.dts b/arch/arm/boot/dts/zynq-afx.dts
+index 6569eee..b909db8 100644
+--- a/arch/arm/boot/dts/zynq-afx.dts
++++ b/arch/arm/boot/dts/zynq-afx.dts
+@@ -13,7 +13,7 @@
+ 	};
+ 
+ 	chosen {
+-		bootargs = "console=ttyPS0,115200 root=/dev/ram rw earlyprintk ip=:::::eth0:dhcp";
++		bootargs = "console=ttyPS0,115200 root=/dev/ram rw earlyprintk";
+ 		linux,stdout-path = "/amba@0/uart@E0001000";
+ 	};
+ 
+-- 
+1.7.1
+

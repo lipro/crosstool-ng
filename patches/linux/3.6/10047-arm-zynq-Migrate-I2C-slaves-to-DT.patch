@@ -1,0 +1,343 @@
+From faf728c1472c3a755229077717a4b85fbc95284c Mon Sep 17 00:00:00 2001
+From: Soren Brinkmann <soren.brinkmann@xilinx.com>
+Date: Fri, 9 Nov 2012 18:00:52 -0800
+Subject: [PATCH] arm: zynq: Migrate I2C slaves to DT
+
+Use the device tree to describe the I2C bus for the zc702/zc706 platform.
+
+Signed-off-by: Soren Brinkmann <soren.brinkmann@xilinx.com>
+Signed-off-by: John Linn <john.linn@xilinx.com>
+Acked-by: Michal Simek <michal.simek@xilinx.com>
+---
+ arch/arm/boot/dts/zynq-zc702.dts |   68 +++++++++++++++++
+ arch/arm/boot/dts/zynq-zc706.dts |   50 +++++++++++++
+ arch/arm/mach-zynq/board_zc702.c |  152 --------------------------------------
+ 3 files changed, 118 insertions(+), 152 deletions(-)
+
+diff --git a/arch/arm/boot/dts/zynq-zc702.dts b/arch/arm/boot/dts/zynq-zc702.dts
+index 620bf74..88e9ce6 100644
+--- a/arch/arm/boot/dts/zynq-zc702.dts
++++ b/arch/arm/boot/dts/zynq-zc702.dts
+@@ -126,6 +126,74 @@
+ 
+ 			#address-cells = <1>;
+ 			#size-cells = <0>;
++                        i2cswitch@74 {
++                                compatible = "nxp,pca9548";
++                                #address-cells = <1>;
++                                #size-cells = <0>;
++                                reg = <0x74>;
++
++				i2c@0 {
++                                        #address-cells = <1>;
++                                        #size-cells = <0>;
++                                        reg = <0>;
++                                        osc@5d {
++                                                compatible = "si570";
++                                                reg = <0x5d>;
++						factory-fout = <156250000>;
++						initial-fout = <148500000>;
++                                        };
++				};
++
++				i2c@2 {
++                                        #address-cells = <1>;
++                                        #size-cells = <0>;
++                                        reg = <2>;
++                                        eeprom@54 {
++                                                compatible = "at,24c08";
++                                                reg = <0x54>;
++                                        };
++                                };
++
++				i2c@3 {
++                                        #address-cells = <1>;
++                                        #size-cells = <0>;
++                                        reg = <3>;
++                                        gpio@21 {
++                                                compatible = "ti,tca6416";
++                                                reg = <0x21>;
++						gpio-controller;
++						#gpio-cells = <2>;
++                                        };
++				};
++
++				i2c@4 {
++                                        #address-cells = <1>;
++                                        #size-cells = <0>;
++                                        reg = <4>;
++                                        rtc@54 {
++                                                compatible = "nxp,pcf8563";
++                                                reg = <0x51>;
++                                        };
++				};
++
++				i2c@7 {
++                                        #address-cells = <1>;
++                                        #size-cells = <0>;
++                                        reg = <7>;
++                                        hwmon@52{
++                                                compatible = "pmbus,ucd9248";
++                                                reg = <52>;
++                                        };
++                                        hwmon@53{
++                                                compatible = "pmbus,ucd9248";
++                                                reg = <53>;
++                                        };
++                                        hwmon@54{
++                                                compatible = "pmbus,ucd9248";
++                                                reg = <54>;
++					};
++				};
++			};
+ 		};
+ 
+ 		sdhci@e0100000 {
+diff --git a/arch/arm/boot/dts/zynq-zc706.dts b/arch/arm/boot/dts/zynq-zc706.dts
+index ce3b425..6a519e1 100644
+--- a/arch/arm/boot/dts/zynq-zc706.dts
++++ b/arch/arm/boot/dts/zynq-zc706.dts
+@@ -124,6 +124,56 @@
+ 
+ 			#address-cells = <1>;
+ 			#size-cells = <0>;
++                        i2cswitch@74 {
++                                compatible = "nxp,pca9548";
++                                #address-cells = <1>;
++                                #size-cells = <0>;
++                                reg = <0x74>;
++
++				i2c@0 {
++                                        #address-cells = <1>;
++                                        #size-cells = <0>;
++                                        reg = <0>;
++                                        osc@5d {
++                                                compatible = "si570";
++                                                reg = <0x5d>;
++						factory-fout = <156250000>;
++						initial-fout = <148500000>;
++                                        };
++				};
++
++				i2c@2 {
++                                        #address-cells = <1>;
++                                        #size-cells = <0>;
++                                        reg = <2>;
++                                        eeprom@54 {
++                                                compatible = "at,24c08";
++                                                reg = <0x54>;
++                                        };
++                                };
++
++				i2c@3 {
++                                        #address-cells = <1>;
++                                        #size-cells = <0>;
++                                        reg = <3>;
++                                        gpio@21 {
++                                                compatible = "ti,tca6416";
++                                                reg = <0x21>;
++						gpio-controller;
++						#gpio-cells = <2>;
++                                        };
++				};
++
++				i2c@4 {
++                                        #address-cells = <1>;
++                                        #size-cells = <0>;
++                                        reg = <4>;
++                                        rtc@54 {
++                                                compatible = "nxp,pcf8563";
++                                                reg = <0x51>;
++                                        };
++				};
++			};
+ 		};
+ 
+ 		sdhci@e0100000 {
+diff --git a/arch/arm/mach-zynq/board_zc702.c b/arch/arm/mach-zynq/board_zc702.c
+index 4639d52..c1af026 100644
+--- a/arch/arm/mach-zynq/board_zc702.c
++++ b/arch/arm/mach-zynq/board_zc702.c
+@@ -15,7 +15,6 @@
+ #include <linux/init.h>
+ #include <linux/of_platform.h>
+ 
+-#include <linux/i2c.h>
+ #include <linux/spi/spi.h>
+ #include <linux/spi/eeprom.h>
+ #include <linux/platform_device.h>
+@@ -23,9 +22,6 @@
+ #include <linux/mtd/physmap.h>
+ #include <linux/spi/flash.h>
+ #include <linux/xilinx_devices.h>
+-#include <linux/i2c/pca954x.h>
+-#include <linux/i2c/pca953x.h>
+-#include <linux/i2c/si570.h>
+ #include <linux/gpio.h>
+ 
+ #include <mach/slcr.h>
+@@ -68,123 +64,6 @@ static struct flash_platform_data spi_flash_pdata = {
+ 
+ #endif
+ 
+-#if defined(CONFIG_I2C_XILINX_PS) && defined(CONFIG_I2C_MUX_PCA954x)
+-
+-static struct pca954x_platform_mode pca954x_platform_modes[] = {
+-	{
+-		.adap_id 		= 1,
+-		.deselect_on_exit	= 0,
+-	},
+-	{
+-		.adap_id 		= 2,
+-		.deselect_on_exit	= 0,
+-	},
+-	{
+-		.adap_id 		= 3,
+-		.deselect_on_exit	= 0,
+-	},
+-	{
+-		.adap_id 		= 4,
+-		.deselect_on_exit	= 0,
+-	},
+-	{
+-		.adap_id 		= 5,
+-		.deselect_on_exit	= 0,
+-	},
+-	{
+-		.adap_id 		= 6,
+-		.deselect_on_exit	= 0,
+-	},
+-	{
+-		.adap_id 		= 7,
+-		.deselect_on_exit	= 0,
+-	},
+-	{
+-		.adap_id 		= 8,
+-		.deselect_on_exit	= 0,
+-	},
+-};
+-
+-static struct pca954x_platform_data pca954x_i2cmux_adap_data = {
+-	.modes 		= pca954x_platform_modes,
+-	.num_modes 	= 8,
+-};
+-
+-static struct i2c_board_info __initdata pca954x_i2c_devices[] = {
+-	{
+-		I2C_BOARD_INFO("pca9548", 0x74),
+-		.platform_data = &pca954x_i2cmux_adap_data,
+-	},
+-};
+-
+-#if defined(CONFIG_RTC_DRV_PCF8563)
+-
+-static struct i2c_board_info __initdata rtc8564_board_info[] = {
+-	{
+-		I2C_BOARD_INFO("rtc8564", 0x51),
+-	},
+-};
+-
+-#endif /*CONFIG_RTC_DRV_PCF8563 */
+-
+-#if defined(CONFIG_GPIO_PCA953X)
+-
+-static struct pca953x_platform_data tca6416_0 = {
+-	.gpio_base = 256,
+-};
+-
+-static struct i2c_board_info __initdata tca6416_board_info[] = {
+-	{
+-		I2C_BOARD_INFO("tca6416", 0x21),
+-		.platform_data = &tca6416_0,
+-	}
+-};
+-
+-#endif /* CONFIG_GPIO_PCF8563 */
+-
+-#if defined(CONFIG_SI570)
+-
+-/* Initial FOUT is set per the ADV7511 video clocking requirement */
+-static struct si570_platform_data si570_0 = {
+-	.factory_fout = 156250000LL,
+-	.initial_fout = 148500000,
+-};
+-
+-static struct i2c_board_info __initdata si570_board_info[] = {
+-	{
+-		I2C_BOARD_INFO("si570", 0x5d),
+-		.platform_data = &si570_0,
+-	}
+-};
+-
+-#endif /* CONFIG_SI570 */
+-	
+-#if defined(CONFIG_EEPROM_AT24)
+-
+-static struct i2c_board_info __initdata m24c08_board_info[] = {
+-	{
+-		I2C_BOARD_INFO("24c08", 0x54),
+-	},
+-};
+-
+-#endif /* CONFIG_EEPROM_AT24 */
+-
+-#if defined(CONFIG_SENSORS_UCD9200)
+-static struct i2c_board_info ucd9248_board_info[] __initdata = {
+-	{
+-		I2C_BOARD_INFO("ucd9248", 52),
+-	},
+-	{
+-		I2C_BOARD_INFO("ucd9248", 53),
+-	},
+-	{
+-		I2C_BOARD_INFO("ucd9248", 54),
+-	}
+-};
+-#endif /* CONFIG_SENSORS_UCD9200 */
+-
+-#endif /* CONFIG_I2C_XILINX_PS && CONFIG_I2C_MUX_PCA954x */
+-
+ #if defined(CONFIG_SPI_SPIDEV) || defined(CONFIG_MTD_M25P80)
+ 
+ static struct spi_board_info __initdata xilinx_spipss_0_boardinfo[] = {
+@@ -230,37 +109,6 @@ static void __init board_zc702_init(void)
+ 	spi_register_board_info(&xilinx_spipss_0_boardinfo[0], 
+ 		ARRAY_SIZE(xilinx_spipss_0_boardinfo));
+ #endif
+-
+-#if	defined(CONFIG_I2C_XILINX_PS) && defined(CONFIG_I2C_MUX_PCA954x)
+-	i2c_register_board_info(0, pca954x_i2c_devices,
+-				ARRAY_SIZE(pca954x_i2c_devices));
+-
+-#if	defined(CONFIG_SI570)
+-	i2c_register_board_info(1, si570_board_info,
+-				ARRAY_SIZE(si570_board_info));
+-#endif
+-
+-#if	defined(CONFIG_EEPROM_AT24)
+-	i2c_register_board_info(3, m24c08_board_info,
+-				ARRAY_SIZE(m24c08_board_info));
+-#endif
+-
+-#if	defined(CONFIG_GPIO_PCA953X)
+-	i2c_register_board_info(4, tca6416_board_info,
+-				ARRAY_SIZE(tca6416_board_info));
+-#endif
+-
+-#if	defined(CONFIG_RTC_DRV_PCF8563)
+-	i2c_register_board_info(5, rtc8564_board_info,
+-				ARRAY_SIZE(rtc8564_board_info));
+-#endif
+-#if	defined(CONFIG_SENSORS_UCD9200)
+-	i2c_register_board_info(8, ucd9248_board_info,
+-				ARRAY_SIZE(ucd9248_board_info));
+-#endif
+-
+-
+-#endif
+ }
+ 
+ static const char *xilinx_dt_match[] = {
+-- 
+1.7.1
+

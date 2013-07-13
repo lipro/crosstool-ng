@@ -1,0 +1,47 @@
+From ae75200b4e2c1f5cd3c95c627fcc80b39ecfa410 Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Thu, 13 Dec 2012 09:19:58 +0100
+Subject: [PATCH] arm: zynq: pl330: Remove NO_IRQ macros
+
+NO_IRQ is defined in asm/irq.h.
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+---
+ arch/arm/mach-zynq/pl330.c           |    4 ----
+ arch/arm/mach-zynq/test/pl330_test.c |    5 -----
+ 2 files changed, 0 insertions(+), 9 deletions(-)
+
+diff --git a/arch/arm/mach-zynq/pl330.c b/arch/arm/mach-zynq/pl330.c
+index d9f2078..7ec81be 100644
+--- a/arch/arm/mach-zynq/pl330.c
++++ b/arch/arm/mach-zynq/pl330.c
+@@ -96,10 +96,6 @@
+ #include <asm/mach/dma.h>
+ #include <mach/pl330.h>
+ 
+-#ifndef NO_IRQ
+-#define NO_IRQ ((unsigned int)(-1))
+-#endif
+-
+ #define DRIVER_NAME         "pl330"
+ #define DRIVER_DESCRIPTION  "pl330 driver"
+ #define DRIVER_VERSION      "1.00a"
+diff --git a/arch/arm/mach-zynq/test/pl330_test.c b/arch/arm/mach-zynq/test/pl330_test.c
+index 942c1e0..c4aa2fb 100644
+--- a/arch/arm/mach-zynq/test/pl330_test.c
++++ b/arch/arm/mach-zynq/test/pl330_test.c
+@@ -61,11 +61,6 @@
+  *
+  */
+ 
+-
+-#ifndef NO_IRQ
+-#define NO_IRQ ((unsigned int)(-1))
+-#endif
+-
+ #define DRIVER_NAME         "pl330_test"
+ #define DRIVER_DESCRIPTION  "pl330 driver test"
+ #define DRIVER_VERSION      "1.00a"
+-- 
+1.7.1
+

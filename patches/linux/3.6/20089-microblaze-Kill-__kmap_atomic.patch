@@ -1,0 +1,30 @@
+From d18e593deb22ff8a588ff8871711df43ff337970 Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Thu, 3 Jan 2013 12:11:59 +0100
+Subject: [PATCH] microblaze: Kill __kmap_atomic()
+
+This should be the part of this patch:
+"highmem: kill all __kmap_atomic()"
+(sha1: a24401bcf4a67c8fe17e649e74eeb09b08b79ef5)
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+---
+ arch/microblaze/include/asm/highmem.h |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/arch/microblaze/include/asm/highmem.h b/arch/microblaze/include/asm/highmem.h
+index 2446a73..d046389 100644
+--- a/arch/microblaze/include/asm/highmem.h
++++ b/arch/microblaze/include/asm/highmem.h
+@@ -71,7 +71,7 @@ static inline void kunmap(struct page *page)
+ 	kunmap_high(page);
+ }
+ 
+-static inline void *__kmap_atomic(struct page *page)
++static inline void *kmap_atomic(struct page *page)
+ {
+ 	return kmap_atomic_prot(page, kmap_prot);
+ }
+-- 
+1.7.1
+

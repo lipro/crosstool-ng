@@ -1,0 +1,116 @@
+From 5f73b0ca9e83053dd3dda853d4fadb35cc4c8d99 Mon Sep 17 00:00:00 2001
+From: Soren Brinkmann <soren.brinkmann@xilinx.com>
+Date: Thu, 20 Dec 2012 10:53:08 -0800
+Subject: [PATCH] clk: zynq: Dynamically allocate locks for PLLs
+
+In the PLL implementation register accesses are protected
+by a spin_lock. This lock is now dynamically allocated in the
+register PLL function.
+
+Signed-off-by: Soren Brinkmann <soren.brinkmann@xilinx.com>
+---
+ arch/arm/mach-zynq/include/mach/clk.h |    3 +--
+ drivers/clk/zynq/clk.c                |   12 +++---------
+ drivers/clk/zynq/pll.c                |   18 ++++++++++++------
+ 3 files changed, 16 insertions(+), 17 deletions(-)
+
+diff --git a/arch/arm/mach-zynq/include/mach/clk.h b/arch/arm/mach-zynq/include/mach/clk.h
+index 38e163c..9881537 100644
+--- a/arch/arm/mach-zynq/include/mach/clk.h
++++ b/arch/arm/mach-zynq/include/mach/clk.h
+@@ -29,8 +29,7 @@ struct clk *clk_register_zynq_d1m(const char *name,
+ 		spinlock_t *lock);
+ 
+ struct clk *clk_register_zynq_pll(const char *name, void __iomem *pllctrl,
+-		void __iomem *pllcfg, void __iomem *pllstatus, u8 lockbit,
+-		spinlock_t *lock);
++		void __iomem *pllcfg, void __iomem *pllstatus, u8 lockbit);
+ 
+ struct clk *clk_register_zynq_clk621(const char *name,
+ 		void __iomem *clkctrl, void __iomem *clk621,
+diff --git a/drivers/clk/zynq/clk.c b/drivers/clk/zynq/clk.c
+index a82402c..1348816 100644
+--- a/drivers/clk/zynq/clk.c
++++ b/drivers/clk/zynq/clk.c
+@@ -20,9 +20,6 @@
+ #include <mach/zynq_soc.h>
+ #include <mach/clk.h>
+ 
+-static DEFINE_SPINLOCK(armpll_lock);
+-static DEFINE_SPINLOCK(ddrpll_lock);
+-static DEFINE_SPINLOCK(iopll_lock);
+ static DEFINE_SPINLOCK(armclk_lock);
+ static DEFINE_SPINLOCK(ddrclk_lock);
+ static DEFINE_SPINLOCK(dciclk_lock);
+@@ -93,18 +90,15 @@ void __init zynq_clock_init(void)
+ 	clk = clk_register_zynq_pll("ARMPLL",
+ 			(__force void __iomem *)SLCR_ARMPLL_CTRL,
+ 			(__force void __iomem *)SLCR_ARMPLL_CFG,
+-			(__force void __iomem *)SLCR_PLL_STATUS,
+-			0, &armpll_lock);
++			(__force void __iomem *)SLCR_PLL_STATUS, 0);
+ 	clk = clk_register_zynq_pll("DDRPLL",
+ 			(__force void __iomem *)SLCR_DDRPLL_CTRL,
+ 			(__force void __iomem *)SLCR_DDRPLL_CFG,
+-			(__force void __iomem *)SLCR_PLL_STATUS,
+-			1, &ddrpll_lock);
++			(__force void __iomem *)SLCR_PLL_STATUS, 1);
+ 	clk = clk_register_zynq_pll("IOPLL",
+ 			(__force void __iomem *)SLCR_IOPLL_CTRL,
+ 			(__force void __iomem *)SLCR_IOPLL_CFG,
+-			(__force void __iomem *)SLCR_PLL_STATUS,
+-			2, &iopll_lock);
++			(__force void __iomem *)SLCR_PLL_STATUS, 2);
+ 
+ 	/* CPU clocks */
+ 	clk = clk_register_zynq_d1m("CPU_MASTER_CLK",
+diff --git a/drivers/clk/zynq/pll.c b/drivers/clk/zynq/pll.c
+index bb5d287..ccf94b7 100644
+--- a/drivers/clk/zynq/pll.c
++++ b/drivers/clk/zynq/pll.c
+@@ -374,15 +374,14 @@ static const struct clk_ops zynq_pll_ops = {
+  * @pllstatus:	Pointer to PLL status register
+  * @lockbit:	Indicates the associated PLL_LOCKED bit in the PLL status
+  *		register.
+- * @lock:	Register lock
+  * Returns clk_register() return value or errpointer.
+  */
+ struct clk *clk_register_zynq_pll(const char *name, void __iomem *pllctrl,
+-		void __iomem *pllcfg, void __iomem *pllstatus, u8 lockbit,
+-		spinlock_t *lock)
++		void __iomem *pllcfg, void __iomem *pllstatus, u8 lockbit)
+ {
+ 	struct zynq_pll *clk;
+ 	const char *pnames[] = {"PS_CLK"};
++	spinlock_t *lock;
+ 	struct clk_init_data initd = {
+ 		.name = name,
+ 		.ops = &zynq_pll_ops,
+@@ -392,14 +391,21 @@ struct clk *clk_register_zynq_pll(const char *name, void __iomem *pllctrl,
+ 	};
+ 
+ 	clk = kmalloc(sizeof(*clk), GFP_KERNEL);
+-	clk->hw.init = &initd;
+-
+ 	if (!clk) {
+-		pr_err("%s: could not allocate Zynq PLL clk\n", __func__);
++		pr_err("%s: Could not allocate Zynq PLL clk.\n", __func__);
+ 		return ERR_PTR(-ENOMEM);
+ 	}
+ 
++	lock = kmalloc(sizeof(*lock), GFP_KERNEL);
++	if (!lock) {
++		pr_err("%s: Could not allocate lock.\n", __func__);
++		kfree(clk);
++		return ERR_PTR(-ENOMEM);
++	}
++	spin_lock_init(lock);
++
+ 	/* Populate the struct */
++	clk->hw.init = &initd;
+ 	clk->pllctrl = pllctrl;
+ 	clk->pllcfg = pllcfg;
+ 	clk->pllstatus = pllstatus;
+-- 
+1.7.1
+

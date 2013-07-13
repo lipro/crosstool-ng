@@ -1,0 +1,36 @@
+From 3bb8588f6cd4d65c9600f8ecc15266757a06ecdd Mon Sep 17 00:00:00 2001
+From: SrikanthT <sthokal@xilinx.com>
+Date: Sat, 13 Oct 2012 00:46:56 +0530
+Subject: [PATCH] Xilinx: ARM: DMA: Modified VDMA config param disable_intr logic
+
+The VDMA configuration parameter 'disable_intr' currently used
+to enable specific interrupts, which does not denote the name
+'disable_intr'.  This patch modifies the logic.
+
+Signed-off-by: SrikanthT <sthokal@xilinx.com>
+---
+ drivers/dma/xilinx_dma.c |    6 +++---
+ 1 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/dma/xilinx_dma.c b/drivers/dma/xilinx_dma.c
+index 7d9cf22..055fe9d 100644
+--- a/drivers/dma/xilinx_dma.c
++++ b/drivers/dma/xilinx_dma.c
+@@ -738,11 +738,11 @@ static void xilinx_vdma_start_transfer(struct xilinx_dma_chan *chan)
+ 	 * park/genlock testing does not use interrupts */
+ 	if (!chan->config.disable_intr) {
+ 		DMA_OUT(&chan->regs->cr,
+-		   DMA_IN(&chan->regs->cr) | XILINX_DMA_XR_IRQ_ALL_MASK);
++		DMA_IN(&chan->regs->cr) | XILINX_DMA_XR_IRQ_ALL_MASK);
+ 	} else {
+ 		DMA_OUT(&chan->regs->cr,
+-		   DMA_IN(&chan->regs->cr) |
+-			chan->config.disable_intr << XILINX_DMA_IRQ_SHIFT);
++		(DMA_IN(&chan->regs->cr) | XILINX_DMA_XR_IRQ_ALL_MASK) &
++		~((chan->config.disable_intr << XILINX_DMA_IRQ_SHIFT)));
+ 	}
+ 
+ 	/* Start the transfer
+-- 
+1.7.1
+

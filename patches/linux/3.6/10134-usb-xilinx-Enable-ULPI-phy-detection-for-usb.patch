@@ -1,0 +1,87 @@
+From 7e3541236258a8048aa6f5c4e52cf93dab112f9e Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Mon, 26 Nov 2012 11:10:24 +0100
+Subject: [PATCH] usb: xilinx: Enable ULPI phy detection for usb
+
+Detect usb ulpi phys and set it up in pdata for others usb drivers.
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+---
+ drivers/usb/host/Kconfig        |    2 ++
+ drivers/usb/host/xusbps-dr-of.c |   20 +++++++++++++++++++-
+ include/linux/xilinx_devices.h  |    1 +
+ 3 files changed, 22 insertions(+), 1 deletions(-)
+
+diff --git a/drivers/usb/host/Kconfig b/drivers/usb/host/Kconfig
+index 1ad40ff..6cf3bd8 100644
+--- a/drivers/usb/host/Kconfig
++++ b/drivers/usb/host/Kconfig
+@@ -133,6 +133,8 @@ config XPS_USB_HCD_XILINX
+ 
+ config USB_XUSBPS_DR_OF
+ 	tristate
++	select USB_ULPI
++	select USB_ULPI_VIEWPORT
+ 
+ config USB_EHCI_XUSBPS
+ 	bool "Support for Xilinx PS EHCI USB controller"
+diff --git a/drivers/usb/host/xusbps-dr-of.c b/drivers/usb/host/xusbps-dr-of.c
+index bf26360..bc0e4af 100644
+--- a/drivers/usb/host/xusbps-dr-of.c
++++ b/drivers/usb/host/xusbps-dr-of.c
+@@ -27,6 +27,9 @@
+ #include <linux/of_platform.h>
+ #include <linux/string.h>
+ #include <linux/clk.h>
++#include <linux/usb/ulpi.h>
++
++#include "ehci-xilinx-usbps.h"
+ 
+ static u64 dma_mask = 0xFFFFFFF0;
+ 
+@@ -145,7 +148,7 @@ static int __devinit xusbps_dr_of_probe(struct platform_device *ofdev)
+ 	const unsigned char *prop;
+ 	static unsigned int idx;
+ 	struct resource *res;
+-	int i;
++	int i, phy_init;
+ 
+ 	pdata = &data;
+ 	memset(pdata, 0, sizeof(data));
+@@ -184,6 +187,21 @@ static int __devinit xusbps_dr_of_probe(struct platform_device *ofdev)
+ 	prop = of_get_property(np, "phy_type", NULL);
+ 	pdata->phy_mode = determine_usb_phy(prop);
+ 
++	/* If ULPI phy type, set it up */
++	if (pdata->phy_mode == XUSBPS_USB2_PHY_ULPI) {
++		pdata->ulpi = otg_ulpi_create(&ulpi_viewport_access_ops,
++			ULPI_OTG_DRVVBUS | ULPI_OTG_DRVVBUS_EXT);
++		if (pdata->ulpi)
++			pdata->ulpi->io_priv = pdata->regs +
++							XUSBPS_SOC_USB_ULPIVP;
++
++		phy_init = usb_phy_init(pdata->ulpi);
++		if (phy_init) {
++			pr_info("Unable to init transceiver, missing?\n");
++			return -ENODEV;
++		}
++	}
++
+ 	for (i = 0; i < ARRAY_SIZE(dev_data->drivers); i++) {
+ 		if (!dev_data->drivers[i])
+ 			continue;
+diff --git a/include/linux/xilinx_devices.h b/include/linux/xilinx_devices.h
+index 454deed..d3e8b60 100644
+--- a/include/linux/xilinx_devices.h
++++ b/include/linux/xilinx_devices.h
+@@ -136,6 +136,7 @@ struct xusbps_usb2_platform_data {
+ 	void		(*exit)(struct platform_device *);
+ 	void __iomem	*regs;		/* ioremap'd register base */
+ 	struct usb_phy	*otg;
++	struct usb_phy	*ulpi;
+ 	int		irq;
+ 	struct clk	*clk;
+ 	unsigned	big_endian_mmio:1;
+-- 
+1.7.1
+

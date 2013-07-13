@@ -1,0 +1,32 @@
+From df46579b91975c13272b33a816cbd512e277bd45 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Mon, 8 Oct 2012 13:57:41 +0200
+Subject: [PATCH] mmc: host: Remove old ARCH_XILINX reference
+
+ARCH_XILINX is unused right now.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ drivers/mmc/host/Kconfig |    4 ++--
+ 1 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/mmc/host/Kconfig b/drivers/mmc/host/Kconfig
+index 6247173..4ae73b2 100644
+--- a/drivers/mmc/host/Kconfig
++++ b/drivers/mmc/host/Kconfig
+@@ -122,10 +122,10 @@ config MMC_SDHCI_OF_XILINX_PS
+ 	tristate "SDHCI OF support for the Xilinx Zynq SDHCI controllers"
+ 	depends on MMC_SDHCI_PLTFM
+ 	depends on OF
+-	depends on ARCH_ZYNQ || ARCH_XILINX
++	depends on ARCH_ZYNQ
+ 	help
+ 	  This selects the Secure Digital Host Controller Interface (SDHCI)
+-	  found in the Xilinx Zynq EPP.
++	  found in the Xilinx Zynq.
+ 
+ 	  If you have a controller with this interface, say Y or M here.
+ 
+-- 
+1.7.1
+

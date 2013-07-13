@@ -1,0 +1,28 @@
+From 4f5a9784cbfc1b98e952ba598d1a1a15d3e5e70a Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Sun, 21 Oct 2012 14:56:18 +0200
+Subject: [PATCH] usb: gadget: Xilinx usbps_udc cleanup
+
+Coding style cleanup.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ drivers/usb/gadget/xilinx_usbps_udc.h |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/drivers/usb/gadget/xilinx_usbps_udc.h b/drivers/usb/gadget/xilinx_usbps_udc.h
+index cb16359..4d3da23 100755
+--- a/drivers/usb/gadget/xilinx_usbps_udc.h
++++ b/drivers/usb/gadget/xilinx_usbps_udc.h
+@@ -481,7 +481,7 @@ struct xusbps_udc {
+ #endif
+ 
+ #if 0
+-static void dump_msg(const char *label, const u8 * buf, unsigned int length)
++static void dump_msg(const char *label, const u8 *buf, unsigned int length)
+ {
+ 	unsigned int start, num, i;
+ 	char line[52], *p;
+-- 
+1.7.1
+

@@ -1,0 +1,31 @@
+From d6b4ce51b1a481839c2b2277cf8e8db7c1799da0 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Mon, 12 Mar 2012 11:39:17 +0100
+Subject: [PATCH] tty: serial: Use clock-frequency property instead of pure clock
+
+clock-frequency is widely used in all FD drivers.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ drivers/tty/serial/xilinx_uartps.c |    5 +++++
+ 1 files changed, 5 insertions(+), 0 deletions(-)
+
+diff --git a/drivers/tty/serial/xilinx_uartps.c b/drivers/tty/serial/xilinx_uartps.c
+index f3a922f..45fea03 100644
+--- a/drivers/tty/serial/xilinx_uartps.c
++++ b/drivers/tty/serial/xilinx_uartps.c
+@@ -1235,6 +1235,11 @@ static int __devinit xuartps_probe(struct platform_device *pdev)
+ 	prop = of_get_property(pdev->dev.of_node, "clock", NULL);
+ 	if (prop)
+ 		clk = be32_to_cpup(prop);
++	else {
++		prop = of_get_property(pdev->dev.of_node, "clock-frequency", NULL);
++		if (prop)
++			clk = be32_to_cpup(prop);
++	}
+ #else
+ 	clk = *((unsigned int *)(pdev->dev.platform_data));
+ #endif
+-- 
+1.7.1
+

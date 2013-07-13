@@ -1,0 +1,30 @@
+From 3986c0531f4884c48c3957b984f36539d141515b Mon Sep 17 00:00:00 2001
+From: Lars-Peter Clausen <lars@metafoo.de>
+Date: Fri, 22 Feb 2013 11:53:29 +0100
+Subject: [PATCH] memory: zynq-smc: Add a terminating entry to the OF match table
+
+Add a terminating entry to the OF match table of the zynq smc driver. Without
+this the driver may bind to random devices who's compatibility string comes next
+in memory.
+
+Signed-off-by: Lars-Peter Clausen <lars@metafoo.de>
+Acked-by: Soren Brinkmann <soren.brinkmann@xilinx.com>
+---
+ drivers/memory/zynq-smc.c |    1 +
+ 1 files changed, 1 insertions(+), 0 deletions(-)
+
+diff --git a/drivers/memory/zynq-smc.c b/drivers/memory/zynq-smc.c
+index 2d14388..2f74e93 100644
+--- a/drivers/memory/zynq-smc.c
++++ b/drivers/memory/zynq-smc.c
+@@ -581,6 +581,7 @@ static int __devexit xsmcps_remove(struct platform_device *pdev)
+ /* Match table for device tree binding */
+ static const struct of_device_id xsmcps_of_match[] __devinitconst = {
+ 	{.compatible = "xlnx,ps7-smc"},
++	{ },
+ };
+ MODULE_DEVICE_TABLE(of, xsmcps_of_match);
+ 
+-- 
+1.7.1
+

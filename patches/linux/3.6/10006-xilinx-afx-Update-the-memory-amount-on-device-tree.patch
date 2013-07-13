@@ -1,0 +1,29 @@
+From f9956797528c02ebefa485d1be915925ab5d61e8 Mon Sep 17 00:00:00 2001
+From: Jagannadha Sutradharudu Teki <jagannadha.sutradharudu-teki@xilinx.com>
+Date: Tue, 6 Nov 2012 16:36:02 +0530
+Subject: [PATCH] xilinx: afx: Update the memory amount on device tree
+
+Update the actual memory amount present on afx ddr module (CFG-114).
+
+Signed-off-by: Jagannadha Sutradharudu Teki <jaganna@xilinx.com>
+Acked-by: Michal Simek <michal.simek@xilinx.com>
+---
+ arch/arm/boot/dts/zynq-afx.dts |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/arch/arm/boot/dts/zynq-afx.dts b/arch/arm/boot/dts/zynq-afx.dts
+index efc4fed..6569eee 100644
+--- a/arch/arm/boot/dts/zynq-afx.dts
++++ b/arch/arm/boot/dts/zynq-afx.dts
+@@ -9,7 +9,7 @@
+ 
+ 	memory {
+ 		device_type = "memory";
+-		reg = <0x0 0x10000000>;
++		reg = <0x0 0x08000000>;
+ 	};
+ 
+ 	chosen {
+-- 
+1.7.1
+

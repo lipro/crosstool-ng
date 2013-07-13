@@ -1,0 +1,115 @@
+From 2bb7adcc657d46ef73a2d4f14056e0618afed551 Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Thu, 14 Feb 2013 10:07:00 +0100
+Subject: [PATCH] arm: zynq: timer: Use helper initialization function
+
+In the Kernel v3.10 mainline zynq driver will use
+different registration. Be prepare for it and synchronize
+it with mainline.
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+---
+ arch/arm/mach-zynq/common.c |    2 +-
+ arch/arm/mach-zynq/common.h |    2 +-
+ arch/arm/mach-zynq/timer.c  |   38 +++++++++++++++++++++++++-------------
+ 3 files changed, 27 insertions(+), 15 deletions(-)
+
+diff --git a/arch/arm/mach-zynq/common.c b/arch/arm/mach-zynq/common.c
+index 4ddf571..641bce9 100644
+--- a/arch/arm/mach-zynq/common.c
++++ b/arch/arm/mach-zynq/common.c
+@@ -85,7 +85,7 @@ static int __init scu_init(void)
+ static void __init xilinx_zynq_timer_init(void)
+ {
+ 	xslcr_init();
+-	xttcps_timer_init();
++	xttcps_timer_init_old();
+ }
+ 
+ /*
+diff --git a/arch/arm/mach-zynq/common.h b/arch/arm/mach-zynq/common.h
+index 21dc202..e4c5e98 100644
+--- a/arch/arm/mach-zynq/common.h
++++ b/arch/arm/mach-zynq/common.h
+@@ -19,7 +19,7 @@
+ 
+ #include <mach/slcr.h>
+ 
+-void __init xttcps_timer_init(void);
++void __init xttcps_timer_init_old(void);
+ void platform_device_init(void);
+ 
+ int __cpuinit zynq_cpun_start(u32 address, int cpu);
+diff --git a/arch/arm/mach-zynq/timer.c b/arch/arm/mach-zynq/timer.c
+index 265a20f..6fdc5f9 100644
+--- a/arch/arm/mach-zynq/timer.c
++++ b/arch/arm/mach-zynq/timer.c
+@@ -318,15 +318,10 @@ static int xttcps_timer_rate_change_cb(struct notifier_block *nb,
+  * Initializes the timer hardware and register the clock source and clock event
+  * timers with Linux kernal timer framework
+  */
+-void __init xttcps_timer_init(void)
++static void __init xttcps_timer_init(struct device_node *timer)
+ {
+ 	unsigned int irq;
+-	struct device_node *timer = NULL;
+ 	void __iomem *timer_baseaddr;
+-	const char * const timer_list[] = {
+-		"xlnx,ps7-ttc-1.00.a",
+-		NULL
+-	};
+ 	struct clk *clk;
+ 
+ 	/*
+@@ -334,12 +329,6 @@ void __init xttcps_timer_init(void)
+ 	 * and use it. Note that the event timer uses the interrupt and it's the
+ 	 * 2nd TTC hence the irq_of_parse_and_map(,1)
+ 	 */
+-	timer = of_find_compatible_node(NULL, NULL, timer_list[0]);
+-	if (!timer) {
+-		pr_err("ERROR: no compatible timer found\n");
+-		BUG();
+-	}
+-
+ 	timer_baseaddr = of_iomap(timer, 0);
+ 	if (!timer_baseaddr) {
+ 		pr_err("ERROR: invalid timer base address\n");
+@@ -358,7 +347,7 @@ void __init xttcps_timer_init(void)
+ 	event_timer_irq.dev_id = &timers[XTTCPS_CLOCKEVENT];
+ 	setup_irq(irq, &event_timer_irq);
+ 
+-	pr_info("%s #0 at %p, irq=%d\n", timer_list[0], timer_baseaddr, irq);
++	pr_info("%s #0 at %p, irq=%d\n", timer->name, timer_baseaddr, irq);
+ 
+ 	clk = clk_get_sys("CPU_1X_CLK", NULL);
+ 	if (IS_ERR(clk)) {
+@@ -395,3 +384,26 @@ void __init xttcps_timer_init(void)
+ 	twd_local_timer_of_register();
+ #endif
+ }
++
++/*
++ * This will be replaced in v3.10 by
++ * CLOCKSOURCE_OF_DECLARE(zynq, "xlnx,ttc",xttcps_timer_init);
++ * or
++ * CLOCKSOURCE_OF_DECLARE(zynq, "xlnx,ps7-ttc-1.00.a",xttcps_timer_init);
++ */
++void __init xttcps_timer_init_old(void)
++{
++	const char * const timer_list[] = {
++		"xlnx,ps7-ttc-1.00.a",
++		NULL
++	};
++	struct device_node *timer;
++
++	timer = of_find_compatible_node(NULL, NULL, timer_list[0]);
++	if (!timer) {
++		pr_err("ERROR: no compatible timer found\n");
++		BUG();
++	}
++
++	xttcps_timer_init(timer);
++}
+-- 
+1.7.1
+

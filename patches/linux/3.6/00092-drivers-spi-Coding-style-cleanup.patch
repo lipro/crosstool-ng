@@ -1,0 +1,30 @@
+From c7c309d8dedd9b2c2eee52ed80769ab652290bca Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Fri, 12 Oct 2012 14:27:27 +0200
+Subject: [PATCH] drivers: spi: Coding style cleanup
+
+Fix wrong merge.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ drivers/spi/Makefile |    3 +--
+ 1 files changed, 1 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/spi/Makefile b/drivers/spi/Makefile
+index d1af3d6..f30ab11 100644
+--- a/drivers/spi/Makefile
++++ b/drivers/spi/Makefile
+@@ -1,4 +1,4 @@
+-
++#
+ # Makefile for kernel SPI drivers.
+ #
+ 
+@@ -66,4 +66,3 @@ obj-$(CONFIG_SPI_XCOMM)		+= spi-xcomm.o
+ obj-$(CONFIG_SPI_XILINX)		+= spi-xilinx.o
+ obj-$(CONFIG_SPI_XILINX_PS_SPI)		+= spi-xilinx-ps.o
+ obj-$(CONFIG_SPI_XILINX_PS_QSPI)	+= spi-xilinx-qps.o
+-
+-- 
+1.7.1
+

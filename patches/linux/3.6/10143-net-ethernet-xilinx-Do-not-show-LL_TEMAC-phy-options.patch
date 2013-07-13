@@ -1,0 +1,37 @@
+From 0fdc4fbdf16a7680ff5146d7ba8cb019529074df Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Thu, 6 Dec 2012 09:37:44 +0100
+Subject: [PATCH] net: ethernet: xilinx: Do not show LL_TEMAC phy options if isn't selected
+
+Show phy options when it is required. Make no sense to show
+it for AXI.
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+---
+ drivers/net/ethernet/xilinx/Kconfig |    3 +--
+ 1 files changed, 1 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/net/ethernet/xilinx/Kconfig b/drivers/net/ethernet/xilinx/Kconfig
+index 278b2b2..40b0249 100644
+--- a/drivers/net/ethernet/xilinx/Kconfig
++++ b/drivers/net/ethernet/xilinx/Kconfig
+@@ -51,6 +51,7 @@ config XILINX_LLTEMAC
+ 
+ choice
+ 	prompt "Xilinx LLTEMAC PHY Support"
++	depends on XILINX_LLTEMAC
+ 	default XILINX_LLTEMAC_MARVELL_88E1111_GMII
+ 
+ config XILINX_LLTEMAC_MARVELL_88E1111_RGMII
+@@ -81,8 +82,6 @@ config XILINX_LLTEMAC_XILINX_1000BASEX
+ 
+ endchoice
+ 
+-
+-
+ config XILINX_PS_EMAC
+ 	tristate "Xilinx PS tri-speed EMAC support"
+ 	depends on ARCH_ZYNQ
+-- 
+1.7.1
+

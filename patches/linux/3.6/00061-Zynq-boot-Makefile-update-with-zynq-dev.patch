@@ -1,0 +1,99 @@
+From 9b9b5842791e4a3462e39be5651c51da7c67a512 Mon Sep 17 00:00:00 2001
+From: Jason Wu <jason.wu@petalogix.com>
+Date: Fri, 2 Dec 2011 14:51:02 +1000
+Subject: [PATCH] Zynq:boot:Makefile update with zynq-dev
+
+Makefile update with zynq-dev
+
+Signed-off-by: Jason Wu <jason.wu@petalogix.com>
+
+Add simpleImage target support
+---
+ arch/arm/Makefile      |    7 ++++++-
+ arch/arm/boot/Makefile |   27 ++++++++++++++++++++++++++-
+ 2 files changed, 32 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/Makefile b/arch/arm/Makefile
+index d170cb5..7a7bd8c 100644
+--- a/arch/arm/Makefile
++++ b/arch/arm/Makefile
+@@ -278,6 +278,10 @@ else
+ KBUILD_IMAGE := zImage
+ endif
+ 
++# With make 3.82 we cannot mix normal and wildcard targets
++BOOT_TARGETS1 := zImage Image xipImage bootpImage uImage
++BOOT_TARGETS2 := zImage% uImage.% dtbImage% simpleImage.%
++
+ all:	$(KBUILD_IMAGE)
+ 
+ boot := arch/arm/boot
+@@ -288,7 +292,8 @@ archprepare:
+ # Convert bzImage to zImage
+ bzImage: zImage
+ 
+-zImage Image xipImage bootpImage uImage: vmlinux
++#zImage Image xipImage bootpImage uImage: vmlinux
++$(BOOT_TARGETS1) $(BOOT_TARGETS2) : vmlinux
+ 	$(Q)$(MAKE) $(build)=$(boot) MACHINE=$(MACHINE) $(boot)/$@
+ 
+ zinstall uinstall install: vmlinux
+diff --git a/arch/arm/boot/Makefile b/arch/arm/boot/Makefile
+index 5d7b93e..3125e58 100644
+--- a/arch/arm/boot/Makefile
++++ b/arch/arm/boot/Makefile
+@@ -47,7 +47,17 @@ INITRD_PHYS := $(initrd_phys-y)
+ 
+ export ZRELADDR INITRD_PHYS PARAMS_PHYS
+ 
+-targets := Image zImage xipImage bootpImage uImage
++targets := zImage Image xipImage bootpImage uImage zImage% uImage.% dtbImage% simpleImage.%
++
++# Where the DTS files live
++dtstree         := $(srctree)/$(src)/dts
++
++# Rule to build device tree blobs
++DTC = $(objtree)/scripts/dtc/dtc
++
++quiet_cmd_strip = STRIP   $@.elf
++	cmd_strip = $(STRIP) -K arm_start -K _end -K __log_buf \
++				-K _fdt_start vmlinux -o $@.elf
+ 
+ ifeq ($(CONFIG_XIP_KERNEL),y)
+ 
+@@ -77,6 +87,15 @@ $(obj)/zImage:	$(obj)/compressed/vmlinux FORCE
+ 	$(call if_changed,objcopy)
+ 	@echo '  Kernel: $@ is ready'
+ 
++$(obj)/simpleImage.%: vmlinux FORCE
++	$(call if_changed,strip)
++	$(call if_changed,objcopy)
++	@echo 'Kernel: $@ is ready' ' (#'`cat .version`')'
++
++$(obj)/zImage.%: $(obj)/compressed/vmlinux FORCE
++	$(call if_changed,objcopy)
++	@echo '  Kernel: $@ is ready'
++
+ endif
+ 
+ targets += $(dtb-y)
+@@ -112,6 +131,10 @@ $(obj)/uImage:	$(obj)/zImage FORCE
+ 	$(call if_changed,uimage)
+ 	@echo '  Image $@ is ready'
+ 
++$(obj)/uImage.%: $(obj)/zImage FORCE
++	$(call if_changed,uimage)
++	@echo '  Image $@ is ready'
++
+ $(obj)/bootp/bootp: $(obj)/zImage initrd FORCE
+ 	$(Q)$(MAKE) $(build)=$(obj)/bootp $@
+ 	@:
+@@ -148,3 +171,5 @@ i:
+ 	$(obj)/Image System.map "$(INSTALL_PATH)"
+ 
+ subdir-	    := bootp compressed
++
++clean-files += *.dtb simpleImage.* linux.bin.ub
+-- 
+1.7.1
+

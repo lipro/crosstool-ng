@@ -1,0 +1,28 @@
+From 3e9570b5e9f7cb2224d4248eda6f788bb6056859 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Mon, 18 Jun 2012 09:01:33 +0200
+Subject: [PATCH] arm: zynq: Simplify smp code
+
+Just remove additional address checking.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ arch/arm/mach-zynq/platsmp.c |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/arch/arm/mach-zynq/platsmp.c b/arch/arm/mach-zynq/platsmp.c
+index 9fd9719..eb05a17 100644
+--- a/arch/arm/mach-zynq/platsmp.c
++++ b/arch/arm/mach-zynq/platsmp.c
+@@ -105,7 +105,7 @@ int zynq_cpu1_start(u32 address)
+ 		 * 0x4: Jump by mov instruction
+ 		 * 0x8: Jumping address
+ 		 */
+-		if (address && address >= 0xC) {
++		if (address) {
+ 			if (!zero) {
+ 				printk(KERN_WARNING
+ 					"BOOTUP jump vectors is not mapped!\n");
+-- 
+1.7.1
+

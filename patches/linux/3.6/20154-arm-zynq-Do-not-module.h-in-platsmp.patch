@@ -1,0 +1,38 @@
+From 7a9024311889bceecbd8358cdea1781f73309c52 Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Fri, 1 Feb 2013 13:09:30 +0100
+Subject: [PATCH] arm: zynq: Do not module.h in platsmp
+
+This patch is inspired by:
+"lib: reduce the use of module.h wherever possible"
+(sha1: 8bc3bcc93a2b4e47d5d410146f6546bca6171663)
+
+With description:
+"For files only using THIS_MODULE and/or EXPORT_SYMBOL, map
+them onto including export.h -- or if the file isn't even
+using those, then just delete the include.  Fix up any implicit
+include dependencies that were being masked by module.h along
+the way."
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+---
+ arch/arm/mach-zynq/platsmp.c |    3 ++-
+ 1 files changed, 2 insertions(+), 1 deletions(-)
+
+diff --git a/arch/arm/mach-zynq/platsmp.c b/arch/arm/mach-zynq/platsmp.c
+index e5cbf29..3185eb2 100644
+--- a/arch/arm/mach-zynq/platsmp.c
++++ b/arch/arm/mach-zynq/platsmp.c
+@@ -17,7 +17,8 @@
+  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  * GNU General Public License for more details.
+  */
+-#include <linux/module.h>
++
++#include <linux/export.h>
+ #include <linux/jiffies.h>
+ #include <linux/init.h>
+ #include <linux/io.h>
+-- 
+1.7.1
+

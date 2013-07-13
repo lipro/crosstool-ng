@@ -1,0 +1,32 @@
+From 629443b92491a6ab1caaff5d0f2652b51e96974f Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Mon, 19 Nov 2012 16:22:53 +0100
+Subject: [PATCH] usb: host: ehci-hcd: Pass correct link to otg phy
+
+Kernel was crashing because we passed instead of pointer to otg
+structure pointer to phy (ehci->ulpi) for ulpi_set_vbus().
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+Acked-by: John Linn <john.linn@xilinx.com>
+---
+ drivers/usb/host/ehci-hcd.c |    4 ++--
+ 1 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/usb/host/ehci-hcd.c b/drivers/usb/host/ehci-hcd.c
+index 2282d83..5dfc00c 100644
+--- a/drivers/usb/host/ehci-hcd.c
++++ b/drivers/usb/host/ehci-hcd.c
+@@ -673,8 +673,8 @@ static int ehci_run (struct usb_hcd *hcd)
+ 	ehci_writel(ehci, 0x00080000, non_ehci + 0x164);
+ #if defined(CONFIG_XILINX_ZED_USB_OTG)
+ 	if (ehci->ulpi) {
+-		struct otg_transceiver *otg = ehci->ulpi;
+-		otg_set_vbus(otg, 1);
++		struct usb_phy *phy = ehci->ulpi;
++		otg_set_vbus(phy->otg, 1);
+ 	}
+ #endif
+ #endif
+-- 
+1.7.1
+

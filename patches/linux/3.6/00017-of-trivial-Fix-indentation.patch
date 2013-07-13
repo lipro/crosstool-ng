@@ -1,0 +1,28 @@
+From 1d33b497d9848b6c0a59a0b571a81252d3cb0530 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Mon, 8 Oct 2012 13:58:53 +0200
+Subject: [PATCH] of: trivial: Fix indentation
+
+Just synchronize with mainline indentation.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ drivers/of/of_mdio.c |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/drivers/of/of_mdio.c b/drivers/of/of_mdio.c
+index 263d476..8e6c25f 100644
+--- a/drivers/of/of_mdio.c
++++ b/drivers/of/of_mdio.c
+@@ -54,7 +54,7 @@ int of_mdiobus_register(struct mii_bus *mdio, struct device_node *np)
+ 
+ 	/* Loop over the child nodes and register a phy_device for each one */
+ 	for_each_child_of_node(np, child) {
+-	const __be32 *paddr;
++		const __be32 *paddr;
+ 		u32 addr;
+ 		int len;
+ 		bool is_c45;
+-- 
+1.7.1
+

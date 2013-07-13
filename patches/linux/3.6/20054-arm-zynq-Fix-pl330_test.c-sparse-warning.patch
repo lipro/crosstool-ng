@@ -1,0 +1,56 @@
+From abfcdcb4efa4ff79fd64b75c0cf7f8de272f5eda Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Wed, 12 Dec 2012 16:59:02 +0100
+Subject: [PATCH] arm: zynq: Fix pl330_test.c sparse warning
+
+Warning log:
+arch/arm/mach-zynq/test/pl330_test.c:353:20: warning: symbol
+    'suite_test_data' was not declared. Should it be static?
+arch/arm/mach-zynq/test/pl330_test.c:1549:6: warning: symbol
+    'print_buf' was not declared. Should it be static?
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+---
+ arch/arm/mach-zynq/test/pl330_test.c |    6 ++++--
+ 1 files changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/mach-zynq/test/pl330_test.c b/arch/arm/mach-zynq/test/pl330_test.c
+index 5bad311..942c1e0 100644
+--- a/arch/arm/mach-zynq/test/pl330_test.c
++++ b/arch/arm/mach-zynq/test/pl330_test.c
+@@ -350,7 +350,7 @@ struct test_data_t {
+ };
+ 
+ static struct pl330_client_data suite_client_data;
+-struct test_data_t suite_test_data = {
++static struct test_data_t suite_test_data = {
+ 	.count = 0,
+ 	.buf = 0,
+ 	.off = 0,
+@@ -1540,13 +1540,14 @@ static int pl330_test_suite_5(void)
+ 	return status;
+ }
+ 
++#ifdef PL330_TEST_DEBUG
+ /**
+  * print_buf - Prints the content of a buffer.
+  * @buf:	Memory buffer
+  * @len:	Buffer length in bytes
+  * @buf_name:	Buffer name
+  */
+-void print_buf(void *buf, int len, char *buf_name)
++static void print_buf(void *buf, int len, char *buf_name)
+ {
+ 	int i;
+ 	PINFO("content of %s\n", buf_name);
+@@ -1554,6 +1555,7 @@ void print_buf(void *buf, int len, char *buf_name)
+ 	for (i = 0; i < len; i++)
+ 		PINFO("[%02x] %02x\n", i, *((u8 *)(buf + i)));
+ }
++#endif /* PL330_TEST_DEBUG */
+ 
+ /**
+  * pl330_test_suite_6 - The suite 6 exercises small DMA size.
+-- 
+1.7.1
+

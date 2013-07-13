@@ -1,0 +1,103 @@
+From c5173be26e392a3dd4be278b5f7f577238184a1c Mon Sep 17 00:00:00 2001
+From: John Linn <john.linn@xilinx.com>
+Date: Thu, 15 Nov 2012 18:03:50 -0800
+Subject: [PATCH] arm: zynq: remove unused platform data from ZC702/ZC706
+
+The board file had old stuff that was not used any more.
+Get rid of all the platform data which is already in the
+device tree.
+
+Signed-off-by: John Linn <john.linn@xilinx.com>
+Acked-by: Michal Simek <michal.simek@xilinx.com>
+---
+ arch/arm/mach-zynq/board_zc702.c |   59 --------------------------------------
+ 1 files changed, 0 insertions(+), 59 deletions(-)
+
+diff --git a/arch/arm/mach-zynq/board_zc702.c b/arch/arm/mach-zynq/board_zc702.c
+index c1af026..d634c8e 100644
+--- a/arch/arm/mach-zynq/board_zc702.c
++++ b/arch/arm/mach-zynq/board_zc702.c
+@@ -15,12 +15,7 @@
+ #include <linux/init.h>
+ #include <linux/of_platform.h>
+ 
+-#include <linux/spi/spi.h>
+-#include <linux/spi/eeprom.h>
+-#include <linux/platform_device.h>
+ #include <linux/device.h>
+-#include <linux/mtd/physmap.h>
+-#include <linux/spi/flash.h>
+ #include <linux/xilinx_devices.h>
+ #include <linux/gpio.h>
+ 
+@@ -35,55 +30,6 @@
+ #define IRQ_SPI1		81
+ #define USB_RST_GPIO	7
+ 
+-#ifdef CONFIG_SPI_SPIDEV
+-
+-static struct xspi_platform_data spi_0_pdata = {
+-	.speed_hz = 75000000,
+-	.bus_num = 0,
+-	.num_chipselect = 1
+-};
+-
+-#endif
+-
+-#ifdef CONFIG_MTD_M25P80
+-
+-static struct mtd_partition spi_flash_partitions[] = {
+-	{
+-		.name		= "spi-flash",
+-		.size		= 0x100000,
+-		.offset		= 0,
+-	},
+-};
+-
+-static struct flash_platform_data spi_flash_pdata = {
+-	.name			= "serial_flash",
+-	.parts			= spi_flash_partitions,
+-	.nr_parts		= ARRAY_SIZE(spi_flash_partitions),
+-	.type			= "sst25wf080"	
+-};
+-
+-#endif
+-
+-#if defined(CONFIG_SPI_SPIDEV) || defined(CONFIG_MTD_M25P80)
+-
+-static struct spi_board_info __initdata xilinx_spipss_0_boardinfo[] = {
+-	{
+-#ifdef CONFIG_SPI_SPIDEV
+-		.modalias		= "spidev",
+-		.platform_data		= &spi_0_pdata,
+-#else 
+-		.modalias		= "m25p80",
+-		.platform_data		= &spi_flash_pdata,
+-#endif
+-		.irq			= IRQ_SPI1,
+-		.max_speed_hz		= 40000000, /* max sample rate at 3V */
+-		.bus_num		= 0,
+-		.chip_select		= 1,
+-	},
+-};
+-
+-#endif
+-
+ extern struct sys_timer xttcpss_sys_timer;
+ 
+ static void __init board_zc702_init(void)
+@@ -104,11 +50,6 @@ static void __init board_zc702_init(void)
+ 	gpio_set_value(USB_RST_GPIO, 1);
+ 	gpio_set_value(USB_RST_GPIO, 0);
+ 	gpio_set_value(USB_RST_GPIO, 1);
+-
+-#if 	defined(CONFIG_SPI_SPIDEV) || defined(CONFIG_MTD_M25P80)
+-	spi_register_board_info(&xilinx_spipss_0_boardinfo[0], 
+-		ARRAY_SIZE(xilinx_spipss_0_boardinfo));
+-#endif
+ }
+ 
+ static const char *xilinx_dt_match[] = {
+-- 
+1.7.1
+

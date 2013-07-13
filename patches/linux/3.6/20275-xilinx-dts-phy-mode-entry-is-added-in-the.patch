@@ -1,0 +1,81 @@
+From a3679d089655d6f13937aa185fc789519f362c7b Mon Sep 17 00:00:00 2001
+From: Anirudha Sarangi <anirudh@xilinx.com>
+Date: Wed, 3 Apr 2013 23:06:57 +0530
+Subject: [PATCH] xilinx: dts: phy-mode entry is added in the
+
+This patch adds a new property "phy-mode" for all relevant device trees
+under the EmacPs node. This is done to ensure that the driver can
+handle varying type of PHY interfaces in a flexible way.
+
+Signed-off-by: Anirudha Sarangi <anirudh@xilinx.com>
+---
+ arch/arm/boot/dts/zynq-zc702.dts       |    1 +
+ arch/arm/boot/dts/zynq-zc706.dts       |    1 +
+ arch/arm/boot/dts/zynq-zc770-xm010.dts |    1 +
+ arch/arm/boot/dts/zynq-zc770-xm013.dts |    1 +
+ arch/arm/boot/dts/zynq-zed.dts         |    1 +
+ 5 files changed, 5 insertions(+), 0 deletions(-)
+
+diff --git a/arch/arm/boot/dts/zynq-zc702.dts b/arch/arm/boot/dts/zynq-zc702.dts
+index 6d5845c..19e2780 100644
+--- a/arch/arm/boot/dts/zynq-zc702.dts
++++ b/arch/arm/boot/dts/zynq-zc702.dts
+@@ -141,6 +141,7 @@
+ 			interrupts = <0 22 4>;
+ 			interrupt-parent = <&gic>;
+ 			phy-handle = <&phy0>;
++			phy-mode = "rgmii-id";
+ 			xlnx,ptp-enet-clock = <111111111>;
+ 			xlnx,slcr-div0-1000Mbps = <8>;
+ 			xlnx,slcr-div0-100Mbps = <8>;
+diff --git a/arch/arm/boot/dts/zynq-zc706.dts b/arch/arm/boot/dts/zynq-zc706.dts
+index ef1e1b6..4708c86 100644
+--- a/arch/arm/boot/dts/zynq-zc706.dts
++++ b/arch/arm/boot/dts/zynq-zc706.dts
+@@ -140,6 +140,7 @@
+ 			interrupts = <0 22 4>;
+ 			interrupt-parent = <&gic>;
+ 			phy-handle = <&phy0>;
++			phy-mode = "rgmii-id";
+ 			xlnx,ptp-enet-clock = <111111111>;
+ 			xlnx,slcr-div0-1000Mbps = <8>;
+ 			xlnx,slcr-div0-100Mbps = <8>;
+diff --git a/arch/arm/boot/dts/zynq-zc770-xm010.dts b/arch/arm/boot/dts/zynq-zc770-xm010.dts
+index b48e4c3..61f4e76 100644
+--- a/arch/arm/boot/dts/zynq-zc770-xm010.dts
++++ b/arch/arm/boot/dts/zynq-zc770-xm010.dts
+@@ -141,6 +141,7 @@
+ 			interrupts = <0 22 4>;
+ 			interrupt-parent = <&gic>;
+ 			phy-handle = <&phy0>;
++			phy-mode = "rgmii-id";
+ 			xlnx,ptp-enet-clock = <133000000>;
+ 			xlnx,slcr-div0-1000Mbps = <8>;
+ 			xlnx,slcr-div0-100Mbps = <8>;
+diff --git a/arch/arm/boot/dts/zynq-zc770-xm013.dts b/arch/arm/boot/dts/zynq-zc770-xm013.dts
+index 940fa99..8dfae1c 100644
+--- a/arch/arm/boot/dts/zynq-zc770-xm013.dts
++++ b/arch/arm/boot/dts/zynq-zc770-xm013.dts
+@@ -222,6 +222,7 @@
+ 			interrupts = <0 45 4>;
+ 			interrupt-parent = <&gic>;
+ 			phy-handle = <&phy0>;
++			phy-mode = "rgmii-id";
+ 			xlnx,ptp-enet-clock = <133000000>;
+ 			xlnx,slcr-div0-1000Mbps = <8>;
+ 			xlnx,slcr-div0-100Mbps = <8>;
+diff --git a/arch/arm/boot/dts/zynq-zed.dts b/arch/arm/boot/dts/zynq-zed.dts
+index 08ad82e..cd0bc86 100644
+--- a/arch/arm/boot/dts/zynq-zed.dts
++++ b/arch/arm/boot/dts/zynq-zed.dts
+@@ -132,6 +132,7 @@
+ 			interrupts = < 0 22 1 >;
+ 			local-mac-address = [ 00 0a 35 00 00 00 ];
+ 			phy-handle = <&phy0>;
++			phy-mode = "rgmii-id";
+ 			reg = < 0xe000b000 0x1000 >;
+ 			xlnx,enet-clk-freq-hz = <0x7735940>;
+ 			xlnx,enet-reset = <0xffffffff>;
+-- 
+1.7.1
+

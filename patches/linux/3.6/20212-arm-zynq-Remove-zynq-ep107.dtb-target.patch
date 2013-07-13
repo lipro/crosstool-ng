@@ -1,0 +1,30 @@
+From 15fbf95a4bd828a70062d6e8ea29537a932bbdd9 Mon Sep 17 00:00:00 2001
+From: Soren Brinkmann <soren.brinkmann@xilinx.com>
+Date: Tue, 5 Mar 2013 16:48:17 -0800
+Subject: [PATCH] arm: zynq: Remove zynq-ep107.dtb target.
+
+Removing the make target for the zynq-ep107.dtb since the dts has
+already been removed.
+This should have been part of 'arm: dt: zynq: Remove ep107 dts (sha1:
+81030d699bef3f256d61f0c7c971bd03286bd142)'
+
+Signed-off-by: Soren Brinkmann <soren.brinkmann@xilinx.com>
+---
+ arch/arm/mach-zynq/Makefile.boot |    1 -
+ 1 files changed, 0 insertions(+), 1 deletions(-)
+
+diff --git a/arch/arm/mach-zynq/Makefile.boot b/arch/arm/mach-zynq/Makefile.boot
+index 7a4faf6..f6a8c4c 100644
+--- a/arch/arm/mach-zynq/Makefile.boot
++++ b/arch/arm/mach-zynq/Makefile.boot
+@@ -5,7 +5,6 @@ initrd_phys-y	:= 0x00800000
+ dtb-$(CONFIG_ARCH_ZYNQ) += \
+ 			zynq-afx-nand.dtb \
+ 			zynq-afx-nor.dtb \
+-			zynq-ep107.dtb \
+ 			zynq-zc702.dtb \
+ 			zynq-zc706.dtb \
+ 			zynq-zc770-xm010.dtb \
+-- 
+1.7.1
+

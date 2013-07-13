@@ -1,0 +1,28 @@
+From af9ba19dc73fb8e10fc2d5cbeac8c7641e4f0c65 Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Fri, 1 Feb 2013 10:43:53 +0100
+Subject: [PATCH] arm: zynq: Coding style cleanup timer.c
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+---
+ arch/arm/mach-zynq/timer.c |    4 ++--
+ 1 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/mach-zynq/timer.c b/arch/arm/mach-zynq/timer.c
+index f43f607..22c6c18 100644
+--- a/arch/arm/mach-zynq/timer.c
++++ b/arch/arm/mach-zynq/timer.c
+@@ -57,8 +57,8 @@
+  * Setup the timers to use pre-scaling, using a fixed value for now that will
+  * work across most input frequency, but it may need to be more dynamic
+  */
+-#define PRESCALE_EXPONENT 	11	/* 2 ^ PRESCALE_EXPONENT = PRESCALE */
+-#define PRESCALE 		2048	/* The exponent must match this */
++#define PRESCALE_EXPONENT	11	/* 2 ^ PRESCALE_EXPONENT = PRESCALE */
++#define PRESCALE		2048	/* The exponent must match this */
+ #define CLK_CNTRL_PRESCALE (((PRESCALE_EXPONENT - 1) << 1) | 0x1)
+ 
+ /**
+-- 
+1.7.1
+

@@ -1,0 +1,90 @@
+From d155bd09caa94af1697872aabff866c5f7116638 Mon Sep 17 00:00:00 2001
+From: Pallav Joshi <pallav.joshi@xilinx.com>
+Date: Wed, 17 Oct 2012 15:07:11 +0530
+Subject: [PATCH] Xilinx: ARM: Frame buffer driver fix for compilation error.
+
+Fixed xylonfb-pixclk.c file for the compilation error while
+    using other flags than CONFIG_FB_XYLON_ZC702_PIXCLK.
+    Added appropriate header files to xylonfb-pixclk.c
+
+Signed-off-by: Pallav Joshi <pallavj@xilinx.com>
+---
+ drivers/video/xylon/xylonfb/core/xylonfb-pixclk.c |    7 +++++++
+ drivers/video/xylon/xylonfb/core/xylonfb.c        |   12 ++++++------
+ drivers/video/xylon/xylonfb/core/xylonfb.h        |    2 +-
+ 3 files changed, 14 insertions(+), 7 deletions(-)
+
+diff --git a/drivers/video/xylon/xylonfb/core/xylonfb-pixclk.c b/drivers/video/xylon/xylonfb/core/xylonfb-pixclk.c
+index 35af7cc..08edc5a 100644
+--- a/drivers/video/xylon/xylonfb/core/xylonfb-pixclk.c
++++ b/drivers/video/xylon/xylonfb/core/xylonfb-pixclk.c
+@@ -27,6 +27,9 @@
+ #undef HW_PIXEL_CLOCK_CHANGE_SUPPORTED
+ #endif
+ #define HW_PIXEL_CLOCK_CHANGE_SUPPORTED 0
++
++#include <linux/kernel.h>
++
+ int xylonfb_hw_pixclk_set(unsigned long pixclk_khz)
+ {
+ 	pr_info("Pixel clock change not supported\n");
+@@ -35,6 +38,10 @@ int xylonfb_hw_pixclk_set(unsigned long pixclk_khz)
+ 
+ #elif defined(CONFIG_FB_XYLON_ZYNQ_PS_PIXCLK)
+ 
++#include <asm/io.h>
++#include <linux/kernel.h>
++#include <linux/errno.h>
++
+ int xylonfb_hw_pixclk_set(unsigned long pixclk_khz)
+ {
+ 	unsigned long pllclk, sysclk;
+diff --git a/drivers/video/xylon/xylonfb/core/xylonfb.c b/drivers/video/xylon/xylonfb/core/xylonfb.c
+index ccfed00..3b1eeca 100644
+--- a/drivers/video/xylon/xylonfb/core/xylonfb.c
++++ b/drivers/video/xylon/xylonfb/core/xylonfb.c
+@@ -208,10 +208,10 @@ static int xylonfb_set_par(struct fb_info *fbi)
+ 	if (common_data->xylonfb_flags & FB_VMODE_SET)
+ 		return 0;
+ 
+-	if (xylonfb_hw_pixclk_change()) {
+-		xylonfb_stop_logicvc(fbi);
+-		xylonfb_logicvc_disp_ctrl(fbi, false);
++	xylonfb_stop_logicvc(fbi);
++	xylonfb_logicvc_disp_ctrl(fbi, false);
+ 
++	if (xylonfb_hw_pixclk_change()) {
+ 		if (!(common_data->xylonfb_flags & FB_VMODE_INIT)) {
+ 			sprintf(vmode_opt, "%dx%dM-%d@%d",
+ 				fbi->var.xres, fbi->var.yres,
+@@ -232,11 +232,11 @@ static int xylonfb_set_par(struct fb_info *fbi)
+ 			pr_err("Error xylonfb changing pixel clock\n");
+ 			return rc;
+ 		}
+-
+-		xylonfb_start_logicvc(fbi);
+-		xylonfb_logicvc_disp_ctrl(fbi, true);
+ 	}
+ 
++	xylonfb_start_logicvc(fbi);
++	xylonfb_logicvc_disp_ctrl(fbi, true);
++
+ 	pr_info("xylonfb video mode: %dx%d-%d@%d\n",
+ 		fbi->var.xres, fbi->var.yres, fbi->var.bits_per_pixel,
+ 		common_data->vmode_data_current.fb_vmode.refresh);
+diff --git a/drivers/video/xylon/xylonfb/core/xylonfb.h b/drivers/video/xylon/xylonfb/core/xylonfb.h
+index fb920d4..185aae7 100644
+--- a/drivers/video/xylon/xylonfb/core/xylonfb.h
++++ b/drivers/video/xylon/xylonfb/core/xylonfb.h
+@@ -24,7 +24,7 @@
+ #define DRIVER_NAME "xylonfb"
+ #define DEVICE_NAME "logicvc"
+ #define DRIVER_DESCRIPTION "Xylon logiCVC frame buffer driver"
+-#define DRIVER_VERSION "1.0"
++#define DRIVER_VERSION "1.1"
+ 
+ /* FB driver flags */
+ #define FB_DMA_BUFFER        0x01
+-- 
+1.7.1
+

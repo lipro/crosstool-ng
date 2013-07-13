@@ -1,0 +1,33 @@
+From 6c3677e02dc42facbd178c4d1c2ad08dc0f6d670 Mon Sep 17 00:00:00 2001
+From: Wendy Liang <wendy.liang@petalogix.com>
+Date: Mon, 12 Mar 2012 18:18:58 +1000
+Subject: [PATCH] c67x00 fix reading BE DTB in LE system
+
+Signed-off-by: Wendy Liang <wendy.liang@petalogix.com>
+---
+ drivers/usb/c67x00/c67x00-drv.c |    4 ++--
+ 1 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/usb/c67x00/c67x00-drv.c b/drivers/usb/c67x00/c67x00-drv.c
+index 92c4dc5..bf1c3ad 100644
+--- a/drivers/usb/c67x00/c67x00-drv.c
++++ b/drivers/usb/c67x00/c67x00-drv.c
+@@ -151,13 +151,13 @@ static int __devinit c67x00_drv_probe(struct platform_device *pdev)
+ 			ret = -ENODEV;
+ 			goto free_pdata_of;
+ 		}
+-		pdata->hpi_regstep = *p;
++		pdata->hpi_regstep = be32_to_cpup(p);
+ 		p = (unsigned int *)of_get_property(pdev->dev.of_node, "sie-config", NULL);
+ 		if (!p) {
+ 			ret = -ENODEV;
+ 			goto free_pdata_of;
+ 		}
+-		pdata->sie_config = *p;
++		pdata->sie_config = be32_to_cpup(p);
+ #else
+ 		return -ENODEV;
+ #endif
+-- 
+1.7.1
+

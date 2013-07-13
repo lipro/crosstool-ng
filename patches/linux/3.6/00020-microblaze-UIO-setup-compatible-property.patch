@@ -1,0 +1,27 @@
+From 3976b667483766aec3174fa01cdf2b668c4de19f Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Mon, 12 Dec 2011 13:34:44 +0100
+Subject: [PATCH] microblaze: UIO setup compatible property
+
+Setup compatible property which matches petalinux.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ drivers/uio/uio_pdrv_genirq.c |    1 +
+ 1 files changed, 1 insertions(+), 0 deletions(-)
+
+diff --git a/drivers/uio/uio_pdrv_genirq.c b/drivers/uio/uio_pdrv_genirq.c
+index 42202cd..1f5ec28 100644
+--- a/drivers/uio/uio_pdrv_genirq.c
++++ b/drivers/uio/uio_pdrv_genirq.c
+@@ -263,6 +263,7 @@ static const struct dev_pm_ops uio_pdrv_genirq_dev_pm_ops = {
+ 
+ #ifdef CONFIG_OF
+ static const struct of_device_id uio_of_genirq_match[] = {
++	{ .compatible = "generic-uio", },
+ 	{ /* empty for now */ },
+ };
+ MODULE_DEVICE_TABLE(of, uio_of_genirq_match);
+-- 
+1.7.1
+

@@ -1,0 +1,24 @@
+rebuild the merge process of xilinx-next into xilinx-master:
+
+  git diff 96aabc1..226f690 >0001-Merge-branch-master-next-into-master.patch
+
+    [sha1:226f690] Merge branch 'master-next' into master
+    
+    This is the result of merging Petalinux and Xilinx OSL together
+    to get the best of both.
+    
+    Signed-off-by: John Linn <john.linn@xilinx.com>
+
+diff --git a/drivers/net/ethernet/xilinx/xilinx_axienet_main.c b/drivers/net/ethernet/xilinx/xilinx_axienet_main.c
+index 041775e..838345c 100644
+--- a/drivers/net/ethernet/xilinx/xilinx_axienet_main.c
++++ b/drivers/net/ethernet/xilinx/xilinx_axienet_main.c
+@@ -1495,7 +1495,7 @@ static void axienet_dma_err_handler(unsigned long data)
+ static int __devinit axienet_of_probe(struct platform_device *op)
+ {
+ 	__be32 *p;
+-	int size, ret = 0;
++	int size, ret = 0, rc;
+ 	struct device_node *np;
+ 	struct axienet_local *lp;
+ 	struct net_device *ndev;

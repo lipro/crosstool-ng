@@ -1,0 +1,35 @@
+From 8ac63f577fb47e150e2fd8cad83ea4da1b878b90 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Mon, 22 Oct 2012 14:43:46 +0200
+Subject: [PATCH] arm: zynq: Remove additional empty lines
+
+Coding style cleanup.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ arch/arm/mach-zynq/common.c |    2 --
+ 1 files changed, 0 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/mach-zynq/common.c b/arch/arm/mach-zynq/common.c
+index bddb20a..fae1ee1 100644
+--- a/arch/arm/mach-zynq/common.c
++++ b/arch/arm/mach-zynq/common.c
+@@ -37,7 +37,6 @@
+ #include <mach/pdev.h>
+ #include "common.h"
+ 
+-
+ static struct of_device_id zynq_of_bus_ids[] __initdata = {
+ 	{ .compatible = "simple-bus", },
+ 	{}
+@@ -93,7 +92,6 @@ static struct map_desc io_desc[] __initdata = {
+ 	},
+ };
+ 
+-
+ /**
+  * xilinx_map_io() - Create memory mappings needed for early I/O.
+  */
+-- 
+1.7.1
+

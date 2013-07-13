@@ -1,0 +1,56 @@
+From 7f8da23784a2fb0a8155a42f4987849722b0f90d Mon Sep 17 00:00:00 2001
+From: Soren Brinkmann <soren.brinkmann@xilinx.com>
+Date: Wed, 14 Nov 2012 09:34:08 -0800
+Subject: [PATCH] clk: zynq: Use range expressions in switch
+
+To shorten the huge switch statement a little bit range
+expressions are used.
+
+Signed-off-by: Soren Brinkmann <soren.brinkmann@xilinx.com>
+Acked-by: Michal Simek <michal.simek@xilinx.com>
+---
+ drivers/clk/zynq/pll.c |   17 +++++------------
+ 1 files changed, 5 insertions(+), 12 deletions(-)
+
+diff --git a/drivers/clk/zynq/pll.c b/drivers/clk/zynq/pll.c
+index e8bcb24..cf2f9a9 100644
+--- a/drivers/clk/zynq/pll.c
++++ b/drivers/clk/zynq/pll.c
+@@ -138,29 +138,22 @@ static int zynq_pll_get_pll_params(unsigned int fbdiv, u32 *rpll_cp,
+ 	case 23:
+ 		lock_cnt = 425;
+ 		break;
+-	case 24:
+-	case 25:
++	case 24 ... 25:
+ 		lock_cnt = 400;
+ 		break;
+ 	case 26:
+ 		lock_cnt = 375;
+ 		break;
+-	case 27:
+-	case 28:
++	case 27 ... 28:
+ 		lock_cnt = 350;
+ 		break;
+-	case 29:
+-	case 30:
++	case 29 ... 30:
+ 		lock_cnt = 325;
+ 		break;
+-	case 31:
+-	case 32:
+-	case 33:
++	case 31 ... 33:
+ 		lock_cnt = 300;
+ 		break;
+-	case 34:
+-	case 35:
+-	case 36:
++	case 34 ... 36:
+ 		lock_cnt = 275;
+ 		break;
+ 	default:
+-- 
+1.7.1
+

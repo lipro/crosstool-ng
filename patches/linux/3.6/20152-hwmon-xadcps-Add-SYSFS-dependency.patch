@@ -1,0 +1,39 @@
+From aa2966bcd64c75d71cca15b4c642f0ccc1a9618b Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Fri, 1 Feb 2013 12:14:21 +0100
+Subject: [PATCH] hwmon: xadcps: Add SYSFS dependency
+
+It is not necessary to do it but let's assume
+that users want to use the whole driver not just
+the part.
+
+Also fix tabs in Kconfig to correct style.
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+---
+ drivers/hwmon/Kconfig |    9 +++++----
+ 1 files changed, 5 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/hwmon/Kconfig b/drivers/hwmon/Kconfig
+index ca1cddd..969f169 100644
+--- a/drivers/hwmon/Kconfig
++++ b/drivers/hwmon/Kconfig
+@@ -1412,10 +1412,11 @@ config SENSORS_MC13783_ADC
+           Support for the A/D converter on MC13783 and MC13892 PMIC.
+ 
+ config SENSORS_XADCPS
+-        tristate "Xilinx Zynq XADC"
+-        depends on ARCH_ZYNQ
+-        help
+-          Support for the A/D converter on Xilinx Zynq.
++	tristate "Xilinx Zynq XADC"
++	depends on ARCH_ZYNQ
++	depends on SYSFS
++	help
++	  Support for the A/D converter on Xilinx Zynq.
+ 
+ if ACPI
+ 
+-- 
+1.7.1
+

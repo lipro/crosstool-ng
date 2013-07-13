@@ -1,0 +1,28 @@
+From f2aea43a995bdf16e41410d3a2a51224b22a8e6c Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Fri, 19 Oct 2012 10:24:35 +0200
+Subject: [PATCH] mtd: nand: Remove old ARCH_XILINX reference
+
+Cleanup.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ drivers/mtd/nand/nand_base.c |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/drivers/mtd/nand/nand_base.c b/drivers/mtd/nand/nand_base.c
+index 252c31b..5b33337 100644
+--- a/drivers/mtd/nand/nand_base.c
++++ b/drivers/mtd/nand/nand_base.c
+@@ -875,7 +875,7 @@ static int nand_wait(struct mtd_info *mtd, struct nand_chip *chip)
+ 		timeo += (HZ * 400) / 1000;
+ 	else {
+ 		timeo += (HZ * 20) / 1000;
+-#if (defined(CONFIG_ARCH_XILINX) || defined(ARCH_ZYNQ)) && (CONFIG_HZ == 20)
++#if defined(ARCH_ZYNQ) && (CONFIG_HZ == 20)
+ 		/* Xilinx PSS NAND work around for HZ=20 */
+ 		timeo += 1;
+ #endif
+-- 
+1.7.1
+

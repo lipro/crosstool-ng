@@ -1,0 +1,28 @@
+From 4d516f010e5523d02832045cf5ae0acd3afe58ce Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Mon, 8 Oct 2012 18:53:27 +0200
+Subject: [PATCH] zynq: slcr: Use __devinit instead of __init
+
+Fix section mistmatch (need to be verified).
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ arch/arm/mach-zynq/slcr.c |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/arch/arm/mach-zynq/slcr.c b/arch/arm/mach-zynq/slcr.c
+index e70d931..a9ecaed 100644
+--- a/arch/arm/mach-zynq/slcr.c
++++ b/arch/arm/mach-zynq/slcr.c
+@@ -2391,7 +2391,7 @@ next_periph:
+  *
+  * Return: 0 on success, negative error otherwise.
+  **/
+-static int __init xslcr_probe(struct platform_device *pdev)
++static int __devinit xslcr_probe(struct platform_device *pdev)
+ {
+ 	struct resource res;
+ 	int ret;
+-- 
+1.7.1
+

@@ -1,0 +1,32 @@
+From d2daf9a8e1c4aa7558f3d8af10a670ff53076402 Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Mon, 4 Feb 2013 09:07:27 +0100
+Subject: [PATCH] net: ethernet: axienet: Remove unused variable
+
+Warning log:
+  CC      drivers/net/ethernet/xilinx/xilinx_axienet_main.o
+drivers/net/ethernet/xilinx/xilinx_axienet_main.c: In function 'axienet_of_probe':
+drivers/net/ethernet/xilinx/xilinx_axienet_main.c:1505:21:
+warning: unused variable 'rc' [-Wunused-variable]
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+---
+ drivers/net/ethernet/xilinx/xilinx_axienet_main.c |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/drivers/net/ethernet/xilinx/xilinx_axienet_main.c b/drivers/net/ethernet/xilinx/xilinx_axienet_main.c
+index d033f39..fdd4a07 100644
+--- a/drivers/net/ethernet/xilinx/xilinx_axienet_main.c
++++ b/drivers/net/ethernet/xilinx/xilinx_axienet_main.c
+@@ -1498,7 +1498,7 @@ static void axienet_dma_err_handler(unsigned long data)
+ static int __devinit axienet_of_probe(struct platform_device *op)
+ {
+ 	__be32 *p;
+-	int size, ret = 0, rc;
++	int size, ret = 0;
+ 	struct device_node *np;
+ 	struct axienet_local *lp;
+ 	struct net_device *ndev;
+-- 
+1.7.1
+

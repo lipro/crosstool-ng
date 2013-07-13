@@ -1,0 +1,31 @@
+From 5ad4ea5e3b486fbf4ff0fd6acb00fb7e051fc118 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Mon, 8 Oct 2012 14:58:21 +0200
+Subject: [PATCH] microblaze: Do more actions for simpleImage format
+
+Synchronize it with mainline.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ arch/microblaze/boot/Makefile |    5 ++++-
+ 1 files changed, 4 insertions(+), 1 deletions(-)
+
+diff --git a/arch/microblaze/boot/Makefile b/arch/microblaze/boot/Makefile
+index 1fddc28..fa83ea4 100644
+--- a/arch/microblaze/boot/Makefile
++++ b/arch/microblaze/boot/Makefile
+@@ -38,7 +38,10 @@ UIMAGE_OUT = $@.ub
+ UIMAGE_LOADADDR = $(CONFIG_KERNEL_BASE_ADDR)
+ 
+ $(obj)/simpleImage.%: vmlinux FORCE
+-	$(call if_changed,cp)
++	$(call if_changed,cp,.unstrip)
++	$(call if_changed,objcopy)
++	$(call if_changed,uimage)
++	$(call if_changed,strip)
+ 	@echo 'Kernel: $@ is ready' ' (#'`cat .version`')'
+ 
+ 
+-- 
+1.7.1
+

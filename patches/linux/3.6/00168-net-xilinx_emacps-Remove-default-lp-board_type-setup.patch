@@ -1,0 +1,29 @@
+From 82038ad7e4cf5a8a83c93d1fed09af35e8e7be0b Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Sun, 21 Oct 2012 17:08:20 +0200
+Subject: [PATCH] net: xilinx_emacps: Remove default lp->board_type setup
+
+It is find out several lines below.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ drivers/net/ethernet/xilinx/xilinx_emacps.c |    3 ---
+ 1 files changed, 0 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/net/ethernet/xilinx/xilinx_emacps.c b/drivers/net/ethernet/xilinx/xilinx_emacps.c
+index 2ce4b38..0e09188 100644
+--- a/drivers/net/ethernet/xilinx/xilinx_emacps.c
++++ b/drivers/net/ethernet/xilinx/xilinx_emacps.c
+@@ -3074,9 +3074,6 @@ static int __devinit xemacps_probe(struct platform_device *pdev)
+ 	netif_napi_add(ndev, &lp->napi, xemacps_rx_poll, XEMACPS_NAPI_WEIGHT);
+ 
+ 	lp->ip_summed = CHECKSUM_UNNECESSARY;
+-#ifdef CONFIG_OF
+-	lp->board_type = BOARD_TYPE_ZYNQ;
+-#endif
+ 
+ 	rc = register_netdev(ndev);
+ 	if (rc) {
+-- 
+1.7.1
+
