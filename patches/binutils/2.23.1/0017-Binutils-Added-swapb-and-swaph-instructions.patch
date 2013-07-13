@@ -1,0 +1,41 @@
+From 2e74d66e9dcbb4718ce5b2447f52ad214055a05f Mon Sep 17 00:00:00 2001
+From: nagaraju <nmekala@xilix.com>
+Date: Tue, 28 Feb 2012 15:23:52 +0530
+Subject: [PATCH 17/24] Binutils: Added swapb and swaph instructions
+
+Signed-off-by: nagaraju nmekala@xilinx.com
+Signed-off-by: David Holsgrove <david.holsgrove@petalogix.com>
+---
+ opcodes/microblaze-opc.h  |    2 ++
+ opcodes/microblaze-opcm.h |    2 +-
+ 2 files changed, 3 insertions(+), 1 deletions(-)
+
+diff --git a/opcodes/microblaze-opc.h b/opcodes/microblaze-opc.h
+index 5a5b3ef..4bb2f6b 100644
+--- a/opcodes/microblaze-opc.h
++++ b/opcodes/microblaze-opc.h
+@@ -268,6 +268,8 @@ struct op_code_struct
+   {"fcmp.ge", INST_TYPE_RD_R1_R2, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x58000260, OPCODE_MASK_H4, fcmp_ge, arithmetic_inst },
+   {"fcmp.un", INST_TYPE_RD_R1_R2, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x58000200, OPCODE_MASK_H4, fcmp_un, arithmetic_inst },
+   {"flt",   INST_TYPE_RD_R1, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x58000280, OPCODE_MASK_H4, flt,   arithmetic_inst },
++  {"swapb",   INST_TYPE_RD_R1, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x900001E0, OPCODE_MASK_H4, swapb,   arithmetic_inst },
++  {"swaph",   INST_TYPE_RD_R1, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x900001E2, OPCODE_MASK_H4, swaph,   arithmetic_inst },
+   {"fint",  INST_TYPE_RD_R1, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x58000300, OPCODE_MASK_H4, fint,  arithmetic_inst },
+   {"fsqrt", INST_TYPE_RD_R1, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x58000380, OPCODE_MASK_H4, fsqrt, arithmetic_inst },
+   {"tget",   INST_TYPE_RD_RFSL, INST_NO_OFFSET, NO_DELAY_SLOT, IMMVAL_MASK_NON_SPECIAL, 0x6C001000, OPCODE_MASK_H32, tget,   anyware_inst },
+diff --git a/opcodes/microblaze-opcm.h b/opcodes/microblaze-opcm.h
+index 1f5d85a..71de752 100644
+--- a/opcodes/microblaze-opcm.h
++++ b/opcodes/microblaze-opcm.h
+@@ -27,7 +27,7 @@ enum microblaze_instr
+ {
+   add, rsub, addc, rsubc, addk, rsubk, addkc, rsubkc, clz, cmp, cmpu,
+   addi, rsubi, addic, rsubic, addik, rsubik, addikc, rsubikc, mul, 
+-  mulh, mulhu, mulhsu,
++  mulh, mulhu, mulhsu,swapb,swaph,
+   idiv, idivu, bsll, bsra, bsrl, get, put, nget, nput, cget, cput,
+   ncget, ncput, muli, bslli, bsrai, bsrli, mului, or, and, xor,
+   andn, pcmpbf, pcmpbc, pcmpeq, pcmpne, sra, src, srl, sext8, sext16, 
+-- 
+1.7.1
+

@@ -1,0 +1,27 @@
+From 0f35d3d4595acbee451c76e73850225b841faa2b Mon Sep 17 00:00:00 2001
+From: David Holsgrove <david.holsgrove@petalogix.com>
+Date: Fri, 11 Nov 2011 10:25:16 +1000
+Subject: [PATCH 10/24] microblaze: Remove special register condition check for INST_TYPE_RFSL related insn
+
+Signed-off-by: David Holsgrove <david.holsgrove@petalogix.com>
+---
+ gas/config/tc-microblaze.c |    3 ---
+ 1 files changed, 0 insertions(+), 3 deletions(-)
+
+diff --git a/gas/config/tc-microblaze.c b/gas/config/tc-microblaze.c
+index b613b40..e9c7846 100644
+--- a/gas/config/tc-microblaze.c
++++ b/gas/config/tc-microblaze.c
+@@ -1213,9 +1213,6 @@ md_assemble (char * str)
+           as_fatal (_("Error in statement syntax"));
+           immed = 0;
+         }
+-      /* Check for spl registers.  */
+-      if (check_spl_reg (&reg1))
+-        as_fatal (_("Cannot use special register with this instruction"));
+       inst |= (immed << IMM_LOW) & RFSL_MASK;
+       output = frag_more (isize);
+       break;
+-- 
+1.7.1
+
