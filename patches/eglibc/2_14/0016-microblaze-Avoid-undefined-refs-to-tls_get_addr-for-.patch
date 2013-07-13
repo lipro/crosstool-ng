@@ -1,0 +1,39 @@
+From fe4ada061e5ba6792d14b676c7b4f52ffc44da10 Mon Sep 17 00:00:00 2001
+From: Edgar E. Iglesias <edgar.iglesias@gmail.com>
+Date: Mon, 30 Jan 2012 11:16:41 +0100
+Subject: [PATCH 16/41] microblaze: Avoid undefined refs to tls_get_addr for various libs
+
+Signed-off-by: Edgar E. Iglesias <edgar.iglesias@gmail.com>
+---
+ sysdeps/microblaze/Makefile |   18 ++++++++++++++++++
+ 1 files changed, 18 insertions(+), 0 deletions(-)
+
+diff --git a/sysdeps/microblaze/Makefile b/sysdeps/microblaze/Makefile
+index 9e2f96b..1aea00b 100644
+--- a/sysdeps/microblaze/Makefile
++++ b/sysdeps/microblaze/Makefile
+@@ -25,3 +25,21 @@ CFLAGS-setjmp.c := -fno-omit-frame-pointer
+ ifeq ($(subdir),elf)
+ CFLAGS-rtld.c += -Wno-uninitialized -Wno-unused
+ endif
++
++# Without the following we get undefined references from these
++# various libs to __tls_get_addr. Not sure why only microblaze
++# needs this?
++$(objpfx)libm.so: $(elfobjdir)/ld.so
++$(objpfx)libcrypt.so: $(elfobjdir)/ld.so
++$(objpfx)libresolv.so: $(elfobjdir)/ld.so
++$(objpfx)libnss_dns.so: $(elfobjdir)/ld.so
++$(objpfx)libnss_files.so: $(elfobjdir)/ld.so
++$(objpfx)libnss_db.so: $(elfobjdir)/ld.so
++$(objpfx)libnss_nis.so: $(elfobjdir)/ld.so
++$(objpfx)libnss_nisplus.so: $(elfobjdir)/ld.so
++$(objpfx)libnss_hesiod.so: $(elfobjdir)/ld.so
++$(objpfx)libnss_compat.so: $(elfobjdir)/ld.so
++$(objpfx)libanl.so: $(elfobjdir)/ld.so
++$(objpfx)libnsl.so: $(elfobjdir)/ld.so
++$(objpfx)libcidn.so: $(elfobjdir)/ld.so
++$(objpfx)libutil.so: $(elfobjdir)/ld.so
+-- 
+1.7.1
+

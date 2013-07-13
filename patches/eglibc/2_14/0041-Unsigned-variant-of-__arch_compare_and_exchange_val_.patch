@@ -1,0 +1,49 @@
+From 74306dd674fb1ae05c94fda57f5f2a515f2c93fe Mon Sep 17 00:00:00 2001
+From: David Holsgrove <david.holsgrove@xilinx.com>
+Date: Mon, 7 Jan 2013 11:38:59 +1000
+Subject: [PATCH 41/41] Unsigned variant of __arch_compare_and_exchange_val_32_acq no longer defined
+
+Correct atomic_compare_and_exchange_val_rel macro usage.
+
+atomic_compare_and_exchange_val_rel is used only once explicitly in libc,
+during the malloc.c _int_free function, which moves the memory chunk
+passed into free() to a fastbin linked list for reuse on future malloc
+calls requesting small (<64byte) chunks of memory.
+
+This broken macro meant that the free call didnt place the chunk in the
+fastbin list, and the next malloc call took a new chunk of memory instead,
+leading to a memory leak
+
+glibc atomic.h is not public, and gcc's atomic builtins do not use the
+_rel macro, rather they use the _acq variant
+
+Signed-off-by: David Holsgrove <david.holsgrove@xilinx.com>
+---
+ sysdeps/microblaze/bits/atomic.h |    8 ++------
+ 1 files changed, 2 insertions(+), 6 deletions(-)
+ mode change 100644 => 100755 sysdeps/microblaze/bits/atomic.h
+
+diff --git a/sysdeps/microblaze/bits/atomic.h b/sysdeps/microblaze/bits/atomic.h
+old mode 100644
+new mode 100755
+index 91d96a6..4eda2cf
+--- a/sysdeps/microblaze/bits/atomic.h
++++ b/sysdeps/microblaze/bits/atomic.h
+@@ -96,12 +96,8 @@ typedef uintmax_t uatomic_max_t;
+ #define atomic_compare_and_exchange_val_rel(mem, newval, oldval)                              \
+   ({                                                                                          \
+     __typeof (*(mem)) __result;                                                               \
+-    if (sizeof (*mem) == 4) {                                                                 \
+-        if (__builtin_types_compatible_p (typeof (*mem), int))                                \
+-            __result = __arch_compare_and_exchange_val_32_acq(mem, newval, oldval);           \
+-        else if (__builtin_types_compatible_p (typeof (*mem), unsigned int))                  \
+-            __result = __arch_compare_and_exchange_val_32_acq_unsigned(mem, newval, oldval);  \
+-    }                                                                                         \
++    if (sizeof (*mem) == 4)                                                                   \
++      __result = __arch_compare_and_exchange_val_32_acq(mem, newval, oldval);                 \
+     else if (sizeof (*mem) == 8)                                                              \
+       __result = __arch_compare_and_exchange_val_64_acq(mem, newval, oldval);                 \
+     else                                                                                      \
+-- 
+1.7.1
+

@@ -1,0 +1,38 @@
+From b0fec00a6b02e282526f7abf41404e92f640fd90 Mon Sep 17 00:00:00 2001
+From: David Holsgrove <david.holsgrove@petalogix.com>
+Date: Thu, 26 Jan 2012 16:28:03 +1000
+Subject: [PATCH 15/41] microblaze: socket.S - remove cfi_startproc and cfi_endproc
+
+revisit
+
+Signed-off-by: David Holsgrove <david.holsgrove@petalogix.com>
+---
+ sysdeps/unix/sysv/linux/microblaze/socket.S |    3 ---
+ 1 files changed, 0 insertions(+), 3 deletions(-)
+
+diff --git a/sysdeps/unix/sysv/linux/microblaze/socket.S b/sysdeps/unix/sysv/linux/microblaze/socket.S
+index 3f886a2..12f385c 100644
+--- a/sysdeps/unix/sysv/linux/microblaze/socket.S
++++ b/sysdeps/unix/sysv/linux/microblaze/socket.S
+@@ -57,10 +57,8 @@
+ 
+ 	.text
+ ENTRY(__socket)
+-	cfi_startproc
+ 	addik r1,r1,-stackadjust
+ 	swi r15,r1,0
+-	cfi_adjust_cfa_offset(stackadjust)
+ #if NARGS >= 1
+ 	swi  r5,r1,stackadjust+4
+ #endif
+@@ -120,7 +118,6 @@ L(socket_cancel):
+ 	rtsd	r15,8
+ 	addk	r0,r0,r0
+ #endif
+-	cfi_endproc
+ 
+ PSEUDO_END (__socket)
+ 
+-- 
+1.7.1
+

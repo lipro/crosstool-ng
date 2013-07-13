@@ -1,0 +1,40 @@
+From 15040702e0ebcc0c5d0f9766c1510e41f4268bdb Mon Sep 17 00:00:00 2001
+From: David Holsgrove <david.holsgrove@petalogix.com>
+Date: Thu, 19 Jan 2012 16:31:37 +1000
+Subject: [PATCH 05/41] Add #ifndef _BITS_STAT_H for microblaze bits/stat.h
+
+replicating powerpc method to avoid redefinition
+
+Signed-off-by: David Holsgrove <david.holsgrove@petalogix.com>
+---
+ sysdeps/unix/sysv/linux/microblaze/bits/stat.h |    7 ++++++-
+ 1 files changed, 6 insertions(+), 1 deletions(-)
+
+diff --git a/sysdeps/unix/sysv/linux/microblaze/bits/stat.h b/sysdeps/unix/sysv/linux/microblaze/bits/stat.h
+index 7f2c4e3..536445f 100644
+--- a/sysdeps/unix/sysv/linux/microblaze/bits/stat.h
++++ b/sysdeps/unix/sysv/linux/microblaze/bits/stat.h
+@@ -13,10 +13,13 @@
+    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
+    02111-1307 USA.  */
+ 
+-#ifndef _SYS_STAT_H
++#if !defined _SYS_STAT_H && !defined _FCNTL_H
+ # error "Never include <bits/stat.h> directly; use <sys/stat.h> instead."
+ #endif
+ 
++#ifndef _BITS_STAT_H
++#define _BITS_STAT_H	1
++
+ /* Versions of the `struct stat' data structure.  */
+ #define _STAT_VER_LINUX_OLD	1
+ #define _STAT_VER_KERNEL	1
+@@ -161,3 +164,5 @@ struct stat64
+ #define	__S_IREAD	0400	/* Read by owner.  */
+ #define	__S_IWRITE	0200	/* Write by owner.  */
+ #define	__S_IEXEC	0100	/* Execute by owner.  */
++
++#endif	/* bits/stat.h */
+-- 
+1.7.1
+

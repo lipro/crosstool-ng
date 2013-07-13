@@ -1,0 +1,43 @@
+From ac186c3cfc16eaa828bcfa2b2cc46661188fdbb4 Mon Sep 17 00:00:00 2001
+From: Edgar E. Iglesias <edgar.iglesias@gmail.com>
+Date: Sun, 12 Feb 2012 20:24:46 +0100
+Subject: [PATCH 21/41] microblaze: Add definition for TLS_VALUE
+
+---
+ .../unix/sysv/linux/microblaze/createthread.c      |   24 ++++++++++++++++++++
+ 1 files changed, 24 insertions(+), 0 deletions(-)
+ create mode 100644 nptl/sysdeps/unix/sysv/linux/microblaze/createthread.c
+
+diff --git a/nptl/sysdeps/unix/sysv/linux/microblaze/createthread.c b/nptl/sysdeps/unix/sysv/linux/microblaze/createthread.c
+new file mode 100644
+index 0000000..8e68215
+--- /dev/null
++++ b/nptl/sysdeps/unix/sysv/linux/microblaze/createthread.c
+@@ -0,0 +1,24 @@
++/* Copyright (C) 2003 Free Software Foundation, Inc.
++   This file is part of the GNU C Library.
++
++   The GNU C Library is free software; you can redistribute it and/or
++   modify it under the terms of the GNU Lesser General Public
++   License as published by the Free Software Foundation; either
++   version 2.1 of the License, or (at your option) any later version.
++
++   The GNU C Library is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++   Lesser General Public License for more details.
++
++   You should have received a copy of the GNU Lesser General Public
++   License along with the GNU C Library; if not, write to the Free
++   Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
++   02111-1307 USA.  */
++
++/* Value passed to 'clone' for initialization of the thread register.  */
++#define TLS_VALUE (pd + 1)
++
++
++/* Get the real implementation.  */
++#include <nptl/sysdeps/pthread/createthread.c>
+-- 
+1.7.1
+
