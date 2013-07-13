@@ -1,0 +1,73 @@
+From 43e2955ab4adc4940e7a7b5461f529bd7b396ed8 Mon Sep 17 00:00:00 2001
+From: Edgar E. Iglesias <edgar.iglesias@gmail.com>
+Date: Mon, 18 Jun 2012 20:18:13 +0200
+Subject: [PATCH 61/79] microblaze: Enable DWARF-2 exception handling
+
+Signed-off-by: Edgar E. Iglesias <edgar.iglesias@gmail.com>
+---
+ gcc/config/microblaze/microblaze.c |   16 +++++++++++++---
+ gcc/config/microblaze/microblaze.h |    7 +++++++
+ 2 files changed, 20 insertions(+), 3 deletions(-)
+
+diff --git a/gcc/config/microblaze/microblaze.c b/gcc/config/microblaze/microblaze.c
+index 2787c30..2207bcc 100755
+--- a/gcc/config/microblaze/microblaze.c
++++ b/gcc/config/microblaze/microblaze.c
+@@ -2031,6 +2031,13 @@ microblaze_must_save_register (int regno)
+ 	return 1;
+     }
+ 
++  if (crtl->calls_eh_return
++      && (regno == EH_RETURN_DATA_REGNO (0)
++          || regno == EH_RETURN_DATA_REGNO (1)))
++    {
++      return 1;
++    }
++
+   return 0;
+ }
+ 
+@@ -3048,6 +3055,12 @@ microblaze_expand_epilogue (void)
+       emit_insn (gen_addsi3 (stack_pointer_rtx, stack_pointer_rtx, fsiz_rtx));
+     }
+ 
++  if (crtl->calls_eh_return)
++    emit_insn (gen_addsi3 (stack_pointer_rtx,
++                           stack_pointer_rtx,
++                           gen_rtx_raw_REG (SImode,
++                                            MB_EH_STACKADJ_REGNUM)));
++
+   emit_jump_insn (gen_return_internal (gen_rtx_REG (Pmode, GP_REG_FIRST +
+ 						    MB_ABI_SUB_RETURN_ADDR_REGNUM)));
+ }
+@@ -3591,9 +3604,6 @@ microblaze_adjust_cost (rtx insn ATTRIBUTE_UNUSED, rtx link,
+ #undef  TARGET_OPTION_OPTIMIZATION_TABLE
+ #define TARGET_OPTION_OPTIMIZATION_TABLE microblaze_option_optimization_table
+ 
+-#undef TARGET_EXCEPT_UNWIND_INFO
+-#define TARGET_EXCEPT_UNWIND_INFO  sjlj_except_unwind_info
+-
+ struct gcc_target targetm = TARGET_INITIALIZER;
+ 
+ #include "gt-microblaze.h"
+diff --git a/gcc/config/microblaze/microblaze.h b/gcc/config/microblaze/microblaze.h
+index 6bdea06..3456dc7 100755
+--- a/gcc/config/microblaze/microblaze.h
++++ b/gcc/config/microblaze/microblaze.h
+@@ -207,6 +207,13 @@ extern enum pipeline_type microblaze_pipe;
+ #define INCOMING_RETURN_ADDR_RTX  			\
+   gen_rtx_REG (VOIDmode, GP_REG_FIRST + MB_ABI_SUB_RETURN_ADDR_REGNUM)
+ 
++/* Describe how we implement __builtin_eh_return.  */
++#define EH_RETURN_DATA_REGNO(N) (((N) < 2) ? MB_ABI_FIRST_ARG_REGNUM + (N) : INVALID_REGNUM)
++#define EH_RETURN_HANDLER_RTX gen_rtx_REG (Pmode, GP_REG_FIRST + MB_ABI_SUB_RETURN_ADDR_REGNUM)
++
++#define MB_EH_STACKADJ_REGNUM  MB_ABI_INT_RETURN_VAL2_REGNUM
++#define EH_RETURN_STACKADJ_RTX  gen_rtx_REG (Pmode, MB_EH_STACKADJ_REGNUM)
++
+ /* Use DWARF 2 debugging information by default.  */
+ #define DWARF2_DEBUGGING_INFO
+ #define PREFERRED_DEBUGGING_TYPE DWARF2_DEBUG
+-- 
+1.7.1
+

@@ -1,0 +1,51 @@
+From bb215be6b20e3c24e885c5d1f23e89a155bd4d78 Mon Sep 17 00:00:00 2001
+From: Edgar E. Iglesias <edgar.iglesias@gmail.com>
+Date: Mon, 30 Jan 2012 12:37:52 +0100
+Subject: [PATCH 44/79] microblaze: Dont build/install crti and crtn for linux toolchains
+
+Signed-off-by: Edgar E. Iglesias <edgar.iglesias@gmail.com>
+---
+ gcc/config/microblaze/t-microblaze          |   12 ------------
+ libgcc/config/microblaze/t-microblaze-linux |    2 --
+ 2 files changed, 0 insertions(+), 14 deletions(-)
+
+diff --git a/gcc/config/microblaze/t-microblaze b/gcc/config/microblaze/t-microblaze
+index 99f31c7..134dfd1 100644
+--- a/gcc/config/microblaze/t-microblaze
++++ b/gcc/config/microblaze/t-microblaze
+@@ -1,8 +1,3 @@
+-# For C++ crtstuff
+-EXTRA_MULTILIB_PARTS = crtbegin$(objext) crtend$(objext)
+-
+-EXTRA_PARTS += crti$(objext) crtn$(objext)
+-
+ MULTILIB_OPTIONS = mxl-barrel-shift mno-xl-soft-mul mxl-multiply-high mlittle-endian
+ MULTILIB_DIRNAMES = bs m mh le
+ MULTILIB_EXCEPTIONS = *mxl-barrel-shift/mxl-multiply-high mxl-multiply-high
+@@ -26,10 +21,3 @@ fp-bit.c: $(srcdir)/config/fp-bit.c
+ 
+ dp-bit.c: $(srcdir)/config/fp-bit.c
+ 	cat $(srcdir)/config/fp-bit.c > dp-bit.c
+-
+-# Assemble startup files
+-$(T)crti$(objext): $(srcdir)/config/microblaze/crti.s
+-	$(GCC_FOR_TARGET) $(MULTILIB_CFLAGS) -c $(srcdir)/config/microblaze/crti.s -o $(T)crti$(objext)
+-
+-$(T)crtn$(objext): $(srcdir)/config/microblaze/crtn.s
+-	$(GCC_FOR_TARGET) $(MULTILIB_CFLAGS) -c $(srcdir)/config/microblaze/crtn.s -o $(T)crtn$(objext)
+diff --git a/libgcc/config/microblaze/t-microblaze-linux b/libgcc/config/microblaze/t-microblaze-linux
+index ecfd4da..fa2b3c7 100644
+--- a/libgcc/config/microblaze/t-microblaze-linux
++++ b/libgcc/config/microblaze/t-microblaze-linux
+@@ -1,8 +1,6 @@
+ # For C++ crtstuff
+ EXTRA_MULTILIB_PARTS = crtbegin$(objext) crtend$(objext)
+ 
+-EXTRA_PARTS += crti$(objext) crtn$(objext)
+-
+ LIB2ADD += \
+         $(srcdir)/config/microblaze/divsi3.asm \
+         $(srcdir)/config/microblaze/modsi3.asm \
+-- 
+1.7.1
+

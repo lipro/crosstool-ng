@@ -1,0 +1,32 @@
+From bdf32f369e1d72d62e4f236813f0401bfae2dbb1 Mon Sep 17 00:00:00 2001
+From: Edgar E. Iglesias <edgar.iglesias@gmail.com>
+Date: Tue, 21 Aug 2012 11:23:51 +1000
+Subject: [PATCH 75/79] microblaze: Remove SECONDARY_MEMORY_NEEDED
+
+MicroBlaze doesn't have restrictions that would force us to
+reload regs via memory. Don't define SECONDARY_MEMORY_NEEDED.
+Fixes an ICE when compiling OpenSSL for linux.
+
+Signed-off-by: Edgar E. Iglesias <edgar.iglesias@gmail.com>
+Signed-off-by: Peter A. G. Crosthwaite <peter.crosthwaite@petalogix.com>
+---
+ gcc/config/microblaze/microblaze.h |    3 ---
+ 1 files changed, 0 insertions(+), 3 deletions(-)
+
+diff --git a/gcc/config/microblaze/microblaze.h b/gcc/config/microblaze/microblaze.h
+index 8761f29..891fc55 100755
+--- a/gcc/config/microblaze/microblaze.h
++++ b/gcc/config/microblaze/microblaze.h
+@@ -452,9 +452,6 @@ extern enum reg_class microblaze_regno_to_class[];
+ 	  || GET_MODE (X) == VOIDmode)					\
+ 	 ? (GR_REGS) : (CLASS))))
+ 
+-#define SECONDARY_MEMORY_NEEDED(CLASS1, CLASS2, MODE)			\
+-  (GET_MODE_CLASS (MODE) == MODE_INT)
+-
+ #define CLASS_MAX_NREGS(CLASS, MODE)					\
+   ((GET_MODE_SIZE (MODE) + (UNITS_PER_WORD) - 1) / (UNITS_PER_WORD))
+ 
+-- 
+1.7.1
+

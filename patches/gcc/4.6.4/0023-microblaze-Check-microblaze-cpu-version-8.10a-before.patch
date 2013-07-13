@@ -1,0 +1,98 @@
+From 4b1feed8a38d46c252b4122f242e9e751ab8d0ab Mon Sep 17 00:00:00 2001
+From: David Holsgrove <david.holsgrove@petalogix.com>
+Date: Tue, 27 Mar 2012 17:57:33 +1000
+Subject: [PATCH 23/79] microblaze: Check microblaze cpu version >= 8.10a before using swapb or swaph insns
+
+Signed-off-by: David Holsgrove <david.holsgrove@petalogix.com>
+---
+ gcc/config/microblaze/microblaze.c  |    9 +++++++++
+ gcc/config/microblaze/microblaze.h  |    4 ++++
+ gcc/config/microblaze/microblaze.md |    6 +++---
+ 3 files changed, 16 insertions(+), 3 deletions(-)
+
+diff --git a/gcc/config/microblaze/microblaze.c b/gcc/config/microblaze/microblaze.c
+index 58d105b..6816b5c 100755
+--- a/gcc/config/microblaze/microblaze.c
++++ b/gcc/config/microblaze/microblaze.c
+@@ -146,6 +146,9 @@ int microblaze_no_unsafe_delay;
+ /* Set to one if the targeted core has the CLZ insn.  */
+ int microblaze_has_clz = 0;
+ 
++/* Set to one if the targeted core has the swapb and swaph insn.  */
++int microblaze_has_swap = 0;
++
+ /* Which CPU pipeline do we use. We haven't really standardized on a CPU 
+    version having only a particular type of pipeline. There can still be 
+    options on the CPU to scale pipeline features up or down. :( 
+@@ -1404,10 +1407,16 @@ microblaze_option_override (void)
+ 
+   ver = MICROBLAZE_VERSION_COMPARE (microblaze_select_cpu, "v8.10.a");
+   microblaze_has_clz = 1;
++  microblaze_has_swap = 1;
+   if (ver < 0)
+     {
+         /* MicroBlaze prior to 8.10.a didn't have clz.  */
+         microblaze_has_clz = 0;
++        /* MicroBlaze prior to 8.10a didn't have swapb or swaph insns. */
++        microblaze_has_swap = 0;
++        if (TARGET_REORDER)
++          warning (0,
++                 "-mxl-reorder can be used only with -mcpu=v8.10.a or greater");
+     }
+   if (TARGET_MULTIPLY_HIGH && TARGET_SOFT_MUL)
+     error ("-mxl-multiply-high requires -mno-xl-soft-mul");
+diff --git a/gcc/config/microblaze/microblaze.h b/gcc/config/microblaze/microblaze.h
+index e729394..350b227 100755
+--- a/gcc/config/microblaze/microblaze.h
++++ b/gcc/config/microblaze/microblaze.h
+@@ -43,6 +43,7 @@ extern int microblaze_dbx_regno[];
+ 
+ extern int microblaze_no_unsafe_delay;
+ extern int microblaze_has_clz;
++extern int microblaze_has_swap;
+ extern enum pipeline_type microblaze_pipe;
+ 
+ #define OBJECT_FORMAT_ELF
+@@ -62,6 +63,9 @@ extern enum pipeline_type microblaze_pipe;
+ /* Do we have CLZ?  */
+ #define TARGET_HAS_CLZ      (TARGET_PATTERN_COMPARE && microblaze_has_clz)
+ 
++/* Do we have SWAPB and SWAPH?  */
++#define TARGET_HAS_SWAP     (TARGET_PATTERN_COMPARE && microblaze_has_swap)
++
+ /* The default is to not support PIC.  */
+ #define TARGET_SUPPORTS_PIC 0
+ 
+diff --git a/gcc/config/microblaze/microblaze.md b/gcc/config/microblaze/microblaze.md
+index 86c4bcd..d61400d 100755
+--- a/gcc/config/microblaze/microblaze.md
++++ b/gcc/config/microblaze/microblaze.md
+@@ -350,14 +350,14 @@
+ (define_insn "bswaphi2"
+   [(set (match_operand:HI 0 "register_operand" "+r")
+         (bswap:HI (match_dup 0)))]
+-  "TARGET_REORDER"
++  "TARGET_HAS_SWAP && TARGET_REORDER"
+   "swaph %0, %0"
+ )
+ 
+ (define_insn "bswapsi2"
+   [(set (match_operand:SI 0 "register_operand" "=r")
+         (bswap:SI (match_operand:SI 1 "register_operand" "r")))]
+-  "TARGET_REORDER"
++  "TARGET_HAS_SWAP && TARGET_REORDER"
+   "swapb %0, %1"
+ )
+ 
+@@ -365,7 +365,7 @@
+ (define_insn "bswap"
+   [(set (match_operand:HI 0 "register_operand" "=r")
+         (bswap:HI (match_operand:HI 1 "register_operand" "r")))]
+-  "TARGET_REORDER"
++  "TARGET_HAS_SWAP && TARGET_REORDER"
+   "swaph %0, %1"
+ )
+ 
+-- 
+1.7.1
+

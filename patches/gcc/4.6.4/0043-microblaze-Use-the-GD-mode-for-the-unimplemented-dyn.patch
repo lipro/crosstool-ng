@@ -1,0 +1,47 @@
+From b9a176546a5355bb86c74276af3335f03b8aec75 Mon Sep 17 00:00:00 2001
+From: Edgar E. Iglesias <edgar.iglesias@gmail.com>
+Date: Mon, 30 Jan 2012 12:36:51 +0100
+Subject: [PATCH 43/79] microblaze: Use the GD mode for the unimplemented dynamic tls modes
+
+Signed-off-by: Edgar E. Iglesias <edgar.iglesias@gmail.com>
+---
+ gcc/config/microblaze/microblaze.c |   22 +---------------------
+ 1 files changed, 1 insertions(+), 21 deletions(-)
+
+diff --git a/gcc/config/microblaze/microblaze.c b/gcc/config/microblaze/microblaze.c
+index 1b5b840..3786d3c 100755
+--- a/gcc/config/microblaze/microblaze.c
++++ b/gcc/config/microblaze/microblaze.c
+@@ -600,28 +600,8 @@ microblaze_legitimize_tls_address(rtx x, rtx reg)
+ 
+   switch (model)
+     {
+-       case TLS_MODEL_GLOBAL_DYNAMIC:
+-	   insns = microblaze_call_tls_get_addr (x, reg, &ret, TLS_GD);
+-	   dest = gen_reg_rtx (Pmode);
+-	   emit_libcall_block (insns, dest, ret, x);
+-	   break;
+-
+        case TLS_MODEL_LOCAL_DYNAMIC:
+-	   insns = microblaze_call_tls_get_addr (x, reg, &ret, TLS_LDM);
+-
+-	   /* Attach a unique REG_EQUIV, to allow the RTL optimizers to
+-	      share the LDM result with other LD model accesses.  */
+-	   eqv = gen_rtx_UNSPEC (Pmode, gen_rtvec (1, const0_rtx),
+-				UNSPEC_TLS);
+-	   dest = gen_reg_rtx (Pmode);
+-	   emit_libcall_block (insns, dest, ret, eqv);
+-
+-	   /* Load the addend.  */
+-           addend = gen_rtx_UNSPEC (Pmode, gen_rtvec (2, x, GEN_INT (TLS_DTPREL)),
+-			       UNSPEC_TLS);
+-	   addend = force_reg (SImode, gen_rtx_CONST (SImode, addend));
+-	   dest = gen_rtx_PLUS (Pmode, dest, addend);
+-	   break;
++       case TLS_MODEL_GLOBAL_DYNAMIC:
+        case TLS_MODEL_INITIAL_EXEC:
+            insns = microblaze_call_tls_get_addr (x, reg, &ret, TLS_GD);
+            dest = gen_reg_rtx (Pmode);
+-- 
+1.7.1
+

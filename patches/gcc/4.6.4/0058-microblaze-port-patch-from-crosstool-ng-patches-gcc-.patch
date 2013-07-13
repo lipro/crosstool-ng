@@ -1,10 +1,18 @@
-Highly inspired by:
-  http://landley.net/hg/aboriginal/file/7e0747a665ab/sources/patches/gcc-core-libgcceh.patch
+From 7592ce809e77ee2273b0f71d13d7b9c6782ed6bb Mon Sep 17 00:00:00 2001
+From: David Holsgrove <david.holsgrove@petalogix.com>
+Date: Tue, 15 May 2012 19:47:30 +1000
+Subject: [PATCH 58/79] microblaze: port patch from crosstool-ng/patches/gcc/4.6.2/100-libgcc_eh.a.patch
 
-diff -durN gcc-4.6.0.orig/libgcc/Makefile.in gcc-4.6.0/libgcc/Makefile.in
---- gcc-4.6.0.orig/libgcc/Makefile.in	2011-01-26 05:19:58.000000000 +0100
-+++ gcc-4.6.0/libgcc/Makefile.in	2011-09-12 18:17:12.743718974 +0200
-@@ -772,8 +772,9 @@
+Signed-off-by: David Holsgrove <david.holsgrove@petalogix.com>
+---
+ libgcc/Makefile.in |   11 ++++++-----
+ 1 files changed, 6 insertions(+), 5 deletions(-)
+
+diff --git a/libgcc/Makefile.in b/libgcc/Makefile.in
+index b57aeb6..59db267 100644
+--- a/libgcc/Makefile.in
++++ b/libgcc/Makefile.in
+@@ -772,8 +772,9 @@ all: libunwind.a
  libgcc_s$(SHLIB_EXT): libunwind$(SHLIB_EXT)
  endif
  
@@ -15,7 +23,7 @@ diff -durN gcc-4.6.0.orig/libgcc/Makefile.in gcc-4.6.0/libgcc/Makefile.in
  ifneq ($(LIBUNWIND),)
  all: libunwind$(SHLIB_EXT)
  endif
-@@ -950,10 +951,6 @@
+@@ -950,10 +951,6 @@ install-libunwind:
  install-shared:
  	$(mkinstalldirs) $(DESTDIR)$(inst_libdir)
  
@@ -26,7 +34,7 @@ diff -durN gcc-4.6.0.orig/libgcc/Makefile.in gcc-4.6.0/libgcc/Makefile.in
  	$(subst @multilib_dir@,$(MULTIDIR),$(subst \
  		@shlib_base_name@,libgcc_s,$(subst \
  		@shlib_slibdir_qual@,$(MULTIOSSUBDIR),$(SHLIB_INSTALL))))
-@@ -968,6 +965,10 @@
+@@ -968,6 +965,10 @@ install-leaf: $(install-shared) $(install-libunwind)
  	chmod 644 $(DESTDIR)$(inst_libdir)/libgcov.a
  	$(RANLIB) $(DESTDIR)$(inst_libdir)/libgcov.a
  
@@ -37,3 +45,6 @@ diff -durN gcc-4.6.0.orig/libgcc/Makefile.in gcc-4.6.0/libgcc/Makefile.in
  	parts="$(INSTALL_PARTS)";				\
  	for file in $$parts; do					\
  	  rm -f $(DESTDIR)$(inst_libdir)/$$file;		\
+-- 
+1.7.1
+

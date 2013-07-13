@@ -1,0 +1,31 @@
+From e1f4a223154ebe455d8ae2c17a4f909375c3484b Mon Sep 17 00:00:00 2001
+From: Edgar E. Iglesias <edgar.iglesias@gmail.com>
+Date: Tue, 6 Sep 2011 18:35:53 +0200
+Subject: [PATCH 06/79] libgcc-microblaze: Handle 0x80000000 as 32bit signed dividend
+
+2011-09-06  Edgar E. Iglesias  <edgar.iglesias@gmail.com>
+
+        * config/microblaze/modsi3.asm (modsi3): Fix case with
+          0x80000000 as dividend.
+
+Signed-off-by: Edgar E. Iglesias <edgar.iglesias@gmail.com>
+---
+ libgcc/config/microblaze/modsi3.asm |    2 ++
+ 1 files changed, 2 insertions(+), 0 deletions(-)
+
+diff --git a/libgcc/config/microblaze/modsi3.asm b/libgcc/config/microblaze/modsi3.asm
+index cae95c8..041dd21 100644
+--- a/libgcc/config/microblaze/modsi3.asm
++++ b/libgcc/config/microblaze/modsi3.asm
+@@ -55,6 +55,8 @@ $LaR5_Pos:
+ $LaR6_Pos:
+ 	ADDIK	r3,r0,0      # Clear mod
+ 	ADDIK	r30,r0,0     # clear div
++	BLTId	r5,$LaDIV2   # If r5 is still negative (0x80000000), skip
++			     # the first bit search.
+ 	ADDIK	r29,r0,32    # Initialize the loop count
+    # First part try to find the first '1' in the r5
+ $LaDIV1:
+-- 
+1.7.1
+

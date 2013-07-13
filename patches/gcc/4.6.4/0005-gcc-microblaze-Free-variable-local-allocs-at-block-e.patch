@@ -1,0 +1,56 @@
+From c34eb2be3b640b3535b862d6d1a0cff782f55ca4 Mon Sep 17 00:00:00 2001
+From: Edgar E. Iglesias <edgar.iglesias@gmail.com>
+Date: Sun, 21 Aug 2011 22:26:46 +0200
+Subject: [PATCH 05/79] gcc-microblaze: Free variable local allocs at block ends.
+
+2011-08-10  Edgar E. Iglesias  <edgar.iglesias@gmail.com>
+
+	* config/microblaze/microblaze.md (save_stack_block):
+	  Define.
+	  (restore_stack_block): Likewise.
+
+Signed-off-by: Edgar E. Iglesias <edgar.iglesias@gmail.com>
+---
+ gcc/config/microblaze/microblaze.md |   26 ++++++++++++++++++++++++++
+ 1 files changed, 26 insertions(+), 0 deletions(-)
+
+diff --git a/gcc/config/microblaze/microblaze.md b/gcc/config/microblaze/microblaze.md
+index 19b77f9..6c2086e 100644
+--- a/gcc/config/microblaze/microblaze.md
++++ b/gcc/config/microblaze/microblaze.md
+@@ -1934,6 +1934,32 @@
+   }
+ )
+ 
++(define_expand "save_stack_block"
++  [(match_operand 0 "register_operand" "")
++   (match_operand 1 "register_operand" "")]
++  ""
++  {
++    emit_move_insn (operands[0], operands[1]);
++    DONE;
++  }
++)
++
++(define_expand "restore_stack_block"
++  [(match_operand 0 "register_operand" "")
++   (match_operand 1 "register_operand" "")]
++  ""
++  {
++    rtx retaddr = gen_rtx_MEM (Pmode, stack_pointer_rtx);
++    rtx rtmp    = gen_rtx_REG (SImode, R_TMP);
++
++    /* Move the retaddr.  */
++    emit_move_insn (rtmp, retaddr);
++    emit_move_insn (operands[0], operands[1]);
++    emit_move_insn (gen_rtx_MEM (Pmode, operands[0]), rtmp);
++    DONE;
++  }
++)
++
+ ;; Trivial return.  Make it look like a normal return insn as that
+ ;; allows jump optimizations to work better .
+ (define_insn "return"
+-- 
+1.7.1
+
