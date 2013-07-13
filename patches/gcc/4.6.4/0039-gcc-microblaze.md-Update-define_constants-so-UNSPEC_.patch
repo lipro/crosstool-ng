@@ -1,0 +1,32 @@
+From 181ab5927b92452f62e2f0e7f301fdd78a138208 Mon Sep 17 00:00:00 2001
+From: David Holsgrove <david.holsgrove@petalogix.com>
+Date: Thu, 19 Jan 2012 14:43:27 +1000
+Subject: [PATCH 39/79] gcc/microblaze.md: Update define_constants so UNSPEC_TLS is 106
+
+and UNSPEC_CMP / UNSPEC_CMPU remain 104/105 respectively
+
+Signed-off-by: David Holsgrove <david.holsgrove@petalogix.com>
+---
+ gcc/config/microblaze/microblaze.md |    6 +++---
+ 1 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/gcc/config/microblaze/microblaze.md b/gcc/config/microblaze/microblaze.md
+index 6f64811..15e9b56 100755
+--- a/gcc/config/microblaze/microblaze.md
++++ b/gcc/config/microblaze/microblaze.md
+@@ -38,9 +38,9 @@
+   (UNSPEC_SET_GOT       101)    ;;
+   (UNSPEC_GOTOFF        102)    ;; GOT offset
+   (UNSPEC_PLT           103)    ;; jump table
+-  (UNSPEC_TLS           104)    ;; jump table
+-  (UNSPEC_CMP		104)    ;; signed compare
+-  (UNSPEC_CMPU		105)    ;; unsigned compare
++  (UNSPEC_CMP		    104)    ;; signed compare
++  (UNSPEC_CMPU		    105)    ;; unsigned compare
++  (UNSPEC_TLS           106)    ;; jump table
+ ])
+ 
+ 
+-- 
+1.7.1
+

@@ -1,0 +1,36 @@
+From ea1d9675cfa387c218522b69cf1015e43a650206 Mon Sep 17 00:00:00 2001
+From: Edgar E. Iglesias <edgar.iglesias@gmail.com>
+Date: Mon, 30 Jan 2012 12:35:12 +0100
+Subject: [PATCH 42/79] microblaze: Add configury support for TLS on microblazeel
+
+Signed-off-by: Edgar E. Iglesias <edgar.iglesias@gmail.com>
+---
+ gcc/configure |   12 ++++++++++++
+ 1 files changed, 12 insertions(+), 0 deletions(-)
+
+diff --git a/gcc/configure b/gcc/configure
+index c8caff2..afcc8e9 100755
+--- a/gcc/configure
++++ b/gcc/configure
+@@ -22645,6 +22645,18 @@ foo:	data8	25
+ 	tls_first_minor=13
+ 	tls_as_opt=--fatal-warnings
+ 	;;
++  microblaze*-*-*)
++    conftest_s='
++	.section .tdata,"awT",@progbits
++x:
++	.word 2
++	.text
++	addik r5,r20,x@TLSGD
++	addik r5,r20,x@TLSLDM'
++	tls_first_major=2
++	tls_first_minor=20
++	tls_as_opt='--fatal-warnings'
++	;;
+   mips*-*-*)
+     conftest_s='
+ 	.section .tdata,"awT",@progbits
+-- 
+1.7.1
+

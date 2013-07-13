@@ -1,0 +1,30 @@
+From 3c8b771910b9cd534f2b1a3f2cf9b2fe74bbc01e Mon Sep 17 00:00:00 2001
+From: Edgar E. Iglesias <edgar.iglesias@gmail.com>
+Date: Wed, 11 Apr 2012 19:06:12 +0200
+Subject: [PATCH 48/79] microblaze: Allow const operands sym/label ref + offset for PIC
+
+Fixes a runtime error where GCC would emit indexed absolute
+addresses in objects in the data section. These are not
+relocateable and must go via the GOT.
+
+Signed-off-by: Edgar E. Iglesias <edgar.iglesias@gmail.com>
+---
+ gcc/config/microblaze/microblaze.c |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/gcc/config/microblaze/microblaze.c b/gcc/config/microblaze/microblaze.c
+index 3786d3c..5d60e3d 100755
+--- a/gcc/config/microblaze/microblaze.c
++++ b/gcc/config/microblaze/microblaze.c
+@@ -1470,7 +1470,7 @@ legitimate_const_operand_p (rtx x)
+               return 0;
+ 
+             if ( (GET_CODE (p0) == SYMBOL_REF || GET_CODE (p0) == LABEL_REF) &&
+-                 (flag_pic == 2 ||
++		(
+                   microblaze_tls_symbol_p (p0) ||
+                   !SMALL_INT (p1)) )
+               return 0;
+-- 
+1.7.1
+

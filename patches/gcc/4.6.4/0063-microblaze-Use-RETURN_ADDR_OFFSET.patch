@@ -1,0 +1,57 @@
+From fbda56ed06c488a99e19c74d16f72835a72da8d0 Mon Sep 17 00:00:00 2001
+From: Edgar E. Iglesias <edgar.iglesias@gmail.com>
+Date: Wed, 20 Jun 2012 09:51:12 +0200
+Subject: [PATCH 63/79] microblaze: Use RETURN_ADDR_OFFSET
+
+Use RETURN_ADDR_OFFSET instead of manual adjustments
+
+Signed-off-by: Edgar E. Iglesias <edgar.iglesias@gmail.com>
+---
+ gcc/config/microblaze/microblaze.c |   12 +++---------
+ gcc/config/microblaze/microblaze.h |    3 +++
+ 2 files changed, 6 insertions(+), 9 deletions(-)
+
+diff --git a/gcc/config/microblaze/microblaze.c b/gcc/config/microblaze/microblaze.c
+index 86de046..ec45706 100755
+--- a/gcc/config/microblaze/microblaze.c
++++ b/gcc/config/microblaze/microblaze.c
+@@ -3308,19 +3308,13 @@ microblaze_return_addr (int count, rtx frame ATTRIBUTE_UNUSED)
+   if (count != 0)
+     return NULL_RTX;
+ 
+-  return gen_rtx_PLUS (Pmode,
+-		       get_hard_reg_initial_val (Pmode,
+-						 MB_ABI_SUB_RETURN_ADDR_REGNUM),
+-		       GEN_INT (8));
++  return get_hard_reg_initial_val (Pmode,
++                                   MB_ABI_SUB_RETURN_ADDR_REGNUM);
+ }
+ 
+ void microblaze_eh_return (rtx op0)
+ {
+-  rtx off, tmp;
+-
+-  tmp = force_reg (SImode, op0);
+-  off = gen_rtx_PLUS (SImode, tmp, GEN_INT(-8));
+-  emit_insn (gen_movsi(gen_rtx_MEM(Pmode, stack_pointer_rtx), off));
++  emit_insn (gen_movsi(gen_rtx_MEM(Pmode, stack_pointer_rtx), op0));
+ }
+ 
+ /* Put string into .sdata2 if below threashold.  */
+diff --git a/gcc/config/microblaze/microblaze.h b/gcc/config/microblaze/microblaze.h
+index 50e3cdb..57dfaed 100755
+--- a/gcc/config/microblaze/microblaze.h
++++ b/gcc/config/microblaze/microblaze.h
+@@ -207,6 +207,9 @@ extern enum pipeline_type microblaze_pipe;
+ #define INCOMING_RETURN_ADDR_RTX  			\
+   gen_rtx_REG (VOIDmode, GP_REG_FIRST + MB_ABI_SUB_RETURN_ADDR_REGNUM)
+ 
++/* Specifies the offset from INCOMING_RETURN_ADDR_RTX and the actual return PC.  */
++#define RETURN_ADDR_OFFSET (8)
++
+ /* Describe how we implement __builtin_eh_return.  */
+ #define EH_RETURN_DATA_REGNO(N) (((N) < 2) ? MB_ABI_FIRST_ARG_REGNUM + (N) : INVALID_REGNUM)
+ 
+-- 
+1.7.1
+

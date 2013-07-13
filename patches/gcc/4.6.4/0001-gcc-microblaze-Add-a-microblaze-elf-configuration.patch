@@ -1,0 +1,34 @@
+From f7d40cc04e3403b7265d2c351a29ff7f216dc54b Mon Sep 17 00:00:00 2001
+From: Edgar E. Iglesias <edgar.iglesias@gmail.com>
+Date: Sat, 13 Aug 2011 09:16:55 +0200
+Subject: [PATCH 01/79] gcc-microblaze: Add a microblaze-*-elf configuration.
+
+2011-08-13  Edgar E. Iglesias  <edgar.iglesias@gmail.com>
+
+        * config.gcc (microblaze*-*-elf): Add.
+
+Signed-off-by: Edgar E. Iglesias <edgar.iglesias@gmail.com>
+---
+ gcc/config.gcc |    6 ++++++
+ 1 files changed, 6 insertions(+), 0 deletions(-)
+
+diff --git a/gcc/config.gcc b/gcc/config.gcc
+index 6dc2427..4e5bbfe 100644
+--- a/gcc/config.gcc
++++ b/gcc/config.gcc
+@@ -1847,6 +1847,12 @@ microblaze*-linux*)
+ 	tmake_file="${tmake_file} t-slibgcc-elf-ver t-slibgcc-nolc-override t-linux microblaze/t-microblaze"
+         extra_parts="crtbegin.o crtbeginS.o crtend.o crtendS.o crtbeginT.o"
+ 	;;
++microblaze*-*-elf)
++	tm_file="${tm_file} dbxelf.h newlib-stdint.h"
++	c_target_objs="${c_target_objs} microblaze-c.o"
++	cxx_target_objs="${cxx_target_objs} microblaze-c.o"
++	tmake_file="${tmake_file} microblaze/t-microblaze"
++        ;;
+ microblaze*-*-*)
+         tm_file="${tm_file} dbxelf.h"
+ 	c_target_objs="${c_target_objs} microblaze-c.o"
+-- 
+1.7.1
+

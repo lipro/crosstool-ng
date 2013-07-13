@@ -1,0 +1,32 @@
+From 8b23d67a7d0aa4f2c18a08f16cfa24ca0de78e6e Mon Sep 17 00:00:00 2001
+From: David Holsgrove <david.holsgrove@petalogix.com>
+Date: Wed, 27 Jun 2012 00:31:39 +1000
+Subject: [PATCH 64/79] microblaze: For dejagnu static testing on qemu, suppress warnings
+
+about multiple definitions from the test function and libc in line
+with method used by powerpc. Dynamic linking and using a qemu binary
+which understands sysroot resolves all test failures with builtins
+
+Signed-off-by: David Holsgrove <david.holsgrove@petalogix.com>
+---
+ .../gcc.c-torture/execute/builtins/builtins.exp    |    4 ++++
+ 1 files changed, 4 insertions(+), 0 deletions(-)
+
+diff --git a/gcc/testsuite/gcc.c-torture/execute/builtins/builtins.exp b/gcc/testsuite/gcc.c-torture/execute/builtins/builtins.exp
+index a54f3c1..35558c0 100644
+--- a/gcc/testsuite/gcc.c-torture/execute/builtins/builtins.exp
++++ b/gcc/testsuite/gcc.c-torture/execute/builtins/builtins.exp
+@@ -42,6 +42,10 @@ if [istarget "powerpc-*-darwin*"] {
+    lappend additional_flags "-Wl,-multiply_defined,suppress"
+ }
+ 
++if [istarget "microblaze*-*-linux*"] {
++   lappend additional_flags "-Wl,-zmuldefs"
++}
++
+ foreach src [lsort [find $srcdir/$subdir *.c]] {
+     if {![string match *-lib.c $src] && [runtest_file_p $runtests $src]} {
+ 	c-torture-execute [list $src \
+-- 
+1.7.1
+

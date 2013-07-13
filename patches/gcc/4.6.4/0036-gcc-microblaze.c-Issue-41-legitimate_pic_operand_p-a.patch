@@ -1,0 +1,37 @@
+From a93f5b744df19ab75a86c09c8ee4ae2d7c739c9d Mon Sep 17 00:00:00 2001
+From: Gopi <gopi@linux69.(none)>
+Date: Sat, 21 Aug 2010 11:18:32 +0530
+Subject: [PATCH 36/79] gcc/microblaze.c Issue #41, legitimate_pic_operand_p, added missing return
+
+---
+ gcc/config/microblaze/microblaze.c |   15 ++-------------
+ 1 files changed, 2 insertions(+), 13 deletions(-)
+
+diff --git a/gcc/config/microblaze/microblaze.c b/gcc/config/microblaze/microblaze.c
+index 8f94adf..9716b4d 100755
+--- a/gcc/config/microblaze/microblaze.c
++++ b/gcc/config/microblaze/microblaze.c
+@@ -1437,19 +1437,8 @@ int legitimate_pic_operand_p (rtx x)
+ 
+   if (flag_pic == 2 && (symbol_mentioned_p(x) || label_mentioned_p(x) ))
+     return 0;
+-   /* Handle Case of (const (plus symbol const_int)) */
+-   if (GET_CODE (x) == CONST && GET_CODE (XEXP (x,0)) == PLUS)
+-     {
+-        rtx p0, p1;
+-
+-        p0 = XEXP( XEXP (x, 0), 0 );
+-        p1 = XEXP( XEXP (x, 0), 1 );
+ 
+-        if (GET_CODE(p1) == CONST_INT)
+-          {
+-            /* Check similar to pic_operand needs scratch */
+-          }
+-      }
++  return 1;
+ }
+ 
+ int
+-- 
+1.7.1
+

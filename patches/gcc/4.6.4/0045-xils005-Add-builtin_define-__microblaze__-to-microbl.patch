@@ -1,0 +1,27 @@
+From 0c09967093f7d227b376175a08a1ad9dbfd73b91 Mon Sep 17 00:00:00 2001
+From: David Holsgrove <david.holsgrove@petalogix.com>
+Date: Thu, 2 Feb 2012 12:33:21 +1000
+Subject: [PATCH 45/79] xils005: Add builtin_define __microblaze__ to microblaze_cpp_define
+
+checked by u-boot and busybox #if defined(__microblaze__)
+
+Signed-off-by: David Holsgrove <david.holsgrove@petalogix.com>
+---
+ gcc/config/microblaze/microblaze-c.c |    1 +
+ 1 files changed, 1 insertions(+), 0 deletions(-)
+
+diff --git a/gcc/config/microblaze/microblaze-c.c b/gcc/config/microblaze/microblaze-c.c
+index 1d791ef..2aeebc1 100644
+--- a/gcc/config/microblaze/microblaze-c.c
++++ b/gcc/config/microblaze/microblaze-c.c
+@@ -41,6 +41,7 @@ microblaze_cpp_define (cpp_reader *pfile)
+   builtin_assert ("cpu=microblaze");
+   builtin_assert ("machine=microblaze");
+   builtin_define ("__MICROBLAZE__");
++  builtin_define ("__microblaze__");
+   if (TARGET_LITTLE_ENDIAN)
+     {
+       builtin_define ("_LITTLE_ENDIAN");
+-- 
+1.7.1
+

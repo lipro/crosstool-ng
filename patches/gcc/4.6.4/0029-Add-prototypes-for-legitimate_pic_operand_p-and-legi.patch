@@ -1,0 +1,25 @@
+From 6d5d201e7704b9e05bfb5deacec7a5b61e5f319d Mon Sep 17 00:00:00 2001
+From: Gopi <gopi@linux69.(none)>
+Date: Thu, 22 Apr 2010 18:03:21 +0530
+Subject: [PATCH 29/79] Add prototypes for legitimate_pic_operand_p and legitimate_const_operand_p
+
+---
+ gcc/config/microblaze/microblaze-protos.h |    2 ++
+ 1 files changed, 2 insertions(+), 0 deletions(-)
+
+diff --git a/gcc/config/microblaze/microblaze-protos.h b/gcc/config/microblaze/microblaze-protos.h
+index aadd7d5..fb42755 100755
+--- a/gcc/config/microblaze/microblaze-protos.h
++++ b/gcc/config/microblaze/microblaze-protos.h
+@@ -24,6 +24,8 @@
+ 
+ #ifdef RTX_CODE
+ extern int pic_address_needs_scratch (rtx);
++extern int legitimate_pic_operand_p (rtx);
++extern int legitimate_const_operand_p (rtx);
+ extern void expand_block_move        (rtx *);
+ extern void microblaze_expand_prologue (void);
+ extern void microblaze_expand_epilogue (void);
+-- 
+1.7.1
+

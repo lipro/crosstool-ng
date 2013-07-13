@@ -1,0 +1,82 @@
+From c20438f903ed101e490aa4d513186498089f742d Mon Sep 17 00:00:00 2001
+From: David Holsgrove <david.holsgrove@petalogix.com>
+Date: Tue, 24 Jan 2012 13:18:27 +1000
+Subject: [PATCH 40/79] libgcc / gcc extra_parts config, create linux specific makefile fragment
+
+so can continue with elf builds as before
+
+Signed-off-by: David Holsgrove <david.holsgrove@petalogix.com>
+---
+ gcc/config.gcc                              |    1 -
+ libgcc/config.host                          |    5 +++-
+ libgcc/config/microblaze/t-microblaze-linux |   29 +++++++++++++++++++++++++++
+ 3 files changed, 33 insertions(+), 2 deletions(-)
+ create mode 100644 libgcc/config/microblaze/t-microblaze-linux
+
+diff --git a/gcc/config.gcc b/gcc/config.gcc
+index eadd5bc..65fd1a0 100644
+--- a/gcc/config.gcc
++++ b/gcc/config.gcc
+@@ -1853,7 +1853,6 @@ microblaze*-linux*)
+ 	c_target_objs="${c_target_objs} microblaze-c.o"
+ 	cxx_target_objs="${cxx_target_objs} microblaze-c.o"
+ 	tmake_file="${tmake_file} t-slibgcc-elf-ver t-slibgcc-nolc-override t-linux microblaze/t-microblaze"
+-        extra_parts="crtbegin.o crtbeginS.o crtend.o crtendS.o crtbeginT.o"
+ 	;;
+ microblaze*-*-elf)
+ 	case $target in
+diff --git a/libgcc/config.host b/libgcc/config.host
+index 25e949e..7f60082 100644
+--- a/libgcc/config.host
++++ b/libgcc/config.host
+@@ -393,8 +393,11 @@ mcore-*-elf)
+ 	;;
+ mcore-*-pe*)
+ 	;;
++microblaze*-linux*)
++	tmake_file="microblaze/t-microblaze-linux"
++	;;
+ microblaze*-*-*)
+-        tmake_file="microblaze/t-microblaze"
++	tmake_file="microblaze/t-microblaze"
+ 	;;
+ mips-sgi-irix[56]*)
+ 	;;
+diff --git a/libgcc/config/microblaze/t-microblaze-linux b/libgcc/config/microblaze/t-microblaze-linux
+new file mode 100644
+index 0000000..ecfd4da
+--- /dev/null
++++ b/libgcc/config/microblaze/t-microblaze-linux
+@@ -0,0 +1,29 @@
++# For C++ crtstuff
++EXTRA_MULTILIB_PARTS = crtbegin$(objext) crtend$(objext)
++
++EXTRA_PARTS += crti$(objext) crtn$(objext)
++
++LIB2ADD += \
++        $(srcdir)/config/microblaze/divsi3.asm \
++        $(srcdir)/config/microblaze/modsi3.asm \
++        $(srcdir)/config/microblaze/muldi3_hard.asm \
++        $(srcdir)/config/microblaze/mulsi3.asm \
++        $(srcdir)/config/microblaze/stack_overflow_exit.asm \
++        $(srcdir)/config/microblaze/udivsi3.asm \
++        $(srcdir)/config/microblaze/umodsi3.asm \
++        $(srcdir)/config/microblaze/divsi3_table.c
++
++#       $(srcdir)/config/microblaze/moddi3.asm \ REDEFINITION FROM gcc/libgcc2.c
++
++MULTILIB_OPTIONS = mxl-barrel-shift mno-xl-soft-mul mxl-multiply-high mlittle-endian
++MULTILIB_DIRNAMES = bs m mh le
++MULTILIB_EXCEPTIONS = *mxl-barrel-shift/mxl-multiply-high mxl-multiply-high
++MULTILIB_EXCEPTIONS += *mxl-barrel-shift/mxl-multiply-high/mlittle-endian
++MULTILIB_EXCEPTIONS += mxl-multiply-high/mlittle-endian
++
++# Assemble startup files
++$(T)crti$(objext): $(gcc_srcdir)/config/microblaze/crti.s
++	$(GCC_FOR_TARGET) $(MULTILIB_CFLAGS) -c $(gcc_srcdir)/config/microblaze/crti.s -o $(T)crti$(objext)
++
++$(T)crtn$(objext): $(gcc_srcdir)/config/microblaze/crtn.s
++	$(GCC_FOR_TARGET) $(MULTILIB_CFLAGS) -c $(gcc_srcdir)/config/microblaze/crtn.s -o $(T)crtn$(objext)
+-- 
+1.7.1
+

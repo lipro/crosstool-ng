@@ -1,0 +1,26 @@
+From 0b63ff80f060922812e45ae014847949d410b53c Mon Sep 17 00:00:00 2001
+From: Edgar E. Iglesias <edgar.iglesias@gmail.com>
+Date: Tue, 24 Apr 2012 23:26:37 +0200
+Subject: [PATCH 54/79] microblaze: Provide glibc compatible stdint types
+
+Signed-off-by: Edgar E. Iglesias <edgar.iglesias@gmail.com>
+---
+ gcc/config.gcc |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/gcc/config.gcc b/gcc/config.gcc
+index cb1ec13..c1409a7 100644
+--- a/gcc/config.gcc
++++ b/gcc/config.gcc
+@@ -1849,7 +1849,7 @@ microblaze*-linux*)
+ 		tm_defines="${tm_defines} TARGET_BIG_ENDIAN_DEFAULT=4321"
+ 		;;
+ 	esac
+-	tm_file="${tm_file} dbxelf.h gnu-user.h linux.h microblaze/linux.h"
++	tm_file="${tm_file} dbxelf.h gnu-user.h linux.h microblaze/linux.h glibc-stdint.h"
+ 	c_target_objs="${c_target_objs} microblaze-c.o"
+ 	cxx_target_objs="${cxx_target_objs} microblaze-c.o"
+ 	tmake_file="${tmake_file} t-slibgcc-elf-ver t-slibgcc-nolc-override t-linux microblaze/t-microblaze-linux"
+-- 
+1.7.1
+

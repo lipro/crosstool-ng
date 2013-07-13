@@ -1,0 +1,39 @@
+From 18a7cec93218dae9144a2dfc5c852969826ab49b Mon Sep 17 00:00:00 2001
+From: Edgar E. Iglesias <edgar.iglesias@gmail.com>
+Date: Thu, 12 Apr 2012 00:19:44 +0200
+Subject: [PATCH 50/79] microblaze: Don't update the GOT reg if PIC is not enabled
+
+Signed-off-by: Edgar E. Iglesias <edgar.iglesias@gmail.com>
+---
+ gcc/config/microblaze/microblaze.c |    5 ++---
+ 1 files changed, 2 insertions(+), 3 deletions(-)
+
+diff --git a/gcc/config/microblaze/microblaze.c b/gcc/config/microblaze/microblaze.c
+index 5d60e3d..b04633c 100755
+--- a/gcc/config/microblaze/microblaze.c
++++ b/gcc/config/microblaze/microblaze.c
+@@ -2096,7 +2096,7 @@ compute_frame_size (HOST_WIDE_INT size)
+   total_size = var_size + args_size;
+ 
+   /* REVISIT: Analysze this call more */
+-  if (TARGET_HAVE_TLS || flag_pic == 2)
++  if (flag_pic == 2)
+     /* force setting GOT.  */
+     df_set_regs_ever_live (MB_ABI_PIC_ADDR_REGNUM, true);
+ 
+@@ -2932,11 +2932,10 @@ microblaze_expand_prologue (void)
+ 	}
+     }
+ 
+-#if 0
++#if 1
+   /* REVISIT: For TLS we may need GOT even when pic is not enabled */
+   if (flag_pic == 2 && df_regs_ever_live_p (MB_ABI_PIC_ADDR_REGNUM))
+ #endif
+-  if ( df_regs_ever_live_p (MB_ABI_PIC_ADDR_REGNUM))
+     {
+       SET_REGNO (pic_offset_table_rtx, MB_ABI_PIC_ADDR_REGNUM);
+       emit_insn (gen_set_got (pic_offset_table_rtx));	/* setting GOT.  */
+-- 
+1.7.1
+

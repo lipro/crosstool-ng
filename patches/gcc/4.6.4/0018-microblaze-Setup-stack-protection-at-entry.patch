@@ -1,0 +1,38 @@
+From e6d80f13c9dd66dbb61e61fdc271687f330b6e13 Mon Sep 17 00:00:00 2001
+From: Edgar E. Iglesias <edgar.iglesias@gmail.com>
+Date: Thu, 5 Jan 2012 01:47:45 +0100
+Subject: [PATCH 18/79] microblaze: Setup stack protection at entry.
+
+Signed-off-by: Edgar E. Iglesias <edgar.iglesias@gmail.com>
+---
+ gcc/config/microblaze/crti.s |   10 ++++++++++
+ 1 files changed, 10 insertions(+), 0 deletions(-)
+
+diff --git a/gcc/config/microblaze/crti.s b/gcc/config/microblaze/crti.s
+index 3944443..622c52a 100644
+--- a/gcc/config/microblaze/crti.s
++++ b/gcc/config/microblaze/crti.s
+@@ -26,10 +26,20 @@
+ 
+     .section .init, "ax"
+     .global __init
++
++    .weak _stack
++    .set  _stack, 0xffffffff
++    .weak _stack_end
++    .set  _stack_end, 0
++
+     .align 2
+ __init: 
+     addik   r1, r1, -8
+     sw      r15, r0, r1
++    la      r11, r0, _stack
++    mts     rshr, r11
++    la      r11, r0, _stack_end
++    mts     rslr, r11
+ 
+     .section .fini, "ax"
+     .global __fini
+-- 
+1.7.1
+

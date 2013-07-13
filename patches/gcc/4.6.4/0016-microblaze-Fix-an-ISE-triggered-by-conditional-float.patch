@@ -1,0 +1,32 @@
+From 5c1ee699d5957e059548a2c4d2558c60641c6814 Mon Sep 17 00:00:00 2001
+From: Edgar E. Iglesias <edgar.iglesias@gmail.com>
+Date: Wed, 7 Dec 2011 16:20:12 +0100
+Subject: [PATCH 16/79] microblaze: Fix an ISE triggered by conditional float branches.
+
+Add a constrain to the cstoresf pattern forcing the use of
+general regs for the operands. This avoids an ICE where the
+compiler would crash on late usage of pseudo registers.
+
+Signed-off-by: Edgar E. Iglesias <edgar.iglesias@gmail.com>
+---
+ gcc/config/microblaze/microblaze.md |    4 ++--
+ 1 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/gcc/config/microblaze/microblaze.md b/gcc/config/microblaze/microblaze.md
+index 3c3805f..d4211d4 100644
+--- a/gcc/config/microblaze/microblaze.md
++++ b/gcc/config/microblaze/microblaze.md
+@@ -1713,8 +1713,8 @@
+ (define_insn "cstoresf4"
+    [(set (match_operand:SI 0 "register_operand")
+         (match_operator:SI 1 "ordered_comparison_operator"
+-	      [(match_operand:SF 2 "register_operand")
+-	       (match_operand:SF 3 "register_operand")]))]
++	      [(match_operand:SF 2 "register_operand" "r")
++	       (match_operand:SF 3 "register_operand" "r")]))]
+   "TARGET_HARD_FLOAT"
+   "fcmp.%C1\t%0,%3,%2"
+   [(set_attr "type"     "fcmp")
+-- 
+1.7.1
+

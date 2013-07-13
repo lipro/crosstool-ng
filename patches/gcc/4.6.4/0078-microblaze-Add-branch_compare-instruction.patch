@@ -1,0 +1,216 @@
+From 07aee838c2f443213971fed2a78f33e392cbaa41 Mon Sep 17 00:00:00 2001
+From: David Holsgrove <david.holsgrove@xilinx.com>
+Date: Mon, 14 Jan 2013 15:40:45 +1000
+Subject: [PATCH 78/79] microblaze: Add branch_compare instruction
+
+To facilitate optimization pass understanding of the conditional
+branch for microblaze, remove the UNSPEC'd signed_compare /
+unsigned_compare instructions, and replace with a complete
+branch_compare which will output_asm_insn the correct cmp/cmpu
+depending on comparison code and signed / unsigned.
+
+We then return the correct branch instruction.
+
+cbranchsi now calls an expanded microblaze_expand_conditional_branch
+function which will carry out compare against zero, compare EQ/NE,
+and all other compares appropriately.
+
+-funroll-loops optimization pass can now proceed
+
+Signed-off-by: David Holsgrove <david.holsgrove@xilinx.com>
+---
+ gcc/config/microblaze/microblaze.c  |   68 ++++++++++++----------------------
+ gcc/config/microblaze/microblaze.md |   63 +++++++++++++++++++++-----------
+ gcc/config/microblaze/predicates.md |    4 ++
+ 3 files changed, 69 insertions(+), 66 deletions(-)
+
+diff --git a/gcc/config/microblaze/microblaze.c b/gcc/config/microblaze/microblaze.c
+index 9e845e7..5189f75 100755
+--- a/gcc/config/microblaze/microblaze.c
++++ b/gcc/config/microblaze/microblaze.c
+@@ -3515,65 +3515,45 @@ microblaze_trampoline_init (rtx m_tramp, tree fndecl, rtx chain_value)
+   emit_move_insn (mem, fnaddr);
+ }
+ 
+-/* Emit instruction to perform compare.  
+-   cmp is (compare_op op0 op1).  */
+-static rtx
+-microblaze_emit_compare (enum machine_mode mode, rtx cmp, enum rtx_code *cmp_code)
++/* Generate conditional branch -- first, generate test condition,
++   second, generate correct branch instruction.  */
++
++void
++microblaze_expand_conditional_branch (enum machine_mode mode, rtx operands[])
+ {
+-  rtx cmp_op0 = XEXP (cmp, 0);
+-  rtx cmp_op1 = XEXP (cmp, 1);
++  enum rtx_code code = GET_CODE (operands[0]);
++  rtx cmp_op0 = operands[1];
++  rtx cmp_op1 = operands[2];
++  rtx label1 = operands[3];
+   rtx comp_reg = gen_reg_rtx (SImode);
+-  enum rtx_code code = *cmp_code;
+-  
++  rtx condition;
++
+   gcc_assert ((GET_CODE (cmp_op0) == REG) || (GET_CODE (cmp_op0) == SUBREG));
+ 
+   /* If comparing against zero, just test source reg.  */
+-  if (cmp_op1 == const0_rtx) 
+-    return cmp_op0;
++  if (cmp_op1 == const0_rtx)
++    {
++      comp_reg = cmp_op0;
++      condition = gen_rtx_fmt_ee (signed_condition (code), SImode, comp_reg, const0_rtx);
++      emit_jump_insn (gen_condjump (condition, label1));
++    }
+ 
+-  if (code == EQ || code == NE)
++  else if (code == EQ || code == NE)
+     {
+       /* Use xor for equal/not-equal comparison.  */
+       emit_insn (gen_xorsi3 (comp_reg, cmp_op0, cmp_op1));
++      condition = gen_rtx_fmt_ee (signed_condition (code), SImode, comp_reg, const0_rtx);
++      emit_jump_insn (gen_condjump (condition, label1));
+     }
+-  else if (code == GT || code == GTU || code == LE || code == LEU)
+-    {
+-      /* MicroBlaze compare is not symmetrical.  */
+-      /* Swap argument order.  */
+-      cmp_op1 = force_reg (mode, cmp_op1);
+-      if (code == GT || code == LE) 
+-        emit_insn (gen_signed_compare (comp_reg, cmp_op0, cmp_op1));
+-      else
+-        emit_insn (gen_unsigned_compare (comp_reg, cmp_op0, cmp_op1));
+-      /* Translate test condition.  */
+-      *cmp_code = swap_condition (code);
+-    }
+-  else /* if (code == GE || code == GEU || code == LT || code == LTU) */
++  else
+     {
++      /* Generate compare and branch in single instruction. */
+       cmp_op1 = force_reg (mode, cmp_op1);
+-      if (code == GE || code == LT) 
+-        emit_insn (gen_signed_compare (comp_reg, cmp_op1, cmp_op0));
+-      else
+-        emit_insn (gen_unsigned_compare (comp_reg, cmp_op1, cmp_op0));
++      condition = gen_rtx_fmt_ee (code, mode, cmp_op0, cmp_op1);
++      emit_jump_insn (gen_branch_compare(condition, cmp_op0, cmp_op1, label1));
+     }
+-
+-  return comp_reg;
+ }
+ 
+-/* Generate conditional branch -- first, generate test condition,
+-   second, generate correct branch instruction.  */
+-
+-void
+-microblaze_expand_conditional_branch (enum machine_mode mode, rtx operands[])
+-{
+-  enum rtx_code code = GET_CODE (operands[0]);
+-  rtx comp;
+-  rtx condition;
+-
+-  comp = microblaze_emit_compare (mode, operands[0], &code);
+-  condition = gen_rtx_fmt_ee (signed_condition (code), SImode, comp, const0_rtx);
+-  emit_jump_insn (gen_condjump (condition, operands[3]));
+-}
+ 
+ void
+ microblaze_expand_conditional_branch_sf (rtx operands[])
+diff --git a/gcc/config/microblaze/microblaze.md b/gcc/config/microblaze/microblaze.md
+index 3a43515..45fee60 100755
+--- a/gcc/config/microblaze/microblaze.md
++++ b/gcc/config/microblaze/microblaze.md
+@@ -1728,28 +1728,6 @@
+   (set_attr "length"	"4")]
+ )              
+ 
+-(define_insn "signed_compare"
+-  [(set (match_operand:SI 0 "register_operand" "=d")
+-	(unspec
+-		[(match_operand:SI 1 "register_operand" "d")
+-		 (match_operand:SI 2 "register_operand" "d")] UNSPEC_CMP))]
+-  ""
+-  "cmp\t%0,%1,%2"
+-  [(set_attr "type"	"arith")
+-  (set_attr "mode"	"SI")
+-  (set_attr "length"	"4")])
+-
+-(define_insn "unsigned_compare"
+-  [(set (match_operand:SI 0 "register_operand" "=d")
+-	(unspec 
+-		[(match_operand:SI 1 "register_operand" "d")
+-		 (match_operand:SI 2 "register_operand" "d")] UNSPEC_CMPU))]
+-  ""
+-  "cmpu\t%0,%1,%2"
+-  [(set_attr "type"	"arith")
+-  (set_attr "mode"	"SI")
+-  (set_attr "length"	"4")])
+-
+ ;;----------------------------------------------------------------
+ ;; Setting a register from an floating point comparison. 
+ ;;----------------------------------------------------------------
+@@ -1823,6 +1801,47 @@
+    (set_attr "length"	"4")]
+ )
+ 
++(define_insn "branch_compare"
++  [(set (pc)
++        (if_then_else (match_operator:SI 0 "cmp_op"
++                                         [(match_operand:SI 1 "register_operand" "d")
++                                          (match_operand:SI 2 "register_operand" "d")
++                                         ])
++                      (label_ref (match_operand 3))
++                      (pc)))
++  (clobber(reg:SI R_TMP))]
++  ""
++  {
++    operands[4] = gen_rtx_REG (SImode, MB_ABI_ASM_TEMP_REGNUM);
++    enum rtx_code code = GET_CODE (operands[0]);
++
++    if (code == GT || code == LE)
++      {
++        output_asm_insn ("cmp\tr18,%z1,%z2", operands);
++        code = swap_condition (code);
++      }
++    else if (code == GTU || code == LEU)
++      {
++        output_asm_insn ("cmpu\tr18,%z1,%z2", operands);
++        code = swap_condition (code);
++      }
++    else if (code == GE || code == LT)
++      {
++        output_asm_insn ("cmp\tr18,%z2,%z1", operands);
++      }
++    else if (code == GEU || code == LTU)
++      {
++        output_asm_insn ("cmpu\tr18,%z2,%z1", operands);
++      }
++
++    operands[0] = gen_rtx_fmt_ee (signed_condition (code), SImode, operands[4], const0_rtx);
++    return "b%C0i%?\tr18,%3";
++  }
++  [(set_attr "type"     "branch")
++   (set_attr "mode"     "none")
++   (set_attr "length"   "12")]
++)
++
+ ;;----------------------------------------------------------------
+ ;; Unconditional branches
+ ;;----------------------------------------------------------------
+diff --git a/gcc/config/microblaze/predicates.md b/gcc/config/microblaze/predicates.md
+index ac75be7..78bbcd6 100644
+--- a/gcc/config/microblaze/predicates.md
++++ b/gcc/config/microblaze/predicates.md
+@@ -120,3 +120,7 @@
+ ;; Test for valid PIC call operand
+ (define_predicate "call_insn_plt_operand"
+   (match_test "PLT_ADDR_P (op)"))
++
++;; Return if the code of this rtx pattern is a comparison.
++(define_predicate "cmp_op"
++  (match_code "gt,ge,gtu,geu,lt,le,ltu,leu"))
+-- 
+1.7.1
+
