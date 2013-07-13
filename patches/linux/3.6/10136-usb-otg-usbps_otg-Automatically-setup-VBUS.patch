@@ -1,0 +1,53 @@
+From adb18653d77b5b12c419f43a1efc943cdb03b629 Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Mon, 26 Nov 2012 14:05:58 +0100
+Subject: [PATCH] usb: otg: usbps_otg: Automatically setup VBUS
+
+This is zedboard requirement to get otg-host to work.
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+---
+ drivers/usb/otg/xilinx_usbps_otg.c   |    7 +++++++
+ include/linux/usb/xilinx_usbps_otg.h |    1 +
+ 2 files changed, 8 insertions(+), 0 deletions(-)
+
+diff --git a/drivers/usb/otg/xilinx_usbps_otg.c b/drivers/usb/otg/xilinx_usbps_otg.c
+index ca28795..6a45c7f 100644
+--- a/drivers/usb/otg/xilinx_usbps_otg.c
++++ b/drivers/usb/otg/xilinx_usbps_otg.c
+@@ -127,6 +127,10 @@ static int xusbps_otg_set_vbus(struct usb_otg *otg, bool enabled)
+ 
+ 	dev_dbg(xotg->dev, "%s <--- %s\n", __func__, enabled ? "on" : "off");
+ 
++	/* Enable ulpi VBUS if required */
++	if (xotg->ulpi)
++		otg_set_vbus(xotg->ulpi->otg, enabled);
++
+ 	val = readl(xotg->base + CI_PORTSC1);
+ 
+ 	if (enabled)
+@@ -1939,6 +1943,9 @@ static int xusbps_otg_probe(struct platform_device *pdev)
+ 
+ 	the_transceiver = xotg;
+ 
++	/* Setup ulpi phy for OTG */
++	xotg->ulpi = pdata->ulpi;
++
+ 	xotg->otg.otg = kzalloc(sizeof(struct usb_otg), GFP_KERNEL);
+ 	if (!xotg->otg.otg) {
+ 		kfree(xotg);
+diff --git a/include/linux/usb/xilinx_usbps_otg.h b/include/linux/usb/xilinx_usbps_otg.h
+index 9b1aaf6..8c360b7 100644
+--- a/include/linux/usb/xilinx_usbps_otg.h
++++ b/include/linux/usb/xilinx_usbps_otg.h
+@@ -166,6 +166,7 @@ struct otg_hsm {
+ 
+ struct xusbps_otg {
+ 	struct usb_phy		otg;
++	struct usb_phy		*ulpi;
+ 
+ 	struct otg_hsm		hsm;
+ 
+-- 
+1.7.1
+

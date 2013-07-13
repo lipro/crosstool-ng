@@ -1,0 +1,28 @@
+From 3f1991e02a31602c550405514f3ca3fc05306150 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Mon, 22 Oct 2012 15:08:29 +0200
+Subject: [PATCH] arm: zynq: Using 1:1 mapping for SCU should be fine
+
+PetaLinux uses 1:1 mapping without any problem.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ arch/arm/mach-zynq/include/mach/zynq_soc.h |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/arch/arm/mach-zynq/include/mach/zynq_soc.h b/arch/arm/mach-zynq/include/mach/zynq_soc.h
+index e87a30c..85a7d21 100644
+--- a/arch/arm/mach-zynq/include/mach/zynq_soc.h
++++ b/arch/arm/mach-zynq/include/mach/zynq_soc.h
+@@ -26,7 +26,7 @@
+ //#define UART1_VIRT			0xFE001000
+ 
+ #define SCU_PERIPH_PHYS			0xF8F00000
+-#define SCU_PERIPH_VIRT			0xFE00C000
++#define SCU_PERIPH_VIRT			SCU_PERIPH_PHYS
+ 
+ /* The following are intended for the devices that are mapped early */
+ 
+-- 
+1.7.1
+

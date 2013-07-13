@@ -1,0 +1,30 @@
+From de502c35f35ff194ca40a96522605173a21547e9 Mon Sep 17 00:00:00 2001
+From: Soren Brinkmann <soren.brinkmann@xilinx.com>
+Date: Mon, 7 Jan 2013 09:26:23 -0800
+Subject: [PATCH] Revert "net: ethernet: emacps: Do no use emac power management"
+
+This reverts commit 012ad7b10bf82b80775f8a0075933d360593160d.
+
+There is no issue with the latest busybox and udhcpc with PM.
+
+Signed-off-by: Soren Brinkmann <soren.brinkmann@xilinx.com>
+---
+ drivers/net/ethernet/xilinx/xilinx_emacps.c |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/drivers/net/ethernet/xilinx/xilinx_emacps.c b/drivers/net/ethernet/xilinx/xilinx_emacps.c
+index 06d98e6..8299ce4 100644
+--- a/drivers/net/ethernet/xilinx/xilinx_emacps.c
++++ b/drivers/net/ethernet/xilinx/xilinx_emacps.c
+@@ -3124,7 +3124,7 @@ static int __exit xemacps_remove(struct platform_device *pdev)
+ 	return 0;
+ }
+ 
+-#ifdef CONFIG_PM_NOT_DEFINE
++#ifdef CONFIG_PM
+ #ifdef CONFIG_PM_SLEEP
+ /**
+  * xemacps_suspend - Suspend event
+-- 
+1.7.1
+

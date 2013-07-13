@@ -1,0 +1,30 @@
+From 85e77ee30c1d31f87ed35e5edf0103610048b654 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Fri, 19 Oct 2012 13:23:04 +0200
+Subject: [PATCH] Revert "Xilinx: ARM: USB Host: taking out unneeded file for device tree"
+
+This reverts commit 9d2305855f30de4f2384480eab8e11585948d1f4.
+
+If there is any problem with compilation. Then fix Kconfig instead.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ drivers/usb/host/Makefile |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/drivers/usb/host/Makefile b/drivers/usb/host/Makefile
+index 73c5927..d572bba 100644
+--- a/drivers/usb/host/Makefile
++++ b/drivers/usb/host/Makefile
+@@ -38,7 +38,7 @@ obj-$(CONFIG_USB_R8A66597_HCD)	+= r8a66597-hcd.o
+ obj-$(CONFIG_USB_ISP1760_HCD)	+= isp1760.o
+ obj-$(CONFIG_USB_HWA_HCD)	+= hwa-hc.o
+ obj-$(CONFIG_USB_IMX21_HCD)	+= imx21-hcd.o
+-# obj-$(CONFIG_USB_FSL_MPH_DR_OF)	+= fsl-mph-dr-of.o
++obj-$(CONFIG_USB_FSL_MPH_DR_OF)	+= fsl-mph-dr-of.o
+ obj-$(CONFIG_USB_XUSBPS_DR_OF)	+= xusbps-dr-of.o
+ obj-$(CONFIG_USB_OCTEON2_COMMON) += octeon2-common.o
+ obj-$(CONFIG_MIPS_ALCHEMY)	+= alchemy-common.o
+-- 
+1.7.1
+

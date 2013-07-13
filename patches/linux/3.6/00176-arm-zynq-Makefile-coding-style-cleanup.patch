@@ -1,0 +1,30 @@
+From 9b19afa8f3d3726beee5395632f558bf0cb6ce49 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Mon, 22 Oct 2012 10:55:30 +0200
+Subject: [PATCH] arm: zynq: Makefile coding style cleanup
+
+Remove one space and fix end of lines.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ arch/arm/mach-zynq/Makefile |    4 ++--
+ 1 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/mach-zynq/Makefile b/arch/arm/mach-zynq/Makefile
+index 2c2fab7..b5e80d1 100644
+--- a/arch/arm/mach-zynq/Makefile
++++ b/arch/arm/mach-zynq/Makefile
+@@ -3,8 +3,8 @@
+ #
+ 
+ # Common support
+-obj-y 	:= common.o timer.o slcr.o\
+-		scu_gtimer.o board_ep107.o board_zc702.o board_zc770.o\
++obj-y	:= common.o timer.o slcr.o \
++		scu_gtimer.o board_ep107.o board_zc702.o board_zc770.o \
+ 		board_zc770_xm013.o pl330.o platform_devices.o
+ 
+ obj-$(CONFIG_HOTPLUG_CPU)	+= hotplug.o
+-- 
+1.7.1
+

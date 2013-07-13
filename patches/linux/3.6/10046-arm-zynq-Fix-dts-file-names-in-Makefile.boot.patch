@@ -1,0 +1,39 @@
+From 62f0355db9df01f65b6803f82128ff953cbabf16 Mon Sep 17 00:00:00 2001
+From: Soren Brinkmann <soren.brinkmann@xilinx.com>
+Date: Mon, 12 Nov 2012 14:46:32 -0800
+Subject: [PATCH] arm: zynq: Fix dts file names in Makefile.boot
+
+The filenames of several dts files have changed and needed
+to be adjusted in Makefile.boot.
+
+Signed-off-by: Soren Brinkmann <soren.brinkmann@xilinx.com>
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+---
+ arch/arm/mach-zynq/Makefile.boot |   14 ++++++++++----
+ 1 files changed, 10 insertions(+), 4 deletions(-)
+
+diff --git a/arch/arm/mach-zynq/Makefile.boot b/arch/arm/mach-zynq/Makefile.boot
+index fb82c9e..9f4921a 100644
+--- a/arch/arm/mach-zynq/Makefile.boot
++++ b/arch/arm/mach-zynq/Makefile.boot
+@@ -2,7 +2,13 @@
+ params_phys-y	:= 0x00000100
+ initrd_phys-y	:= 0x00800000
+ 
+-dtb-$(CONFIG_ARCH_ZYNQ) += zynq-zc702.dtb zynq-afx.dtb zynq-zc706.dtb \
+-				zynq-zc770-xm010.dtb zynq-zc770-xm011.dtb \
+-				zynq-zc770-xm012.dtb zynq-zc770-xm013.dtb \
+-				zynq-ep107.dtb
++dtb-$(CONFIG_ARCH_ZYNQ) += \
++			zynq-afx-nand.dtb \
++			zynq-afx-nor.dtb \
++			zynq-ep107.dtb \
++			zynq-zc702.dtb \
++			zynq-zc706.dtb \
++			zynq-zc770-xm010.dtb \
++			zynq-zc770-xm011.dtb \
++			zynq-zc770-xm012.dtb \
++			zynq-zc770-xm013.dtb
+-- 
+1.7.1
+

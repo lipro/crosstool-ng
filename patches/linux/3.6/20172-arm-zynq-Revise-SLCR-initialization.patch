@@ -1,0 +1,743 @@
+From 49afb2dd465404eb10bc1b055775df4b64d11332 Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Tue, 29 Jan 2013 10:09:14 +0100
+Subject: [PATCH] arm: zynq: Revise SLCR initialization
+
+Changing the SLCR initialization in order to remove static IO mappings.
+Basic SLCR inititalization is done in timer init.
+Providing the io-remap area for the SLCR early during boot, as required
+for clock init. Furthermore, clock_init is called from the slcr init routine,
+passing the slcr_base address as parameter.
+
+Signed-off-by: Soren Brinkmann <soren.brinkmann@xilinx.com>
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+---
+ arch/arm/mach-zynq/common.c                |   12 +--
+ arch/arm/mach-zynq/include/mach/clk.h      |    2 +-
+ arch/arm/mach-zynq/include/mach/slcr.h     |    1 +
+ arch/arm/mach-zynq/include/mach/zynq_soc.h |   30 ----
+ arch/arm/mach-zynq/slcr.c                  |  146 ++++++------------
+ drivers/clk/zynq/clk.c                     |  234 ++++++++++++----------------
+ 6 files changed, 154 insertions(+), 271 deletions(-)
+
+diff --git a/arch/arm/mach-zynq/common.c b/arch/arm/mach-zynq/common.c
+index 00d422c..a79cdd7 100644
+--- a/arch/arm/mach-zynq/common.c
++++ b/arch/arm/mach-zynq/common.c
+@@ -35,7 +35,6 @@
+ #include <asm/hardware/cache-l2x0.h>
+ 
+ #include <mach/zynq_soc.h>
+-#include <mach/clk.h>
+ #include "common.h"
+ 
+ static const struct of_device_id zynq_dt_irq_match[] __initconst = {
+@@ -62,20 +61,11 @@ static struct map_desc io_desc[] __initdata = {
+ 		.type		= MT_DEVICE,
+ 	},
+ #endif
+-
+-	/* SLCR space for clock stuff for now */
+-	{
+-		.virtual	= SLCR_BASE_VIRT,
+-		.pfn		= __phys_to_pfn(SLCR_BASE_PHYS),
+-		.length		= (3 * SZ_1K),
+-		.type		= MT_DEVICE,
+-	},
+ };
+ 
+ static void __init xilinx_zynq_timer_init(void)
+ {
+-	zynq_clock_init();
+-
++	xslcr_init();
+ 	xttcpss_timer_init();
+ }
+ 
+diff --git a/arch/arm/mach-zynq/include/mach/clk.h b/arch/arm/mach-zynq/include/mach/clk.h
+index 9881537..6505a8e 100644
+--- a/arch/arm/mach-zynq/include/mach/clk.h
++++ b/arch/arm/mach-zynq/include/mach/clk.h
+@@ -14,7 +14,7 @@
+ #ifndef __MACH_CLK__H__
+ #define __MACH_CLK__H__
+ 
+-void zynq_clock_init(void);
++void zynq_clock_init(void __iomem *slcr_base);
+ 
+ struct clk *clk_register_zynq_gd1m(const char *name,
+ 		void __iomem *clkctrl, const char **pnames,
+diff --git a/arch/arm/mach-zynq/include/mach/slcr.h b/arch/arm/mach-zynq/include/mach/slcr.h
+index 7795012..be5e995 100644
+--- a/arch/arm/mach-zynq/include/mach/slcr.h
++++ b/arch/arm/mach-zynq/include/mach/slcr.h
+@@ -18,6 +18,7 @@
+ extern void xslcr_write(u32 val, u32 offset);
+ extern u32 xslcr_read(u32 offset);
+ 
++extern int xslcr_init(void);
+ extern void xslcr_system_reset(void);
+ 
+ extern void xslcr_init_preload_fpga(void);
+diff --git a/arch/arm/mach-zynq/include/mach/zynq_soc.h b/arch/arm/mach-zynq/include/mach/zynq_soc.h
+index 9c4cdd2..ad2c32e 100644
+--- a/arch/arm/mach-zynq/include/mach/zynq_soc.h
++++ b/arch/arm/mach-zynq/include/mach/zynq_soc.h
+@@ -37,34 +37,4 @@
+ 
+ #define SCU_PERIPH_BASE			IOMEM(SCU_PERIPH_VIRT)
+ 
+-#define SLCR_BASE_VIRT			0xf8000000
+-#define SLCR_BASE_PHYS			0xf8000000
+-
+-#define SLCR_ARMPLL_CTRL		(SLCR_BASE_VIRT | 0x100)
+-#define SLCR_DDRPLL_CTRL		(SLCR_BASE_VIRT | 0x104)
+-#define SLCR_IOPLL_CTRL			(SLCR_BASE_VIRT | 0x108)
+-#define SLCR_PLL_STATUS			(SLCR_BASE_VIRT | 0x10c)
+-#define SLCR_ARMPLL_CFG			(SLCR_BASE_VIRT | 0x110)
+-#define SLCR_DDRPLL_CFG			(SLCR_BASE_VIRT | 0x114)
+-#define SLCR_IOPLL_CFG			(SLCR_BASE_VIRT | 0x118)
+-#define SLCR_ARM_CLK_CTRL		(SLCR_BASE_VIRT | 0x120)
+-#define SLCR_DDR_CLK_CTRL		(SLCR_BASE_VIRT | 0x124)
+-#define SLCR_DCI_CLK_CTRL		(SLCR_BASE_VIRT | 0x128)
+-#define SLCR_APER_CLK_CTRL		(SLCR_BASE_VIRT | 0x12c)
+-#define SLCR_GEM0_CLK_CTRL		(SLCR_BASE_VIRT | 0x140)
+-#define SLCR_GEM1_CLK_CTRL		(SLCR_BASE_VIRT | 0x144)
+-#define SLCR_SMC_CLK_CTRL		(SLCR_BASE_VIRT | 0x148)
+-#define SLCR_LQSPI_CLK_CTRL		(SLCR_BASE_VIRT | 0x14c)
+-#define SLCR_SDIO_CLK_CTRL		(SLCR_BASE_VIRT | 0x150)
+-#define SLCR_UART_CLK_CTRL		(SLCR_BASE_VIRT | 0x154)
+-#define SLCR_SPI_CLK_CTRL		(SLCR_BASE_VIRT | 0x158)
+-#define SLCR_CAN_CLK_CTRL		(SLCR_BASE_VIRT | 0x15c)
+-#define SLCR_DBG_CLK_CTRL		(SLCR_BASE_VIRT | 0x164)
+-#define SLCR_PCAP_CLK_CTRL		(SLCR_BASE_VIRT | 0x168)
+-#define SLCR_FPGA0_CLK_CTRL		(SLCR_BASE_VIRT | 0x170)
+-#define SLCR_FPGA1_CLK_CTRL		(SLCR_BASE_VIRT | 0x180)
+-#define SLCR_FPGA2_CLK_CTRL		(SLCR_BASE_VIRT | 0x190)
+-#define SLCR_FPGA3_CLK_CTRL		(SLCR_BASE_VIRT | 0x1a0)
+-#define SLCR_621_TRUE			(SLCR_BASE_VIRT | 0x1c4)
+-
+ #endif
+diff --git a/arch/arm/mach-zynq/slcr.c b/arch/arm/mach-zynq/slcr.c
+index 6d1c3b7..2554320 100644
+--- a/arch/arm/mach-zynq/slcr.c
++++ b/arch/arm/mach-zynq/slcr.c
+@@ -21,11 +21,13 @@
+ #include <linux/init.h>
+ #include <linux/kernel.h>
+ #include <linux/module.h>
++#include <linux/of_address.h>
+ #include <linux/uaccess.h>
+ #include <linux/platform_device.h>
+ #include <linux/slab.h>
+ #include <linux/string.h>
+ #include <mach/slcr.h>
++#include <mach/clk.h>
+ 
+ #define DRIVER_NAME "xslcr"
+ 
+@@ -2395,49 +2397,13 @@ next_periph:
+  **/
+ static int __devinit xslcr_probe(struct platform_device *pdev)
+ {
+-	struct resource res;
+ 	int ret;
+ 
+-	res.start = 0xF8000000;
+-	res.end = 0xF8000FFF;
+-
+-	if (slcr) {
+-		dev_err(&pdev->dev, "Device Busy, only 1 slcr instance "
+-			"supported.\n");
+-		return -EBUSY;
+-	}
+-
+-	if (!request_mem_region(res.start,
+-					res.end - res.start + 1,
+-					DRIVER_NAME)) {
+-		dev_err(&pdev->dev, "Couldn't lock memory region at %Lx\n",
+-			(unsigned long long)res.start);
+-		return -EBUSY;
+-	}
+-
+-	slcr = kzalloc(sizeof(struct xslcr), GFP_KERNEL);
+-	if (!slcr) {
+-		ret = -ENOMEM;
+-		dev_err(&pdev->dev, "Unable to allocate memory for driver "
+-			"data\n");
+-		goto err_release;
+-	}
+-
+-	slcr->regs = ioremap(res.start, (res.end - res.start + 1));
+-	if (!slcr->regs) {
+-		ret = -ENOMEM;
+-		dev_err(&pdev->dev, "Unable to map I/O memory\n");
+-		goto err_free;
+-	}
+-
+-	/* init periph_status based on the data from MIO control registers */
+-	xslcr_get_mio_status();
+-
+ 	spin_lock_init(&slcr->io_lock);
+ 
+ 	ret = class_register(&xslcr_mio_class);
+ 	if (ret < 0)
+-		goto err_iounmap;
++		return ret;
+ 
+ 	ret = xslcr_create_devices(pdev, &xslcr_mio_class, mio_periph_name,
+ 				   ARRAY_SIZE(mio_periph_name));
+@@ -2459,11 +2425,6 @@ static int __devinit xslcr_probe(struct platform_device *pdev)
+ 		goto err_rst_class;
+ 	}
+ 
+-	/* unlock the SLCR so that registers can be changed */
+-	xslcr_writereg(slcr->regs + XSLCR_UNLOCK, 0xDF0D);
+-
+-	dev_info(&pdev->dev, "at 0x%08X mapped to 0x%08X\n", res.start,
+-		 (u32 __force)slcr->regs);
+ 	platform_set_drvdata(pdev, slcr);
+ 
+ 	return 0;
+@@ -2474,84 +2435,77 @@ err_rst_class:
+ err_mio_class:
+ 	xslcr_remove_devices(&xslcr_mio_class, mio_periph_name,
+ 			     ARRAY_SIZE(mio_periph_name));
+-err_iounmap:
+-	iounmap(slcr->regs);
+-err_free:
+-	kfree(slcr);
+-err_release:
+-	release_mem_region(res.start, (res.end - res.start + 1));
+ 
+ 	return ret;
+ }
+ 
+-/**
+- * xslcr_remove -  Remove call for the device.
+- *
+- * @pdev:	handle to the platform device structure.
+- *
+- * Unregister the device after releasing the resources.
+- * Returns 0 on success, otherwise negative error.
+- **/
+-static int __devexit xslcr_remove(struct platform_device *pdev)
+-{
+-	struct xslcr *id = platform_get_drvdata(pdev);
+-	struct resource *res;
+-
+-	device_remove_file(&pdev->dev, &dev_attr_mio_pin_status);
+-
+-	xslcr_remove_devices(&xslcr_reset_class, reset_periph_name,
+-			     ARRAY_SIZE(reset_periph_name));
+-	xslcr_remove_devices(&xslcr_mio_class, mio_periph_name,
+-			     ARRAY_SIZE(mio_periph_name));
+-
+-	iounmap(id->regs);
+-
+-	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+-	if (!res) {
+-		dev_err(&pdev->dev, "Unable to locate mmio resource\n");
+-		return -ENODEV;
+-	}
+-	release_mem_region(res->start, resource_size(res));
+-
+-	kfree(id);
+-	platform_set_drvdata(pdev, NULL);
+-
+-	return 0;
+-}
++static struct of_device_id slcr_of_match[] __devinitdata = {
++	{ .compatible = "xlnx,zynq-slcr", },
++	{ /* end of list */ },
++};
++MODULE_DEVICE_TABLE(of, slcr_of_match);
+ 
+ /* Driver Structure */
+ static struct platform_driver xslcr_driver = {
+ 	.probe		= xslcr_probe,
+-	.remove		= __devexit_p(xslcr_remove),
+ 	.driver		= {
+ 		.name	= DRIVER_NAME,
+ 		.owner	= THIS_MODULE,
++		.of_match_table = slcr_of_match,
+ 	},
+ };
+ 
+-static struct platform_device xslcr_device = {
+-	.name = "xslcr",
+-	.dev.platform_data = NULL,
+-};
+-
+ /**
+- * xslcr_init -  Register the SLCR.
++ * xslcr_arch_init -  Register the SLCR
+  *
+  * Returns 0 on success, otherwise negative error.
+  */
+-static int __init xslcr_init(void)
++static int __init xslcr_arch_init(void)
+ {
+-	platform_device_register(&xslcr_device);
+ 	return platform_driver_register(&xslcr_driver);
+ }
+-arch_initcall(xslcr_init);
++module_init(xslcr_arch_init);
+ 
+ /**
+- * xslcr_exit -  Unregister the SLCR.
++ * xslcr_init()
++ * Returns 0 on success, negative errno otherwise.
++ *
++ * Called early during boot from platform code to remap SLCR area.
+  */
+-static void __exit xslcr_exit(void)
++int __init xslcr_init(void)
+ {
+-	platform_driver_unregister(&xslcr_driver);
+-}
++	struct device_node *np;
+ 
++	np = of_find_compatible_node(NULL, NULL, "xlnx,zynq-slcr");
++	if (!np) {
++		pr_err("%s: no slcr node found\n", __func__);
++		BUG();
++	}
+ 
++	slcr = kzalloc(sizeof(*slcr), GFP_KERNEL);
++	if (!slcr) {
++		pr_err("%s: Unable to allocate memory for driver data\n",
++				__func__);
++		BUG();
++	}
++
++	slcr->regs = of_iomap(np, 0);
++	if (!slcr->regs) {
++		pr_err("%s: Unable to map I/O memory\n", __func__);
++		BUG();
++	}
++
++	/* init periph_status based on the data from MIO control registers */
++	xslcr_get_mio_status();
++
++	/* unlock the SLCR so that registers can be changed */
++	xslcr_writereg(slcr->regs + XSLCR_UNLOCK, 0xDF0D);
++
++	pr_info("%s mapped to %p\n", DRIVER_NAME, slcr->regs);
++
++	zynq_clock_init(slcr->regs);
++
++	of_node_put(np);
++
++	return 0;
++}
+diff --git a/drivers/clk/zynq/clk.c b/drivers/clk/zynq/clk.c
+index 1348816..46f904d 100644
+--- a/drivers/clk/zynq/clk.c
++++ b/drivers/clk/zynq/clk.c
+@@ -17,9 +17,35 @@
+ #include <linux/clk-provider.h>
+ #include <linux/clkdev.h>
+ #include <linux/of.h>
+-#include <mach/zynq_soc.h>
+ #include <mach/clk.h>
+ 
++#define SLCR_ARMPLL_CTRL		(slcr_base + 0x100)
++#define SLCR_DDRPLL_CTRL		(slcr_base + 0x104)
++#define SLCR_IOPLL_CTRL			(slcr_base + 0x108)
++#define SLCR_PLL_STATUS			(slcr_base + 0x10c)
++#define SLCR_ARMPLL_CFG			(slcr_base + 0x110)
++#define SLCR_DDRPLL_CFG			(slcr_base + 0x114)
++#define SLCR_IOPLL_CFG			(slcr_base + 0x118)
++#define SLCR_ARM_CLK_CTRL		(slcr_base + 0x120)
++#define SLCR_DDR_CLK_CTRL		(slcr_base + 0x124)
++#define SLCR_DCI_CLK_CTRL		(slcr_base + 0x128)
++#define SLCR_APER_CLK_CTRL		(slcr_base + 0x12c)
++#define SLCR_GEM0_CLK_CTRL		(slcr_base + 0x140)
++#define SLCR_GEM1_CLK_CTRL		(slcr_base + 0x144)
++#define SLCR_SMC_CLK_CTRL		(slcr_base + 0x148)
++#define SLCR_LQSPI_CLK_CTRL		(slcr_base + 0x14c)
++#define SLCR_SDIO_CLK_CTRL		(slcr_base + 0x150)
++#define SLCR_UART_CLK_CTRL		(slcr_base + 0x154)
++#define SLCR_SPI_CLK_CTRL		(slcr_base + 0x158)
++#define SLCR_CAN_CLK_CTRL		(slcr_base + 0x15c)
++#define SLCR_DBG_CLK_CTRL		(slcr_base + 0x164)
++#define SLCR_PCAP_CLK_CTRL		(slcr_base + 0x168)
++#define SLCR_FPGA0_CLK_CTRL		(slcr_base + 0x170)
++#define SLCR_FPGA1_CLK_CTRL		(slcr_base + 0x180)
++#define SLCR_FPGA2_CLK_CTRL		(slcr_base + 0x190)
++#define SLCR_FPGA3_CLK_CTRL		(slcr_base + 0x1a0)
++#define SLCR_621_TRUE			(slcr_base + 0x1c4)
++
+ static DEFINE_SPINLOCK(armclk_lock);
+ static DEFINE_SPINLOCK(ddrclk_lock);
+ static DEFINE_SPINLOCK(dciclk_lock);
+@@ -79,7 +105,7 @@ static const struct of_device_id clk_match[] __initconst = {
+  * To avoid enabling unused clocks, only leaf clocks are present for which the
+  * drivers supports the common clock framework.
+  */
+-void __init zynq_clock_init(void)
++void __init zynq_clock_init(void __iomem *slcr_base)
+ {
+ 	struct clk *clk;
+ 
+@@ -87,283 +113,225 @@ void __init zynq_clock_init(void)
+ 
+ 	of_clk_init(clk_match);
+ 
+-	clk = clk_register_zynq_pll("ARMPLL",
+-			(__force void __iomem *)SLCR_ARMPLL_CTRL,
+-			(__force void __iomem *)SLCR_ARMPLL_CFG,
+-			(__force void __iomem *)SLCR_PLL_STATUS, 0);
+-	clk = clk_register_zynq_pll("DDRPLL",
+-			(__force void __iomem *)SLCR_DDRPLL_CTRL,
+-			(__force void __iomem *)SLCR_DDRPLL_CFG,
+-			(__force void __iomem *)SLCR_PLL_STATUS, 1);
+-	clk = clk_register_zynq_pll("IOPLL",
+-			(__force void __iomem *)SLCR_IOPLL_CTRL,
+-			(__force void __iomem *)SLCR_IOPLL_CFG,
+-			(__force void __iomem *)SLCR_PLL_STATUS, 2);
++	clk = clk_register_zynq_pll("ARMPLL", SLCR_ARMPLL_CTRL, SLCR_ARMPLL_CFG,
++			SLCR_PLL_STATUS, 0);
++	clk = clk_register_zynq_pll("DDRPLL", SLCR_DDRPLL_CTRL, SLCR_DDRPLL_CFG,
++			SLCR_PLL_STATUS, 1);
++	clk = clk_register_zynq_pll("IOPLL", SLCR_IOPLL_CTRL, SLCR_IOPLL_CFG,
++			SLCR_PLL_STATUS, 2);
+ 
+ 	/* CPU clocks */
+-	clk = clk_register_zynq_d1m("CPU_MASTER_CLK",
+-			(__force void __iomem *)SLCR_ARM_CLK_CTRL,
++	clk = clk_register_zynq_d1m("CPU_MASTER_CLK", SLCR_ARM_CLK_CTRL,
+ 			cpu_parents, 4, &armclk_lock);
+ 	clk = clk_register_gate(NULL, "CPU_6OR4X_CLK", "CPU_MASTER_CLK",
+ 			CLK_SET_RATE_PARENT | CLK_IGNORE_UNUSED,
+-			(__force void __iomem *)SLCR_ARM_CLK_CTRL,
+-			24, 0, &armclk_lock);
++			SLCR_ARM_CLK_CTRL, 24, 0, &armclk_lock);
+ 	zynq_clkdev_add(NULL, "CPU_6OR4X_CLK", clk);
+ 	clk_prepare(clk);
+ 	clk_enable(clk);
+ 	clk = clk_register_fixed_factor(NULL, "CPU_3OR2X_DIV_CLK",
+ 			"CPU_MASTER_CLK", 0, 1, 2);
+ 	clk = clk_register_gate(NULL, "CPU_3OR2X_CLK", "CPU_3OR2X_DIV_CLK",
+-			CLK_IGNORE_UNUSED,
+-			(__force void __iomem *)SLCR_ARM_CLK_CTRL, 25, 0,
++			CLK_IGNORE_UNUSED, SLCR_ARM_CLK_CTRL, 25, 0,
+ 			&armclk_lock);
+ 	zynq_clkdev_add(NULL, "smp_twd", clk);
+ 	clk_prepare(clk);
+ 	clk_enable(clk);
+-	clk = clk_register_zynq_clk621("CPU_1X_DIV_CLK",
+-		(__force void __iomem *)SLCR_ARM_CLK_CTRL,
+-		(__force void __iomem *)SLCR_621_TRUE, 4, 2, clk621_parents, 1,
+-		&armclk_lock);
+-	clk = clk_register_zynq_clk621("CPU_2X_DIV_CLK",
+-		(__force void __iomem *)SLCR_ARM_CLK_CTRL,
+-		(__force void __iomem *)SLCR_621_TRUE, 2, 1, clk621_parents, 1,
+-		&armclk_lock);
++	clk = clk_register_zynq_clk621("CPU_1X_DIV_CLK", SLCR_ARM_CLK_CTRL,
++		SLCR_621_TRUE, 4, 2, clk621_parents, 1, &armclk_lock);
++	clk = clk_register_zynq_clk621("CPU_2X_DIV_CLK", SLCR_ARM_CLK_CTRL,
++		SLCR_621_TRUE, 2, 1, clk621_parents, 1, &armclk_lock);
+ 	clk = clk_register_gate(NULL, "CPU_2X_CLK", "CPU_2X_DIV_CLK",
+-			CLK_IGNORE_UNUSED,
+-			(__force void __iomem *)SLCR_ARM_CLK_CTRL, 26, 0,
++			CLK_IGNORE_UNUSED, SLCR_ARM_CLK_CTRL, 26, 0,
+ 			&armclk_lock);
+ 	clk_prepare(clk);
+ 	clk_enable(clk);
+ 	clk = clk_register_gate(NULL, "CPU_1X_CLK", "CPU_1X_DIV_CLK",
+-			CLK_IGNORE_UNUSED,
+-			(__force void __iomem *)SLCR_ARM_CLK_CTRL, 27, 0,
++			CLK_IGNORE_UNUSED, SLCR_ARM_CLK_CTRL, 27, 0,
+ 			&armclk_lock);
+ 	zynq_clkdev_add(NULL, "CPU_1X_CLK", clk);
+ 	clk_prepare(clk);
+ 	clk_enable(clk);
+ 	/* DDR clocks */
+ 	clk = clk_register_divider(NULL, "DDR_2X_DIV_CLK", "DDRPLL", 0,
+-			(__force void __iomem *)SLCR_DDR_CLK_CTRL, 26, 6,
+-			CLK_DIVIDER_ONE_BASED, &ddrclk_lock);
+-	clk = clk_register_gate(NULL, "DDR_2X_CLK", "DDR_2X_DIV_CLK", 0,
+-			(__force void __iomem *)SLCR_DDR_CLK_CTRL, 1, 0,
++			SLCR_DDR_CLK_CTRL, 26, 6, CLK_DIVIDER_ONE_BASED,
+ 			&ddrclk_lock);
++	clk = clk_register_gate(NULL, "DDR_2X_CLK", "DDR_2X_DIV_CLK", 0,
++			SLCR_DDR_CLK_CTRL, 1, 0, &ddrclk_lock);
+ 	clk_prepare(clk);
+ 	clk_enable(clk);
+ 	clk = clk_register_divider(NULL, "DDR_3X_DIV_CLK", "DDRPLL", 0,
+-			(__force void __iomem *)SLCR_DDR_CLK_CTRL, 20, 6,
+-			CLK_DIVIDER_ONE_BASED, &ddrclk_lock);
+-	clk = clk_register_gate(NULL, "DDR_3X_CLK", "DDR_3X_DIV_CLK", 0,
+-			(__force void __iomem *)SLCR_DDR_CLK_CTRL, 0, 0,
++			SLCR_DDR_CLK_CTRL, 20, 6, CLK_DIVIDER_ONE_BASED,
+ 			&ddrclk_lock);
++	clk = clk_register_gate(NULL, "DDR_3X_CLK", "DDR_3X_DIV_CLK", 0,
++			SLCR_DDR_CLK_CTRL, 0, 0, &ddrclk_lock);
+ 	clk_prepare(clk);
+ 	clk_enable(clk);
+-	clk = clk_register_zynq_gd2m("DCI_CLK",
+-			(__force void __iomem *)SLCR_DCI_CLK_CTRL,
+-			dci_parents, 1, &dciclk_lock);
++	clk = clk_register_zynq_gd2m("DCI_CLK", SLCR_DCI_CLK_CTRL, dci_parents,
++			1, &dciclk_lock);
+ 	clk_prepare(clk);
+ 	clk_enable(clk);
+ 
+ 	/* Peripheral clocks */
+-	clk = clk_register_zynq_gd1m("LQSPI_CLK",
+-			(__force void __iomem *)SLCR_LQSPI_CLK_CTRL,
++	clk = clk_register_zynq_gd1m("LQSPI_CLK", SLCR_LQSPI_CLK_CTRL,
+ 			def_periph_parents, &lqspiclk_lock);
+ 	zynq_clkdev_add(NULL, "LQSPI", clk);
+ 
+ 	/*
+-	 * clk = clk_register_zynq_gd1m("SMC_CLK",
+-	 *		(__force void __iomem *)SLCR_SMC_CLK_CTRL,
++	 * clk = clk_register_zynq_gd1m("SMC_CLK", SLCR_SMC_CLK_CTRL,
+ 	 *		def_periph_parents, &smcclk_lock);
+ 	 * zynq_clkdev_add(NULL, "SMC", clk);
+ 	 */
+-	clk = clk_register_zynq_gd1m("PCAP_CLK",
+-			(__force void __iomem *)SLCR_PCAP_CLK_CTRL,
++	clk = clk_register_zynq_gd1m("PCAP_CLK", SLCR_PCAP_CLK_CTRL,
+ 			def_periph_parents, &pcapclk_lock);
+ 	zynq_clkdev_add(NULL, "PCAP", clk);
+ 
+-	clk = clk_register_zynq_gd2m("GEM0_CLK",
+-			(__force void __iomem *)SLCR_GEM0_CLK_CTRL,
++	clk = clk_register_zynq_gd2m("GEM0_CLK", SLCR_GEM0_CLK_CTRL,
+ 			gem_parents, 8, &gem0clk_lock);
+ 	zynq_clkdev_add(NULL, "GEM0", clk);
+-	clk = clk_register_zynq_gd2m("GEM1_CLK",
+-			(__force void __iomem *)SLCR_GEM1_CLK_CTRL,
++	clk = clk_register_zynq_gd2m("GEM1_CLK", SLCR_GEM1_CLK_CTRL,
+ 			gem_parents, 8, &gem1clk_lock);
+ 	zynq_clkdev_add(NULL, "GEM1", clk);
+ 
+-	clk = clk_register_zynq_d2m("FPGA0_CLK",
+-			(__force void __iomem *)SLCR_FPGA0_CLK_CTRL,
++	clk = clk_register_zynq_d2m("FPGA0_CLK", SLCR_FPGA0_CLK_CTRL,
+ 			def_periph_parents, &fpga0clk_lock);
+ 	clk_prepare(clk);
+ 	clk_enable(clk);
+ 	zynq_clkdev_add(NULL, "FPGA0", clk);
+-	clk = clk_register_zynq_d2m("FPGA1_CLK",
+-			(__force void __iomem *)SLCR_FPGA1_CLK_CTRL,
++	clk = clk_register_zynq_d2m("FPGA1_CLK", SLCR_FPGA1_CLK_CTRL,
+ 			def_periph_parents, &fpga1clk_lock);
+ 	clk_prepare(clk);
+ 	clk_enable(clk);
+ 	zynq_clkdev_add(NULL, "FPGA1", clk);
+-	clk = clk_register_zynq_d2m("FPGA2_CLK",
+-			(__force void __iomem *)SLCR_FPGA2_CLK_CTRL,
++	clk = clk_register_zynq_d2m("FPGA2_CLK", SLCR_FPGA2_CLK_CTRL,
+ 			def_periph_parents, &fpga2clk_lock);
+ 	clk_prepare(clk);
+ 	clk_enable(clk);
+ 	zynq_clkdev_add(NULL, "FPGA2", clk);
+-	clk = clk_register_zynq_d2m("FPGA3_CLK",
+-			(__force void __iomem *)SLCR_FPGA3_CLK_CTRL,
++	clk = clk_register_zynq_d2m("FPGA3_CLK", SLCR_FPGA3_CLK_CTRL,
+ 			def_periph_parents, &fpga3clk_lock);
+ 	clk_prepare(clk);
+ 	clk_enable(clk);
+ 	zynq_clkdev_add(NULL, "FPGA3", clk);
+-	clk = clk_register_zynq_d2m("CAN_MASTER_CLK",
+-			(__force void __iomem *)SLCR_CAN_CLK_CTRL,
++	clk = clk_register_zynq_d2m("CAN_MASTER_CLK", SLCR_CAN_CLK_CTRL,
+ 			def_periph_parents, &canclk_lock);
+ 
+-	clk = clk_register_zynq_d1m("SDIO_MASTER_CLK",
+-			(__force void __iomem *)SLCR_SDIO_CLK_CTRL,
++	clk = clk_register_zynq_d1m("SDIO_MASTER_CLK", SLCR_SDIO_CLK_CTRL,
+ 			def_periph_parents, 4, &sdioclk_lock);
+-	clk = clk_register_zynq_d1m("UART_MASTER_CLK",
+-			(__force void __iomem *)SLCR_UART_CLK_CTRL,
++	clk = clk_register_zynq_d1m("UART_MASTER_CLK", SLCR_UART_CLK_CTRL,
+ 			def_periph_parents, 4, &uartclk_lock);
+-	clk = clk_register_zynq_d1m("SPI_MASTER_CLK",
+-			(__force void __iomem *)SLCR_SPI_CLK_CTRL,
++	clk = clk_register_zynq_d1m("SPI_MASTER_CLK", SLCR_SPI_CLK_CTRL,
+ 			def_periph_parents, 4, &spiclk_lock);
+-	clk = clk_register_zynq_d1m("DBG_MASTER_CLK",
+-			(__force void __iomem *)SLCR_DBG_CLK_CTRL,
++	clk = clk_register_zynq_d1m("DBG_MASTER_CLK", SLCR_DBG_CLK_CTRL,
+ 			dbg_parents, 8, &dbgclk_lock);
+ 
+ 	/*
+ 	 * clk = clk_register_gate(NULL, "CAN0_CLK", "CAN_MASTER_CLK",
+-	 *	CLK_SET_RATE_PARENT, (__force void __iomem *)SLCR_CAN_CLK_CTRL,
++	 *	CLK_SET_RATE_PARENT, SLCR_CAN_CLK_CTRL,
+ 	 *	0, 0, &canclk_lock);
+ 	 * zynq_clkdev_add(NULL, "CAN0", clk);
+ 	 * clk = clk_register_gate(NULL, "CAN1_CLK", "CAN_MASTER_CLK",
+-	 *	CLK_SET_RATE_PARENT, (__force void __iomem *)SLCR_CAN_CLK_CTRL,
++	 *	CLK_SET_RATE_PARENT, SLCR_CAN_CLK_CTRL,
+ 	 *	1, 0, &canclk_lock);
+ 	 * zynq_clkdev_add(NULL, "CAN1", clk);
+ 	 */
+ 
+ 	clk = clk_register_gate(NULL, "SDIO0_CLK", "SDIO_MASTER_CLK",
+-			CLK_SET_RATE_PARENT,
+-			(__force void __iomem *)SLCR_SDIO_CLK_CTRL,
+-			0, 0, &sdioclk_lock);
++			CLK_SET_RATE_PARENT, SLCR_SDIO_CLK_CTRL, 0, 0,
++			&sdioclk_lock);
+ 	zynq_clkdev_add(NULL, "SDIO0", clk);
+ 	clk = clk_register_gate(NULL, "SDIO1_CLK", "SDIO_MASTER_CLK",
+-			CLK_SET_RATE_PARENT,
+-			(__force void __iomem *)SLCR_SDIO_CLK_CTRL,
+-			1, 0, &sdioclk_lock);
++			CLK_SET_RATE_PARENT, SLCR_SDIO_CLK_CTRL, 1, 0,
++			&sdioclk_lock);
+ 	zynq_clkdev_add(NULL, "SDIO1", clk);
+ 
+ 	clk = clk_register_gate(NULL, "UART0_CLK", "UART_MASTER_CLK",
+-			CLK_SET_RATE_PARENT,
+-			(__force void __iomem *)SLCR_UART_CLK_CTRL,
+-			0, 0, &uartclk_lock);
++			CLK_SET_RATE_PARENT, SLCR_UART_CLK_CTRL, 0, 0,
++			&uartclk_lock);
+ 	zynq_clkdev_add(NULL, "UART0", clk);
+ 	clk = clk_register_gate(NULL, "UART1_CLK", "UART_MASTER_CLK",
+-			CLK_SET_RATE_PARENT,
+-			(__force void __iomem *)SLCR_UART_CLK_CTRL,
+-			1, 0, &uartclk_lock);
++			CLK_SET_RATE_PARENT, SLCR_UART_CLK_CTRL, 1, 0,
++			&uartclk_lock);
+ 	zynq_clkdev_add(NULL, "UART1", clk);
+ 
+ 	clk = clk_register_gate(NULL, "SPI0_CLK", "SPI_MASTER_CLK",
+-			CLK_SET_RATE_PARENT,
+-			(__force void __iomem *)SLCR_SPI_CLK_CTRL,
+-			0, 0, &spiclk_lock);
++			CLK_SET_RATE_PARENT, SLCR_SPI_CLK_CTRL, 0, 0,
++			&spiclk_lock);
+ 	zynq_clkdev_add(NULL, "SPI0", clk);
+ 	clk = clk_register_gate(NULL, "SPI1_CLK", "SPI_MASTER_CLK",
+-			CLK_SET_RATE_PARENT,
+-			(__force void __iomem *)SLCR_SPI_CLK_CTRL,
+-			1, 0, &spiclk_lock);
++			CLK_SET_RATE_PARENT, SLCR_SPI_CLK_CTRL, 1, 0,
++			&spiclk_lock);
+ 	zynq_clkdev_add(NULL, "SPI1", clk);
+ 	/*
+ 	 * clk = clk_register_gate(NULL, "DBGTRC_CLK", "DBG_MASTER_CLK",
+-	 *		CLK_SET_RATE_PARENT,
+-	 *		(__force void __iomem *)SLCR_DBG_CLK_CTRL,
+-	 *		0, 0, &dbgclk_lock);
++	 *		CLK_SET_RATE_PARENT, SLCR_DBG_CLK_CTRL,	0, 0,
++	 *		&dbgclk_lock);
+ 	 * zynq_clkdev_add(NULL, "DBGTRC", clk);
+ 	 * clk = clk_register_gate(NULL, "DBG1X_CLK", "DBG_MASTER_CLK",
+-	 *		CLK_SET_RATE_PARENT,
+-	 *		(__force void __iomem *)SLCR_DBG_CLK_CTRL,
+-	 *		1, 0, &dbgclk_lock);
++	 *		CLK_SET_RATE_PARENT, SLCR_DBG_CLK_CTRL, 1, 0,
++	 *		&dbgclk_lock);
+ 	 * zynq_clkdev_add(NULL, "DBG1X", clk);
+ 	 */
+ 
+ 	/* One gated clock for all APER clocks. */
+ 	/*
+ 	 * clk = clk_register_gate(NULL, "DMA_CPU2X", "CPU_2X_CLK", 0,
+-	 *		(__force void __iomem *)SLCR_APER_CLK_CTRL, 0, 0,
+-	 *		&aperclk_lock);
++	 *		SLCR_APER_CLK_CTRL, 0, 0, &aperclk_lock);
+ 	 * zynq_clkdev_add(NULL, "DMA_APER", clk);
+ 	 */
+ 	clk = clk_register_gate(NULL, "USB0_CPU1X", "CPU_1X_CLK", 0,
+-			(__force void __iomem *)SLCR_APER_CLK_CTRL, 2, 0,
+-			&aperclk_lock);
++			SLCR_APER_CLK_CTRL, 2, 0, &aperclk_lock);
+ 	zynq_clkdev_add(NULL, "USB0_APER", clk);
+ 	clk = clk_register_gate(NULL, "USB1_CPU1X", "CPU_1X_CLK", 0,
+-			(__force void __iomem *)SLCR_APER_CLK_CTRL, 3, 0,
+-			&aperclk_lock);
++			SLCR_APER_CLK_CTRL, 3, 0, &aperclk_lock);
+ 	zynq_clkdev_add(NULL, "USB1_APER", clk);
+ 	clk = clk_register_gate(NULL, "GEM0_CPU1X", "CPU_1X_CLK", 0,
+-			(__force void __iomem *)SLCR_APER_CLK_CTRL, 6, 0,
+-			&aperclk_lock);
++			SLCR_APER_CLK_CTRL, 6, 0, &aperclk_lock);
+ 	zynq_clkdev_add(NULL, "GEM0_APER", clk);
+ 	clk = clk_register_gate(NULL, "GEM1_CPU1X", "CPU_1X_CLK", 0,
+-			(__force void __iomem *)SLCR_APER_CLK_CTRL, 7, 0,
+-			&aperclk_lock);
++			SLCR_APER_CLK_CTRL, 7, 0, &aperclk_lock);
+ 	zynq_clkdev_add(NULL, "GEM1_APER", clk);
+ 	clk = clk_register_gate(NULL, "SDI0_CPU1X", "CPU_1X_CLK", 0,
+-			(__force void __iomem *)SLCR_APER_CLK_CTRL, 10, 0,
+-			&aperclk_lock);
++			SLCR_APER_CLK_CTRL, 10, 0, &aperclk_lock);
+ 	zynq_clkdev_add(NULL, "SDIO0_APER", clk);
+ 	clk = clk_register_gate(NULL, "SDI1_CPU1X", "CPU_1X_CLK", 0,
+-			(__force void __iomem *)SLCR_APER_CLK_CTRL, 11, 0,
+-			&aperclk_lock);
++			SLCR_APER_CLK_CTRL, 11, 0, &aperclk_lock);
+ 	zynq_clkdev_add(NULL, "SDIO1_APER", clk);
+ 	clk = clk_register_gate(NULL, "SPI0_CPU1X", "CPU_1X_CLK", 0,
+-			(__force void __iomem *)SLCR_APER_CLK_CTRL, 14, 0,
+-			&aperclk_lock);
++			SLCR_APER_CLK_CTRL, 14, 0, &aperclk_lock);
+ 	zynq_clkdev_add(NULL, "SPI0_APER", clk);
+ 	clk = clk_register_gate(NULL, "SPI1_CPU1X", "CPU_1X_CLK", 0,
+-			(__force void __iomem *)SLCR_APER_CLK_CTRL, 15, 0,
+-			&aperclk_lock);
++			SLCR_APER_CLK_CTRL, 15, 0, &aperclk_lock);
+ 	zynq_clkdev_add(NULL, "SPI1_APER", clk);
+ 	/*
+ 	 * clk = clk_register_gate(NULL, "CAN0_CPU1X", "CPU_1X_CLK", 0,
+-	 *		(__force void __iomem *)SLCR_APER_CLK_CTRL, 16, 0,
+-	 *		&aperclk_lock);
++	 *		SLCR_APER_CLK_CTRL, 16, 0, &aperclk_lock);
+ 	 * zynq_clkdev_add(NULL, "CAN0_APER", clk);
+ 	 * clk = clk_register_gate(NULL, "CAN1_CPU1X", "CPU_1X_CLK", 0,
+-	 *		(__force void __iomem *)SLCR_APER_CLK_CTRL, 17, 0,
+-	 *		&aperclk_lock);
++	 *		SLCR_APER_CLK_CTRL, 17, 0, &aperclk_lock);
+ 	 * zynq_clkdev_add(NULL, "CAN1_APER", clk);
+ 	 */
+ 	clk = clk_register_gate(NULL, "I2C0_CPU1X", "CPU_1X_CLK", 0,
+-			(__force void __iomem *)SLCR_APER_CLK_CTRL, 18, 0,
+-			&aperclk_lock);
++			SLCR_APER_CLK_CTRL, 18, 0, &aperclk_lock);
+ 	zynq_clkdev_add(NULL, "I2C0_APER", clk);
+ 	clk = clk_register_gate(NULL, "I2C1_CPU1X", "CPU_1X_CLK", 0,
+-			(__force void __iomem *)SLCR_APER_CLK_CTRL, 19, 0,
+-			&aperclk_lock);
++			SLCR_APER_CLK_CTRL, 19, 0, &aperclk_lock);
+ 	zynq_clkdev_add(NULL, "I2C1_APER", clk);
+ 	clk = clk_register_gate(NULL, "UART0_CPU1X", "CPU_1X_CLK", 0,
+-			(__force void __iomem *)SLCR_APER_CLK_CTRL, 20, 0,
+-			&aperclk_lock);
++			SLCR_APER_CLK_CTRL, 20, 0, &aperclk_lock);
+ 	zynq_clkdev_add(NULL, "UART0_APER", clk);
+ 	clk = clk_register_gate(NULL, "UART1_CPU1X", "CPU_1X_CLK", 0,
+-			(__force void __iomem *)SLCR_APER_CLK_CTRL, 21, 0,
+-			&aperclk_lock);
++			SLCR_APER_CLK_CTRL, 21, 0, &aperclk_lock);
+ 	zynq_clkdev_add(NULL, "UART1_APER", clk);
+ 	clk = clk_register_gate(NULL, "GPIO_CPU1X", "CPU_1X_CLK", 0,
+-			(__force void __iomem *)SLCR_APER_CLK_CTRL, 22, 0,
+-			&aperclk_lock);
++			SLCR_APER_CLK_CTRL, 22, 0, &aperclk_lock);
+ 	zynq_clkdev_add(NULL, "GPIO_APER", clk);
+ 	clk = clk_register_gate(NULL, "LQSPI_CPU1X", "CPU_1X_CLK", 0,
+-			(__force void __iomem *)SLCR_APER_CLK_CTRL, 23, 0,
+-			&aperclk_lock);
++			SLCR_APER_CLK_CTRL, 23, 0, &aperclk_lock);
+ 	zynq_clkdev_add(NULL, "LQSPI_APER", clk);
+ 	/*
+ 	 * clk = clk_register_gate(NULL, "SMC_CPU1X", "CPU_1X_CLK", 0,
+-	 *		(__force void __iomem *)SLCR_APER_CLK_CTRL, 24, 0,
+-	 *		&aperclk_lock);
++	 *		SLCR_APER_CLK_CTRL, 24, 0, &aperclk_lock);
+ 	 * zynq_clkdev_add(NULL, "SMC_APER", clk);
+ 	 */
+ }
+-- 
+1.7.1
+

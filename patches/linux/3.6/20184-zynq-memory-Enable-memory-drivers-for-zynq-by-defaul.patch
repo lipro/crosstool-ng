@@ -1,0 +1,44 @@
+From c5402c0260ec256782bc4b149a5e787f92ea8be3 Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Fri, 8 Feb 2013 11:53:23 +0100
+Subject: [PATCH] zynq: memory: Enable memory drivers for zynq by default
+
+Select MEMORY by default and add dependency on smc in nand driver.
+
+This should be the part of patch:
+"memory: Add driver for Zynq SMC"
+(sha1: 6cffa68066c3dbace05b6937b8e3d671ca6cd62a)
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+---
+ arch/arm/Kconfig         |    1 +
+ drivers/mtd/nand/Kconfig |    1 +
+ 2 files changed, 2 insertions(+), 0 deletions(-)
+
+diff --git a/arch/arm/Kconfig b/arch/arm/Kconfig
+index bddd329..1a2c787 100644
+--- a/arch/arm/Kconfig
++++ b/arch/arm/Kconfig
+@@ -1018,6 +1018,7 @@ config ARCH_ZYNQ
+ 	select ARM_GIC
+ 	select ARM_AMBA
+ 	select ICST
++	select MEMORY
+ 	select USE_OF
+ 	select HAVE_SMP
+ 	select CACHE_L2X0
+diff --git a/drivers/mtd/nand/Kconfig b/drivers/mtd/nand/Kconfig
+index 06d1700..bf480c6 100644
+--- a/drivers/mtd/nand/Kconfig
++++ b/drivers/mtd/nand/Kconfig
+@@ -597,6 +597,7 @@ config MTD_NAND_NUC900
+ config MTD_NAND_XILINX_PS
+ 	tristate "Xilinx Zynq NAND flash driver"
+ 	depends on MTD_NAND && ARCH_ZYNQ
++	select ZYNQ_SMC
+ 	help
+ 	  This enables access to the NAND flash device on Xilinx Zynq.
+ 
+-- 
+1.7.1
+

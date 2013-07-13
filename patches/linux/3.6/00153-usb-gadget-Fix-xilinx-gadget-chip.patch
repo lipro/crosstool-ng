@@ -1,0 +1,42 @@
+From 9d5c0471d57058ada66bd79a32d2e327c583a797 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Sun, 21 Oct 2012 15:17:13 +0200
+Subject: [PATCH] usb: gadget: Fix xilinx gadget chip
+
+Fix correct udc number and use new style (v3.6).
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ drivers/usb/gadget/gadget_chips.h |    9 +++------
+ 1 files changed, 3 insertions(+), 6 deletions(-)
+
+diff --git a/drivers/usb/gadget/gadget_chips.h b/drivers/usb/gadget/gadget_chips.h
+index c2cc52f..0376af1 100644
+--- a/drivers/usb/gadget/gadget_chips.h
++++ b/drivers/usb/gadget/gadget_chips.h
+@@ -51,12 +51,7 @@
+ #define gadget_is_s3c2410(g)		(!strcmp("s3c2410_udc", (g)->name))
+ #define gadget_is_s3c_hsotg(g)		(!strcmp("s3c-hsotg", (g)->name))
+ #define gadget_is_s3c_hsudc(g)		(!strcmp("s3c-hsudc", (g)->name))
+-
+-#ifdef CONFIG_USB_GADGET_XILINX
+-#define gadget_is_xlnx(g)	!strcmp("xilinx_udc", (g)->name)
+-#else
+-#define gadget_is_xlnx(g)	0
+-#endif
++#define gadget_is_xlnx(g)		(!strcmp("xilinx_udc", (g)->name))
+ 
+ /**
+  * usb_gadget_controller_number - support bcdDevice id convention
+@@ -127,6 +122,8 @@ static inline int usb_gadget_controller_number(struct usb_gadget *gadget)
+ 		return 0x32;
+ 	else if (gadget_is_lpc32xx(gadget))
+ 		return 0x33;
++	else if (gadget_is_xlnx(gadget))
++		return 0x34;
+ 
+ 	return -ENOENT;
+ }
+-- 
+1.7.1
+

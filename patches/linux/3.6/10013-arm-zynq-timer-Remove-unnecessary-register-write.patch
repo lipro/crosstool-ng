@@ -1,0 +1,32 @@
+From d2a9d6358e586a6bb8c1d208b789a8e36c430f8f Mon Sep 17 00:00:00 2001
+From: Soren Brinkmann <soren.brinkmann@xilinx.com>
+Date: Wed, 7 Nov 2012 17:05:24 -0800
+Subject: [PATCH] arm: zynq: timer: Remove unnecessary register write
+
+Acknowedging an interrupt requires to read the interrupt register
+only. The write was only required to work around a bug in
+the QEMU implementation of the TTC, which is fixed.
+
+Signed-off-by: Soren Brinkmann <soren.brinkmann@xilinx.com>
+Acked-by: Peter Crosthwaite <peter.crosthwaite@xilinx.com>
+---
+ arch/arm/mach-zynq/timer.c |    3 +--
+ 1 files changed, 1 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/mach-zynq/timer.c b/arch/arm/mach-zynq/timer.c
+index e0efd9e..2167e4c 100644
+--- a/arch/arm/mach-zynq/timer.c
++++ b/arch/arm/mach-zynq/timer.c
+@@ -132,8 +132,7 @@ static irqreturn_t xttcpss_clock_event_interrupt(int irq, void *dev_id)
+ 	struct xttcpss_timer *timer = dev_id;
+ 
+ 	/* Acknowledge the interrupt and call event handler */
+-	__raw_writel(__raw_readl(timer->base_addr + XTTCPSS_ISR_OFFSET),
+-			timer->base_addr + XTTCPSS_ISR_OFFSET);
++	__raw_readl(timer->base_addr + XTTCPSS_ISR_OFFSET);
+ 
+ 	evt->event_handler(evt);
+ 
+-- 
+1.7.1
+

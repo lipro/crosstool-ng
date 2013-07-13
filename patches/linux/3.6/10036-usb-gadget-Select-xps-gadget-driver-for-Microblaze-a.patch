@@ -1,0 +1,27 @@
+From d030c1a6a04fb6d4a9ba4d72dd0faf120a7d3518 Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Mon, 12 Nov 2012 16:17:48 +0100
+Subject: [PATCH] usb: gadget: Select xps gadget driver for Microblaze and PowerPC
+
+Do not select it for Zynq.
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+---
+ drivers/usb/gadget/Kconfig |    1 +
+ 1 files changed, 1 insertions(+), 0 deletions(-)
+
+diff --git a/drivers/usb/gadget/Kconfig b/drivers/usb/gadget/Kconfig
+index 4b2d8df..78ec0aa 100644
+--- a/drivers/usb/gadget/Kconfig
++++ b/drivers/usb/gadget/Kconfig
+@@ -270,6 +270,7 @@ config USB_R8A66597
+ 
+ config USB_GADGET_XILINX
+ 	boolean "Xilinx USB Driver"
++	depends on (XILINX_VIRTEX || MICROBLAZE)
+ 	select USB_GADGET_DUALSPEED
+ 	help
+ 	   Sample USB gadget driver
+-- 
+1.7.1
+

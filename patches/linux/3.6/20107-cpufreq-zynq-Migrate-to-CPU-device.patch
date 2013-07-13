@@ -1,0 +1,240 @@
+From 4d9046f38bdaeabc1415c1f3f148e0633b975435 Mon Sep 17 00:00:00 2001
+From: Soren Brinkmann <soren.brinkmann@xilinx.com>
+Date: Tue, 8 Jan 2013 17:48:00 -0800
+Subject: [PATCH] cpufreq: zynq: Migrate to CPU device
+
+Use the existing, generic CPU devices isntead of the DVFS dummy
+device. This also allows removing some platform_device infrastructure
+in the Zynq BSP, which had been added to support this driver.
+
+This change is inspired by 'cpufreq: OMAP: use get_cpu_device() instead of
+omap_device API' (sha1: 747a7f64201b8ffa8654c8767c5f794fdfa4239e).
+
+Signed-off-by: Soren Brinkmann <soren.brinkmann@xilinx.com>
+---
+ arch/arm/mach-zynq/common.c            |   31 ++++++++++----------
+ arch/arm/mach-zynq/include/mach/pdev.h |   19 ------------
+ arch/arm/mach-zynq/platform_devices.c  |   49 --------------------------------
+ drivers/cpufreq/zynq-cpufreq.c         |    9 ++---
+ 4 files changed, 19 insertions(+), 89 deletions(-)
+ delete mode 100644 arch/arm/mach-zynq/include/mach/pdev.h
+
+diff --git a/arch/arm/mach-zynq/common.c b/arch/arm/mach-zynq/common.c
+index 9abbd5f..69776ef 100644
+--- a/arch/arm/mach-zynq/common.c
++++ b/arch/arm/mach-zynq/common.c
+@@ -16,6 +16,7 @@
+ 
+ #include <linux/init.h>
+ #include <linux/kernel.h>
++#include <linux/cpu.h>
+ #include <linux/cpumask.h>
+ #include <linux/platform_device.h>
+ #include <linux/clk.h>
+@@ -35,7 +36,6 @@
+ 
+ #include <mach/zynq_soc.h>
+ #include <mach/clk.h>
+-#include <mach/pdev.h>
+ #include "common.h"
+ 
+ static struct of_device_id zynq_of_bus_ids[] __initdata = {
+@@ -127,24 +127,23 @@ static unsigned int freq_divs[] __initdata = {
+  * Registering frequency/voltage operating points for voltage and frequency
+  * scaling. Currently we only support frequency scaling.
+  */
+-static void __init xilinx_opp_init(void)
++static int __init xilinx_opp_init(void)
+ {
+-	struct platform_device *pdev = xilinx_get_pdev_by_name("zynq-dvfs");
+-	struct device *dev;
+-	int ret = 0;
+ 	long freq;
+-	struct clk *cpuclk = clk_get_sys("CPU_6OR4X_CLK", NULL);
+ 	unsigned int i;
++	struct device *dev = get_cpu_device(0);
++	int ret = 0;
++	struct clk *cpuclk = clk_get_sys("CPU_6OR4X_CLK", NULL);
+ 
+-	if (IS_ERR(pdev)) {
+-		pr_warn("Xilinx OOP init: No device. DVFS not available.");
+-		return;
++	if (!dev) {
++		pr_warn("%s: no cpu device. DVFS not available.", __func__);
++		return -ENODEV;
+ 	}
+-	dev = &pdev->dev;
+ 
+ 	if (IS_ERR(cpuclk)) {
+-		pr_warn("Xilinx OOP init: CPU clock not found. DVFS not available.");
+-		return;
++		pr_warn("%s: CPU clock not found. DVFS not available.",
++				__func__);
++		return PTR_ERR(cpuclk);
+ 	}
+ 
+ 	/* frequency/voltage operating points. For now use f only */
+@@ -161,10 +160,11 @@ static void __init xilinx_opp_init(void)
+ 		ret |= opp_add(dev, freq, 0);
+ 
+ 	if (ret)
+-		pr_warn("Error adding OPPs.");
++		pr_warn("%s: Error adding OPPs.", __func__);
++
++	return ret;
+ }
+-#else
+-static void __init xilinx_opp_init(void) {}
++device_initcall(xilinx_opp_init);
+ #endif
+ 
+ #ifdef CONFIG_CACHE_L2X0
+@@ -218,7 +218,6 @@ static void __init xilinx_init_machine(void)
+ {
+ 	of_platform_bus_probe(NULL, zynq_of_bus_ids, NULL);
+ 	platform_device_init();
+-	xilinx_opp_init();
+ }
+ 
+ static const char *xilinx_dt_match[] = {
+diff --git a/arch/arm/mach-zynq/include/mach/pdev.h b/arch/arm/mach-zynq/include/mach/pdev.h
+deleted file mode 100644
+index 1761a1a..0000000
+--- a/arch/arm/mach-zynq/include/mach/pdev.h
++++ /dev/null
+@@ -1,19 +0,0 @@
+-/*
+- *  Copyright (C) 2012 Xilinx
+- *
+- * This software is licensed under the terms of the GNU General Public
+- * License version 2, as published by the Free Software Foundation, and
+- * may be copied, distributed, and modified under those terms.
+- *
+- * This program is distributed in the hope that it will be useful,
+- * but WITHOUT ANY WARRANTY; without even the implied warranty of
+- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+- * GNU General Public License for more details.
+- */
+-
+-#ifndef __MAC_PDEV_H__
+-#define __MAC_PDEV_H__
+-
+-struct platform_device *xilinx_get_pdev_by_name(const char *nm);
+-
+-#endif
+diff --git a/arch/arm/mach-zynq/platform_devices.c b/arch/arm/mach-zynq/platform_devices.c
+index 5af2667..c3e3500 100644
+--- a/arch/arm/mach-zynq/platform_devices.c
++++ b/arch/arm/mach-zynq/platform_devices.c
+@@ -22,7 +22,6 @@
+ #include <linux/amba/xilinx_dma.h>
+ #include <linux/xilinx_devices.h>
+ #include <mach/dma.h>
+-#include <mach/pdev.h>
+ #include <asm/pmu.h>
+ #include "common.h"
+ 
+@@ -100,10 +99,6 @@ static struct platform_device xilinx_pmu_device = {
+ 	.resource	= &xilinx_pmu_resource,
+ };
+ 
+-static struct platform_device xilinx_dvfs_device = {
+-	.name = "zynq-dvfs"
+-};
+-
+ /* add all platform devices to the following table so they
+  * will be registered
+  */
+@@ -114,50 +109,8 @@ static struct platform_device *xilinx_pdevices[] __initdata = {
+ 	&xilinx_dma_test,
+ #endif
+ 	&xilinx_pmu_device,
+-	&xilinx_dvfs_device,
+ };
+ 
+-/* Maintain a list of platform devices */
+-static LIST_HEAD(xilinx_pdevlist);
+-struct xilinx_pdevlist_entry {
+-	struct list_head lh;
+-	struct platform_device *pdev;
+-};
+-
+-/**
+- * xilinx_add_pdevlist() - Add platform device to list
+- * @pdev: The platform device to add to the list
+- */
+-static void xilinx_add_pdevlist(struct platform_device *pdev)
+-{
+-	struct xilinx_pdevlist_entry *entry = kmalloc(sizeof(*entry),
+-			GFP_KERNEL);
+-	if (!entry) {
+-		pr_warn("Adding PDEV to list failed.");
+-		return;
+-	}
+-	entry->pdev = pdev;
+-	list_add_tail(&entry->lh, &xilinx_pdevlist);
+-}
+-
+-/**
+- * xilinx_get_pdev_by_name - Find a platform device by name
+- * @nm: Name of the Platform device searched.
+- * Returns a pointer to the found struct platform_device or error pointer if no
+- * platform device is found.
+- */
+-struct platform_device *xilinx_get_pdev_by_name(const char *nm)
+-{
+-	struct xilinx_pdevlist_entry *tmp;
+-
+-	list_for_each_entry(tmp, &xilinx_pdevlist, lh) {
+-		if (!strcmp(tmp->pdev->name, nm))
+-			return tmp->pdev;
+-	}
+-	return ERR_PTR(-ENODEV);
+-}
+-EXPORT_SYMBOL(xilinx_get_pdev_by_name);
+-
+ /**
+  * platform_device_init - Initialize all the platform devices.
+  *
+@@ -183,8 +136,6 @@ void __init platform_device_init(void)
+ 		if (ret)
+ 			pr_info("Unable to register platform device '%s': %d\n",
+ 				(*devptr)->name, ret);
+-		else
+-			xilinx_add_pdevlist(*devptr);
+ 	}
+ 
+ //#if defined CONFIG_SPI_SPIDEV || defined CONFIG_MTD_M25P80
+diff --git a/drivers/cpufreq/zynq-cpufreq.c b/drivers/cpufreq/zynq-cpufreq.c
+index 98e00d3..5bf14f7 100644
+--- a/drivers/cpufreq/zynq-cpufreq.c
++++ b/drivers/cpufreq/zynq-cpufreq.c
+@@ -26,7 +26,6 @@
+ #include <linux/platform_device.h>
+ #include <asm/smp_plat.h>
+ #include <asm/cpu.h>
+-#include <mach/pdev.h>
+ 
+ #ifdef CONFIG_SMP
+ struct lpj_info {
+@@ -234,13 +233,13 @@ static struct cpufreq_driver zynq_cpufreq_driver = {
+ 
+ static int __init zynq_cpufreq_init(void)
+ {
+-	struct platform_device *pdev = xilinx_get_pdev_by_name("zynq-dvfs");
++	struct device *dev = get_cpu_device(0);
+ 
+-	if (IS_ERR(pdev)) {
+-		pr_warn("Xilinx: cpufreq: Device not found.");
++	if (!dev) {
++		pr_warn("%s: Error: device not found.", __func__);
+ 		return -EINVAL;
+ 	}
+-	mpu_dev = &pdev->dev;
++	mpu_dev = dev;
+ 	return cpufreq_register_driver(&zynq_cpufreq_driver);
+ }
+ 
+-- 
+1.7.1
+

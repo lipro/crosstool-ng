@@ -1,0 +1,47 @@
+From e7d605736ea50a27f45083c227f45b563c2b9e8f Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Thu, 10 Jan 2013 14:50:40 +0100
+Subject: [PATCH] arm: zynq: Use of_platform_populate instead of bus_probe
+
+All new boards should be using this function instead of
+of_platform_bus_probe.
+
+Two side effects:
+1. Possible to probe node which are not in the bus
+2. Remove bus_id table from platform code
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+Acked-by: Soren Brinkmann <soren.brinkmann@xilinx.com>
+---
+ arch/arm/mach-zynq/common.c |    8 ++------
+ 1 files changed, 2 insertions(+), 6 deletions(-)
+
+diff --git a/arch/arm/mach-zynq/common.c b/arch/arm/mach-zynq/common.c
+index 69776ef..c43505a 100644
+--- a/arch/arm/mach-zynq/common.c
++++ b/arch/arm/mach-zynq/common.c
+@@ -38,11 +38,6 @@
+ #include <mach/clk.h>
+ #include "common.h"
+ 
+-static struct of_device_id zynq_of_bus_ids[] __initdata = {
+-	{ .compatible = "simple-bus", },
+-	{}
+-};
+-
+ static const struct of_device_id zynq_dt_irq_match[] __initconst = {
+ 	{ .compatible = "arm,cortex-a9-gic", .data = gic_of_init },
+ 	{ }
+@@ -216,7 +211,8 @@ static void __init xilinx_init_late(void)
+  */
+ static void __init xilinx_init_machine(void)
+ {
+-	of_platform_bus_probe(NULL, zynq_of_bus_ids, NULL);
++	of_platform_populate(NULL, of_default_bus_match_table, NULL, NULL);
++
+ 	platform_device_init();
+ }
+ 
+-- 
+1.7.1
+

@@ -1,0 +1,28 @@
+From 9e32e887180b01e4c89810dbaf37109ec9a15115 Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Fri, 15 Mar 2013 11:31:17 +0100
+Subject: [PATCH] usb: gadget: usbps_udc: Enable kernel module
+
+Enable option to compile kernel module.
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+---
+ drivers/usb/gadget/Kconfig |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/drivers/usb/gadget/Kconfig b/drivers/usb/gadget/Kconfig
+index 40690ea..78296c3 100644
+--- a/drivers/usb/gadget/Kconfig
++++ b/drivers/usb/gadget/Kconfig
+@@ -177,7 +177,7 @@ config USB_FSL_USB2
+ 	   all gadget drivers to also be dynamically linked.
+ 
+ config USB_GADGET_XUSBPS
+-	boolean "Xilinx PS Highspeed USB DR Peripheral Controller"
++	tristate "Xilinx PS Highspeed USB DR Peripheral Controller"
+ 	depends on ARCH_ZYNQ
+ 	select USB_GADGET_DUALSPEED
+ 	select USB_XUSBPS_DR_OF if OF
+-- 
+1.7.1
+

@@ -1,0 +1,54 @@
+From 2d6dd33fc7a61e3f3a98f05771a6b3ab33ccacbb Mon Sep 17 00:00:00 2001
+From: Soren Brinkmann <soren.brinkmann@xilinx.com>
+Date: Fri, 9 Nov 2012 18:00:50 -0800
+Subject: [PATCH] arm: zynq: Add ucd9248 hwmon to zc702
+
+The zc702 has several ucd9248 PWM controllers connected to the
+PMBUS. This patch registers those devices with the driver framework,
+if the corresponding driver is selected in the kernel configuration.
+
+Signed-off-by: Soren Brinkmann <soren.brinkmann@xilinx.com>
+Acked-by: Michal Simek <michal.simek@xilinx.com>
+---
+ arch/arm/mach-zynq/board_zc702.c |   18 ++++++++++++++++++
+ 1 files changed, 18 insertions(+), 0 deletions(-)
+
+diff --git a/arch/arm/mach-zynq/board_zc702.c b/arch/arm/mach-zynq/board_zc702.c
+index 9be7696..4639d52 100644
+--- a/arch/arm/mach-zynq/board_zc702.c
++++ b/arch/arm/mach-zynq/board_zc702.c
+@@ -169,6 +169,20 @@ static struct i2c_board_info __initdata m24c08_board_info[] = {
+ 
+ #endif /* CONFIG_EEPROM_AT24 */
+ 
++#if defined(CONFIG_SENSORS_UCD9200)
++static struct i2c_board_info ucd9248_board_info[] __initdata = {
++	{
++		I2C_BOARD_INFO("ucd9248", 52),
++	},
++	{
++		I2C_BOARD_INFO("ucd9248", 53),
++	},
++	{
++		I2C_BOARD_INFO("ucd9248", 54),
++	}
++};
++#endif /* CONFIG_SENSORS_UCD9200 */
++
+ #endif /* CONFIG_I2C_XILINX_PS && CONFIG_I2C_MUX_PCA954x */
+ 
+ #if defined(CONFIG_SPI_SPIDEV) || defined(CONFIG_MTD_M25P80)
+@@ -240,6 +254,10 @@ static void __init board_zc702_init(void)
+ 	i2c_register_board_info(5, rtc8564_board_info,
+ 				ARRAY_SIZE(rtc8564_board_info));
+ #endif
++#if	defined(CONFIG_SENSORS_UCD9200)
++	i2c_register_board_info(8, ucd9248_board_info,
++				ARRAY_SIZE(ucd9248_board_info));
++#endif
+ 
+ 
+ #endif
+-- 
+1.7.1
+

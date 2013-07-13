@@ -1,0 +1,57 @@
+From aca42179531dd1b91e1a7479e3182da2503fa57d Mon Sep 17 00:00:00 2001
+From: Soren Brinkmann <soren.brinkmann@xilinx.com>
+Date: Mon, 7 Jan 2013 15:23:13 -0800
+Subject: [PATCH] clk: zynq: Verify allocation before using pointer
+
+A struct was used before proper allocation had been checked.
+
+Signed-off-by: Soren Brinkmann <soren.brinkmann@xilinx.com>
+Acked-by: Michal Simek <michal.simek@xilinx.com>
+---
+ drivers/clk/zynq/clk621.c         |    3 +--
+ drivers/clk/zynq/peripheral_clk.c |    3 +--
+ 2 files changed, 2 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/clk/zynq/clk621.c b/drivers/clk/zynq/clk621.c
+index 8bea4ed..1e0dd30 100644
+--- a/drivers/clk/zynq/clk621.c
++++ b/drivers/clk/zynq/clk621.c
+@@ -149,14 +149,13 @@ struct clk *clk_register_zynq_clk621(const char *name,
+ 	};
+ 
+ 	clk = kmalloc(sizeof(*clk), GFP_KERNEL);
+-	clk->hw.init = &initd;
+-
+ 	if (!clk) {
+ 		pr_err("%s: could not allocate Zynq clk\n", __func__);
+ 		return ERR_PTR(-ENOMEM);
+ 	}
+ 
+ 	/* Populate the struct */
++	clk->hw.init = &initd;
+ 	clk->clkctrl = clkctrl;
+ 	clk->clk621 = clk621;
+ 	clk->basediv = basediv;
+diff --git a/drivers/clk/zynq/peripheral_clk.c b/drivers/clk/zynq/peripheral_clk.c
+index 6dcde19..2307f56 100644
+--- a/drivers/clk/zynq/peripheral_clk.c
++++ b/drivers/clk/zynq/peripheral_clk.c
+@@ -393,14 +393,13 @@ static struct clk *clk_register_zynq_common(const char *name,
+ 	};
+ 
+ 	clk = kmalloc(sizeof(*clk), GFP_KERNEL);
+-	clk->hw.init = &initd;
+-
+ 	if (!clk) {
+ 		pr_err("%s: could not allocate Zynq clock\n", __func__);
+ 		return ERR_PTR(-ENOMEM);
+ 	}
+ 
+ 	/* Populate the struct */
++	clk->hw.init = &initd;
+ 	clk->clkctrl = clkctrl;
+ 	clk->lock = lock;
+ 
+-- 
+1.7.1
+

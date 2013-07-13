@@ -1,0 +1,27 @@
+From 0fa718f7990e1a6eb550358810db123504c50393 Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Wed, 12 Dec 2012 16:58:04 +0100
+Subject: [PATCH] char: xilinx_devcfg: Fix Kconfig
+
+This driver is valid for Zynq only.
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+---
+ drivers/char/Kconfig |    1 +
+ 1 files changed, 1 insertions(+), 0 deletions(-)
+
+diff --git a/drivers/char/Kconfig b/drivers/char/Kconfig
+index 2c748bc..5062117 100644
+--- a/drivers/char/Kconfig
++++ b/drivers/char/Kconfig
+@@ -392,6 +392,7 @@ config XILINX_HWICAP
+ 
+ config XILINX_DEVCFG
+ 	tristate "Xilinx Device Configuration"
++	depends on ARCH_ZYNQ
+ 	help
+ 	  This option enables support for the Xilinx device configuration driver.
+ 	  If unsure, say N
+-- 
+1.7.1
+

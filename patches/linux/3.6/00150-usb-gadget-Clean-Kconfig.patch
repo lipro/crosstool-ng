@@ -1,0 +1,50 @@
+From 27cb47062340b07b196f9df2275d91829af6037a Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Sun, 21 Oct 2012 14:53:57 +0200
+Subject: [PATCH] usb: gadget: Clean Kconfig
+
+Remove the second USB_FSL_USB2 option. Probably
+result of incorrect merge.
++ synchronization
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ drivers/usb/gadget/Kconfig |   18 +-----------------
+ 1 files changed, 1 insertions(+), 17 deletions(-)
+
+diff --git a/drivers/usb/gadget/Kconfig b/drivers/usb/gadget/Kconfig
+index ca9f33e..e1b6e24 100644
+--- a/drivers/usb/gadget/Kconfig
++++ b/drivers/usb/gadget/Kconfig
+@@ -1,4 +1,4 @@
+-
++#
+ # USB Gadget support on a system involves
+ #    (a) a peripheral controller, and
+ #    (b) the gadget driver using it.
+@@ -176,22 +176,6 @@ config USB_FSL_USB2
+ 	   dynamically linked module called "fsl_usb2_udc" and force
+ 	   all gadget drivers to also be dynamically linked.
+ 
+-config USB_FSL_USB2
+-	tristate "Freescale Highspeed USB DR Peripheral Controller"
+-	depends on FSL_SOC || ARCH_MXC
+-	select USB_GADGET_DUALSPEED
+-	select USB_FSL_MPH_DR_OF if OF
+-	help
+-	   Some of Freescale PowerPC processors have a High Speed
+-	   Dual-Role(DR) USB controller, which supports device mode.
+-
+-	   The number of programmable endpoints is different through
+-	   SOC revisions.
+-
+-	   Say "y" to link the driver statically, or "m" to build a
+-	   dynamically linked module called "fsl_usb2_udc" and force
+-	   all gadget drivers to also be dynamically linked.
+-
+ config USB_GADGET_XUSBPS
+ 	boolean "Xilinx PS Highspeed USB DR Peripheral Controller"
+ 	depends on ARCH_XILINX || ARCH_ZYNQ
+-- 
+1.7.1
+

@@ -1,0 +1,49 @@
+From 8b21c62566a6857dc7bd577a531465bb4548d464 Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Wed, 28 Nov 2012 17:13:19 +0100
+Subject: [PATCH] mtd: xilinx_nandps: Move of_match table to proper location
+
+match table should be close to platform_driver function
+where all expect it.
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+Acked-by: John Linn <john.linn@xilinx.com>
+---
+ drivers/mtd/nand/xilinx_nandps.c |   14 +++++++-------
+ 1 files changed, 7 insertions(+), 7 deletions(-)
+
+diff --git a/drivers/mtd/nand/xilinx_nandps.c b/drivers/mtd/nand/xilinx_nandps.c
+index 198ee54..2050180 100644
+--- a/drivers/mtd/nand/xilinx_nandps.c
++++ b/drivers/mtd/nand/xilinx_nandps.c
+@@ -941,13 +941,6 @@ static int xnandps_device_ready(struct mtd_info *mtd)
+ 	return status ? 1 : 0;
+ }
+ 
+-/* Match table for device tree binding */
+-static const struct of_device_id __devinitconst xnandps_of_match[] = {
+-	{ .compatible = "xlnx,ps7-nand-1.00.a" },
+-	{},
+-};
+-MODULE_DEVICE_TABLE(of, xnandps_of_match);
+-
+ /**
+  * xnandps_probe - Probe method for the NAND driver
+  * @pdev:	Pointer to the platform_device structure
+@@ -1274,6 +1267,13 @@ static int __devexit xnandps_remove(struct platform_device *pdev)
+ 	return 0;
+ }
+ 
++/* Match table for device tree binding */
++static const struct of_device_id __devinitconst xnandps_of_match[] = {
++	{ .compatible = "xlnx,ps7-nand-1.00.a" },
++	{},
++};
++MODULE_DEVICE_TABLE(of, xnandps_of_match);
++
+ /*
+  * xnandps_driver - This structure defines the NAND subsystem platform driver
+  */
+-- 
+1.7.1
+

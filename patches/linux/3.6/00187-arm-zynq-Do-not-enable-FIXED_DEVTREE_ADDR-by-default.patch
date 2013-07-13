@@ -1,0 +1,29 @@
+From ca55bc3b3e91c866cadd19eb5070b82853ed98f3 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Mon, 22 Oct 2012 14:13:19 +0200
+Subject: [PATCH] arm: zynq: Do not enable FIXED_DEVTREE_ADDR by default
+
+The main reason is that hardcoding any address
+is wrong.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ arch/arm/mach-zynq/Kconfig |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/arch/arm/mach-zynq/Kconfig b/arch/arm/mach-zynq/Kconfig
+index 065737c..aab4c56 100644
+--- a/arch/arm/mach-zynq/Kconfig
++++ b/arch/arm/mach-zynq/Kconfig
+@@ -19,7 +19,7 @@ config ZYNQ_EARLY_UART_EP107
+ 
+ config XILINX_FIXED_DEVTREE_ADDR
+ 	tristate "Device Tree At Fixed Address"
+-	default y
++	default n
+ 	depends on OF
+ 	help
+ 	  Select if you want the kernel to assume a device tree is located at a
+-- 
+1.7.1
+

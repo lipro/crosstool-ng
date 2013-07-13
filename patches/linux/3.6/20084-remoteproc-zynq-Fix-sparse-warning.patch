@@ -1,0 +1,29 @@
+From 4891865e9410b491892e114c686b7911d8fd329a Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Wed, 2 Jan 2013 11:21:59 +0100
+Subject: [PATCH] remoteproc: zynq: Fix sparse warning
+
+remoteprocdev should be static because it is used only
+in this file.
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+---
+ drivers/remoteproc/zynq_remoteproc.c |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/drivers/remoteproc/zynq_remoteproc.c b/drivers/remoteproc/zynq_remoteproc.c
+index c3568c3..4fd429f 100644
+--- a/drivers/remoteproc/zynq_remoteproc.c
++++ b/drivers/remoteproc/zynq_remoteproc.c
+@@ -59,7 +59,7 @@ struct zynq_rproc_pdata {
+ };
+ 
+ /* Store rproc for IPI handler */
+-struct platform_device *remoteprocdev;
++static struct platform_device *remoteprocdev;
+ static struct work_struct workqueue;
+ 
+ static void handle_event(struct work_struct *work)
+-- 
+1.7.1
+

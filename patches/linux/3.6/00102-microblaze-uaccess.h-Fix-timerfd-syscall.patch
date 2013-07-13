@@ -1,0 +1,53 @@
+From f5288e0cf47708b61e762f5a84eb2f3b195de2b8 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Mon, 15 Oct 2012 11:49:22 +0200
+Subject: [PATCH] microblaze: uaccess.h: Fix timerfd syscall
+
+__pu_val must be volatile to ensure that the value is not lost.
+
+It was causing the problem with timerfd syscall
+where using inline asm at the end of function call doesn't
+save u64 bit value to the stack.
+In comparison both cases you can find out this fragment
+where you can see the first part which is saved u64
+value to stack and then using it in __put_user_asm_8 macro.
+Origin broken implementation misses the first two swi instructions.
+
+	swi	r22, r1, 28 /* missing without volatile */
+	swi	r23, r1, 32
+...
+	addik	r4, r1, 28
+	lwi	r3, r4, 0
+	swi	r3, r25, 0
+	lwi	r3, r4, 4
+	swi	r3, r25, 4
+	addk	r3, r0, r0
+
+NOTE: Moving __put_val initialization after declaration
+has not impact on this bug. It is just coding style issue.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ arch/microblaze/include/asm/uaccess.h |    3 +--
+ 1 files changed, 1 insertions(+), 2 deletions(-)
+
+diff --git a/arch/microblaze/include/asm/uaccess.h b/arch/microblaze/include/asm/uaccess.h
+index ef25f75..927540d 100644
+--- a/arch/microblaze/include/asm/uaccess.h
++++ b/arch/microblaze/include/asm/uaccess.h
+@@ -298,11 +298,10 @@ extern long __user_bad(void);
+ 
+ #define __put_user_check(x, ptr, size)					\
+ ({									\
+-	typeof(*(ptr)) __pu_val;					\
++	typeof(*(ptr)) volatile __pu_val = x;					\
+ 	typeof(*(ptr)) __user *__pu_addr = (ptr);			\
+ 	int __pu_err = 0;						\
+ 									\
+-	__pu_val = (x);							\
+ 	if (access_ok(VERIFY_WRITE, __pu_addr, size)) {			\
+ 		switch (size) {						\
+ 		case 1:							\
+-- 
+1.7.1
+

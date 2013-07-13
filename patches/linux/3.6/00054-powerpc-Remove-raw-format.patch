@@ -1,0 +1,115 @@
+From 54242f9bbfba7e82f7d93693d2cce20505db83ba Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Mon, 8 Oct 2012 15:48:11 +0200
+Subject: [PATCH] powerpc: Remove raw format
+
+It is unused because there were no targets for it.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ arch/powerpc/boot/Makefile       |    1 +
+ arch/powerpc/boot/io.h           |    7 ----
+ arch/powerpc/boot/raw-platform.c |   63 --------------------------------------
+ 3 files changed, 1 insertions(+), 70 deletions(-)
+ delete mode 100644 arch/powerpc/boot/raw-platform.c
+
+diff --git a/arch/powerpc/boot/Makefile b/arch/powerpc/boot/Makefile
+index 0414713..e7780e5 100644
+--- a/arch/powerpc/boot/Makefile
++++ b/arch/powerpc/boot/Makefile
+@@ -315,6 +315,7 @@ $(obj)/zImage.initrd.%: vmlinux $(wrapperbits)
+ 
+ $(obj)/zImage.%: vmlinux $(wrapperbits)
+ 	$(call if_changed,wrap,$*)
++
+ # dtbImage% - a dtbImage is a zImage with an embedded device tree blob
+ $(obj)/dtbImage.initrd.%: vmlinux $(wrapperbits) $(obj)/%.dtb
+ 	$(call if_changed,wrap,$*,,$(obj)/$*.dtb,$(obj)/ramdisk.image.gz)
+diff --git a/arch/powerpc/boot/io.h b/arch/powerpc/boot/io.h
+index 099912e..7c09f48 100644
+--- a/arch/powerpc/boot/io.h
++++ b/arch/powerpc/boot/io.h
+@@ -99,11 +99,4 @@ static inline void barrier(void)
+ 	asm volatile("" : : : "memory");
+ }
+ 
+-static inline void disable_irq(void)
+-{
+-	int dummy;
+-	asm volatile("mfmsr %0; rlwinm %0, %0, 0, ~(1<<15); mtmsr %0" :
+-	             "=r" (dummy) : : "memory");
+-}
+-
+ #endif /* _IO_H */
+diff --git a/arch/powerpc/boot/raw-platform.c b/arch/powerpc/boot/raw-platform.c
+deleted file mode 100644
+index 2a5e493..0000000
+--- a/arch/powerpc/boot/raw-platform.c
++++ /dev/null
+@@ -1,63 +0,0 @@
+-/*
+- * The "raw" platform -- for booting from a complete dtb without
+- * any fixups.
+- *
+- * Author: Scott Wood <scottwood@freescale.com>
+- *
+- * Copyright (c) 2007 Freescale Semiconductor, Inc.
+- *
+- * This program is free software; you can redistribute it and/or modify it
+- * under the terms of the GNU General Public License version 2 as published
+- * by the Free Software Foundation.
+- */
+-
+-#include "ops.h"
+-#include "types.h"
+-#include "io.h"
+-
+-BSS_STACK(4096);
+-
+-/* These are labels in the device tree. */
+-extern u32 memsize[2], timebase, mem_size_cells;
+-
+-void platform_init(unsigned long r3, unsigned long r4, unsigned long r5,
+-                   unsigned long r6, unsigned long r7)
+-{
+-	u64 memsize64 = memsize[0];
+-	static const unsigned long line_size = 32;
+-	static const unsigned long congruence_classes = 256;
+-	unsigned long addr;
+-	unsigned long dccr;
+-
+-	/*
+-	 * Invalidate the data cache if the data cache is turned off.
+-	 * - The 405 core does not invalidate the data cache on power-up
+-	 *   or reset but does turn off the data cache. We cannot assume
+-	 *   that the cache contents are valid.
+-	 * - If the data cache is turned on this must have been done by
+-	 *   a bootloader and we assume that the cache contents are
+-	 *   valid.
+-	 */
+-	__asm__("mfdccr %0": "=r" (dccr));
+-	if (dccr == 0) {
+-		for (addr = 0;
+-		     addr < (congruence_classes * line_size);
+-		     addr += line_size) {
+-			__asm__("dccci 0,%0": :"b"(addr));
+-		}
+-	}
+-
+-	if (mem_size_cells == 2) {
+-		memsize64 <<= 32;
+-		memsize64 |= memsize[1];
+-	}
+-
+-	if (sizeof(void *) == 4 && memsize64 >= 0x100000000ULL)
+-		memsize64 = 0xffffffff;
+-
+-	disable_irq();
+-	timebase_period_ns = 1000000000 / timebase;
+-	simple_alloc_init(_end, memsize64 - (unsigned long)_end, 32, 64);
+-	ft_init(_dtb_start, _dtb_end - _dtb_start, 32);
+-	serial_console_init();
+-}
+-- 
+1.7.1
+

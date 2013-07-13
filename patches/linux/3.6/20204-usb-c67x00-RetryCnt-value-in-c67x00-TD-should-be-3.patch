@@ -1,0 +1,30 @@
+From 53ed359c7928daa7efe82e79a8d1c1d7ffd1443e Mon Sep 17 00:00:00 2001
+From: Dave Tubbs <dave.tubbs@portalislc.com>
+Date: Mon, 4 Mar 2013 12:32:36 +0100
+Subject: [PATCH] usb: c67x00 RetryCnt value in c67x00 TD should be 3
+
+RetryCnt value in c67x00 TD should be 3 (both bits set to 1). Reference
+Cypress Semiconductor BIOS User's Manual 1.2, page 3-14
+
+Signed-off-by: Dave Tubbs <dave.tubbs@portalislc.com>
+Acked-by: Peter Korsgaard <jacmet@sunsite.dk>
+---
+ drivers/usb/c67x00/c67x00-sched.c |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/drivers/usb/c67x00/c67x00-sched.c b/drivers/usb/c67x00/c67x00-sched.c
+index aa2262f..aa49162 100644
+--- a/drivers/usb/c67x00/c67x00-sched.c
++++ b/drivers/usb/c67x00/c67x00-sched.c
+@@ -590,7 +590,7 @@ static int c67x00_create_td(struct c67x00_hcd *c67x00, struct urb *urb,
+ {
+ 	struct c67x00_td *td;
+ 	struct c67x00_urb_priv *urbp = urb->hcpriv;
+-	const __u8 active_flag = 1, retry_cnt = 1;
++	const __u8 active_flag = 1, retry_cnt = 3;
+ 	__u8 cmd = 0;
+ 	int tt = 0;
+ 
+-- 
+1.7.1
+

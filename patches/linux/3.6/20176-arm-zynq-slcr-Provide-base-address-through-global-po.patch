@@ -1,0 +1,39 @@
+From b134e33b0337b13a3b8136c08a35e928d1e29bd1 Mon Sep 17 00:00:00 2001
+From: Soren Brinkmann <soren.brinkmann@xilinx.com>
+Date: Fri, 1 Feb 2013 10:50:39 -0800
+Subject: [PATCH] arm: zynq: slcr: Provide base address through global pointer
+
+Suspend code which is executed out of OCM while DRAM is in self-refresh
+mode must be self-contained. Therefore it cannot use the xslcr
+accessor functions and requires a pointer to the remapped memory.
+
+Signed-off-by: Soren Brinkmann <soren.brinkmann@xilinx.com>
+---
+ arch/arm/mach-zynq/slcr.c |    4 ++++
+ 1 files changed, 4 insertions(+), 0 deletions(-)
+
+diff --git a/arch/arm/mach-zynq/slcr.c b/arch/arm/mach-zynq/slcr.c
+index ee7dd27..b0c3eb9 100644
+--- a/arch/arm/mach-zynq/slcr.c
++++ b/arch/arm/mach-zynq/slcr.c
+@@ -160,6 +160,8 @@
+ #define xslcr_writereg(offset, val)	__raw_writel(val, offset)
+ #define xslcr_readreg(offset)		__raw_readl(offset)
+ 
++void __iomem *zynq_slcr_base;
++
+ /**
+  * struct xslcr - slcr device data.
+  * @regs:	baseaddress of device.
+@@ -2495,6 +2497,8 @@ int __init xslcr_init(void)
+ 		BUG();
+ 	}
+ 
++	zynq_slcr_base = slcr->regs;
++
+ 	/* init periph_status based on the data from MIO control registers */
+ 	xslcr_get_mio_status();
+ 
+-- 
+1.7.1
+

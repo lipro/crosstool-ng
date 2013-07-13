@@ -1,0 +1,27 @@
+From 713ef6402c8ea768fa1397f4c4efe7735a25c056 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Fri, 12 Oct 2012 13:43:46 +0200
+Subject: [PATCH] net: Coding style cleanup
+
+Sync with mainline.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ drivers/net/Makefile |    1 -
+ 1 files changed, 0 insertions(+), 1 deletions(-)
+
+diff --git a/drivers/net/Makefile b/drivers/net/Makefile
+index cde9045..3d375ca 100644
+--- a/drivers/net/Makefile
++++ b/drivers/net/Makefile
+@@ -5,7 +5,6 @@
+ #
+ # Networking Core Drivers
+ #
+-
+ obj-$(CONFIG_BONDING) += bonding/
+ obj-$(CONFIG_DUMMY) += dummy.o
+ obj-$(CONFIG_EQUALIZER) += eql.o
+-- 
+1.7.1
+

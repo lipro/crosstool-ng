@@ -1,0 +1,64 @@
+From 1424452f5517b68ca288fab2e987142013e2ce72 Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Mon, 17 Dec 2012 16:54:49 +0100
+Subject: [PATCH] arm: zynq: pl330: Remove return at the end of void func()
+
+Useless.
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+---
+ arch/arm/mach-zynq/pl330.c |   10 ----------
+ 1 files changed, 0 insertions(+), 10 deletions(-)
+
+diff --git a/arch/arm/mach-zynq/pl330.c b/arch/arm/mach-zynq/pl330.c
+index 4ea031f..05ed7ba 100644
+--- a/arch/arm/mach-zynq/pl330.c
++++ b/arch/arm/mach-zynq/pl330.c
+@@ -1552,8 +1552,6 @@ static void pl330_free_irq(unsigned int dev_id)
+ 
+ 	/* free the fault irq */
+ 	free_irq(irq, device_data);
+-
+-	return;
+ }
+ 
+ /**
+@@ -1797,8 +1795,6 @@ static void pl330_free_dma(unsigned int channel, dma_t *indexed_dma_chan)
+ 		channel_data->dma_prog_buf = NULL;
+ 		channel_data->dma_prog_phy = 0;
+ 	}
+-
+-	return;
+ }
+ 
+ /**
+@@ -1818,8 +1814,6 @@ static void print_pl330_bus_des(struct pl330_bus_des *bus_des)
+ 	pr_debug("  .burst_len = %d\n", bus_des->burst_len);
+ 	pr_debug("  .prot_ctrl = %d\n", bus_des->prot_ctrl);
+ 	pr_debug("  .cache_ctrl = %d\n", bus_des->cache_ctrl);
+-
+-	return;
+ }
+ #else
+ #	define print_pl330_bus_des(bus_des)
+@@ -2074,8 +2068,6 @@ static void pl330_enable_dma(unsigned int channel,
+ 			 dma_prog);
+ 
+ 	spin_unlock_irqrestore(&device_data->lock, spin_flags);
+-
+-	return;
+ }
+ 
+ /**
+@@ -2120,8 +2112,6 @@ static void pl330_disable_dma(unsigned int channel,
+ 	spin_unlock_irqrestore(&device_data->lock, spin_flags);
+ 
+ 	dma->count = 0;
+-
+-	return;
+ }
+ 
+ /*
+-- 
+1.7.1
+

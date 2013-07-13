@@ -1,0 +1,56 @@
+From 98f3c0fe061556e7034cb2cc044eae932374fa8a Mon Sep 17 00:00:00 2001
+From: Soren Brinkmann <soren.brinkmann@xilinx.com>
+Date: Mon, 12 Nov 2012 11:58:45 -0800
+Subject: [PATCH] serial: xilinx_uartps: Remove CONFIG_OF conditionals
+
+CONFIG_OF is mandatory for the Zynq platform. For this reason
+all conditional compiling regarding this option can be removed.
+
+Signed-off-by: Soren Brinkmann <soren.brinkmann@xilinx.com>
+Acked-by: Michal Simek <michal.simek@xilinx.com>
+---
+ drivers/tty/serial/xilinx_uartps.c |    9 +--------
+ 1 files changed, 1 insertions(+), 8 deletions(-)
+
+diff --git a/drivers/tty/serial/xilinx_uartps.c b/drivers/tty/serial/xilinx_uartps.c
+index 9cc9329..6a3a052 100644
+--- a/drivers/tty/serial/xilinx_uartps.c
++++ b/drivers/tty/serial/xilinx_uartps.c
+@@ -1244,7 +1244,6 @@ static int __devinit xuartps_probe(struct platform_device *pdev)
+ #ifdef CONFIG_COMMON_CLK
+ 	struct xuartps *xuartps;
+ #else
+-#ifdef CONFIG_OF
+ 	const unsigned int *prop;
+ 
+ 	prop = of_get_property(pdev->dev.of_node, "clock", NULL);
+@@ -1255,9 +1254,7 @@ static int __devinit xuartps_probe(struct platform_device *pdev)
+ 		if (prop)
+ 			clk = be32_to_cpup(prop);
+ 	}
+-#else
+-	clk = *((unsigned int *)(pdev->dev.platform_data));
+-#endif
++
+ 	if (!clk) {
+ 		dev_err(&pdev->dev, "no clock specified\n");
+ 		return -ENODEV;
+@@ -1509,15 +1506,11 @@ static SIMPLE_DEV_PM_OPS(xuartps_dev_pm_ops, xuartps_suspend, xuartps_resume);
+ #endif /* ! CONFIG_PM_SLEEP */
+ 
+ /* Match table for of_platform binding */
+-#ifdef CONFIG_OF
+ static struct of_device_id xuartps_of_match[] __devinitdata = {
+ 	{ .compatible = "xlnx,ps7-uart-1.00.a", },
+ 	{}
+ };
+ MODULE_DEVICE_TABLE(of, xuartps_of_match);
+-#else
+-#define xuartps_of_match NULL
+-#endif
+ 
+ static struct platform_driver xuartps_platform_driver = {
+ 	.probe   = xuartps_probe,		/* Probe method */
+-- 
+1.7.1
+

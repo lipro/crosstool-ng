@@ -1,0 +1,147 @@
+From 475ac11c1e4069e26a9ecde2a3446c652871acb0 Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Tue, 29 Jan 2013 17:55:50 +0100
+Subject: [PATCH] arm: zynq: Do not define SCU physical address
+
+Autodetect scu base address through Cortex A9 registers.
+smp_alloc use 1:1 virt:phys mapping.
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+---
+ arch/arm/mach-zynq/common.c                |   33 ++++++++++++++++++++++------
+ arch/arm/mach-zynq/common.h                |    2 +
+ arch/arm/mach-zynq/include/mach/zynq_soc.h |    7 ------
+ arch/arm/mach-zynq/platsmp.c               |    5 +--
+ 4 files changed, 30 insertions(+), 17 deletions(-)
+
+diff --git a/arch/arm/mach-zynq/common.c b/arch/arm/mach-zynq/common.c
+index 3c578f3..c60d25f 100644
+--- a/arch/arm/mach-zynq/common.c
++++ b/arch/arm/mach-zynq/common.c
+@@ -38,6 +38,8 @@
+ #include "common.h"
+ #include <linux/clk/zynq.h>
+ 
++void __iomem *scu_base;
++
+ static const struct of_device_id zynq_dt_irq_match[] __initconst = {
+ 	{ .compatible = "arm,cortex-a9-gic", .data = gic_of_init },
+ 	{ }
+@@ -47,13 +49,6 @@ static const struct of_device_id zynq_dt_irq_match[] __initconst = {
+  * running include the GIC, UART and Timer Counter.
+  */
+ static struct map_desc io_desc[] __initdata = {
+-	{
+-		.virtual	= SCU_PERIPH_VIRT,
+-		.pfn		= __phys_to_pfn(SCU_PERIPH_PHYS),
+-		.length		= SZ_8K,
+-		.type		= MT_DEVICE,
+-	},
+-
+ #ifdef CONFIG_DEBUG_LL
+ 	{
+ 		.virtual	= LL_UART_VADDR,
+@@ -64,6 +59,29 @@ static struct map_desc io_desc[] __initdata = {
+ #endif
+ };
+ 
++static struct map_desc zynq_cortex_a9_scu_map __initdata = {
++	.length	= SZ_256,
++	.type	= MT_DEVICE,
++};
++
++/* Solution ala vexpress platform */
++static int __init scu_init(void)
++{
++	unsigned long base;
++
++	/* FIXME will be replaced by scu_get_base(void) in 3.8 */
++	asm("mrc p15, 4, %0, c15, c0, 0" : "=r" (base));
++
++	zynq_cortex_a9_scu_map.pfn = __phys_to_pfn(base);
++	zynq_cortex_a9_scu_map.virtual = base;
++	iotable_init(&zynq_cortex_a9_scu_map, 1);
++	scu_base = ioremap(base, zynq_cortex_a9_scu_map.length);
++	if (WARN_ON(!scu_base))
++		return -EFAULT;
++
++	return 0;
++}
++
+ static void __init xilinx_zynq_timer_init(void)
+ {
+ 	xslcr_init();
+@@ -83,6 +101,7 @@ static struct sys_timer xttcpss_sys_timer = {
+ static void __init xilinx_map_io(void)
+ {
+ 	iotable_init(io_desc, ARRAY_SIZE(io_desc));
++	scu_init();
+ }
+ 
+ /**
+diff --git a/arch/arm/mach-zynq/common.h b/arch/arm/mach-zynq/common.h
+index ce93247..d20e543 100644
+--- a/arch/arm/mach-zynq/common.h
++++ b/arch/arm/mach-zynq/common.h
+@@ -32,4 +32,6 @@ static inline void xilinx_system_reset(char mode, const char *cmd)
+ /* multiplatform use core.h for this purpose */
+ extern void secondary_startup(void);
+ 
++extern void __iomem *scu_base;
++
+ #endif
+diff --git a/arch/arm/mach-zynq/include/mach/zynq_soc.h b/arch/arm/mach-zynq/include/mach/zynq_soc.h
+index ad2c32e..43f0610 100644
+--- a/arch/arm/mach-zynq/include/mach/zynq_soc.h
++++ b/arch/arm/mach-zynq/include/mach/zynq_soc.h
+@@ -22,9 +22,6 @@
+ #define UART_SIZE		SZ_4K
+ #define UART_VIRT		0xF0001000
+ 
+-#define SCU_PERIPH_PHYS			0xF8F00000
+-#define SCU_PERIPH_VIRT			SCU_PERIPH_PHYS
+-
+ #if IS_ENABLED(CONFIG_DEBUG_ZYNQ_UART1)
+ # define LL_UART_PADDR		UART1_PHYS
+ #else
+@@ -33,8 +30,4 @@
+ 
+ #define LL_UART_VADDR		UART_VIRT
+ 
+-/* The following are intended for the devices that are mapped early */
+-
+-#define SCU_PERIPH_BASE			IOMEM(SCU_PERIPH_VIRT)
+-
+ #endif
+diff --git a/arch/arm/mach-zynq/platsmp.c b/arch/arm/mach-zynq/platsmp.c
+index 3185eb2..1e915c6 100644
+--- a/arch/arm/mach-zynq/platsmp.c
++++ b/arch/arm/mach-zynq/platsmp.c
+@@ -26,7 +26,6 @@
+ #include <asm/smp_scu.h>
+ #include <asm/hardware/gic.h>
+ #include <mach/system.h>
+-#include <mach/zynq_soc.h>
+ #include "common.h"
+ 
+ static DEFINE_SPINLOCK(boot_lock);
+@@ -191,7 +190,7 @@ void __init smp_init_cpus(void)
+ {
+ 	int i;
+ 
+-	ncores = scu_get_core_count(SCU_PERIPH_BASE);
++	ncores = scu_get_core_count(scu_base);
+ 
+ 	for (i = 0; i < ncores && i < CONFIG_NR_CPUS; i++)
+ 		set_cpu_possible(i, true);
+@@ -226,6 +225,6 @@ void __init platform_smp_prepare_cpus(unsigned int max_cpus)
+ 	for (i = 0; i < max_cpus; i++)
+ 		set_cpu_present(i, true);
+ 
+-	scu_enable(SCU_PERIPH_BASE);
++	scu_enable(scu_base);
+ }
+ 
+-- 
+1.7.1
+

@@ -1,0 +1,32 @@
+From 31f5444c2920aa6a434ad2b2741cfbcab316f3b5 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Mon, 22 Oct 2012 15:04:21 +0200
+Subject: [PATCH] arm: zynq: Enable debug uart to be also uart1
+
+Extend debug option for debug uart.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ arch/arm/mach-zynq/common.c |    6 +++---
+ 1 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/arch/arm/mach-zynq/common.c b/arch/arm/mach-zynq/common.c
+index 6fa6bac..7e2c79e 100644
+--- a/arch/arm/mach-zynq/common.c
++++ b/arch/arm/mach-zynq/common.c
+@@ -60,9 +60,9 @@ static struct map_desc io_desc[] __initdata = {
+ 
+ #ifdef CONFIG_DEBUG_LL
+ 	{
+-		.virtual	= UART0_VIRT,
+-		.pfn		= __phys_to_pfn(UART0_PHYS),
+-		.length		= SZ_8K,
++		.virtual	= LL_UART_VADDR,
++		.pfn		= __phys_to_pfn(LL_UART_PADDR),
++		.length		= SZ_4K,
+ 		.type		= MT_DEVICE,
+ 	},
+ #endif
+-- 
+1.7.1
+

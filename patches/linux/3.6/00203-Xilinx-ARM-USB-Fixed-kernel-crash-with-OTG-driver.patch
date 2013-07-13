@@ -1,0 +1,31 @@
+From 26d7bfcf06e52c6fe07858ef5a6599739da9d47b Mon Sep 17 00:00:00 2001
+From: Naveen Mamindlapalli <naveenm@xilinx.com>
+Date: Thu, 11 Oct 2012 18:55:16 +0530
+Subject: [PATCH] Xilinx: ARM: USB: Fixed kernel crash with OTG driver.
+
+Fixed the kernel crash with 3.5 changes.
+---
+ drivers/usb/otg/xilinx_usbps_otg.c |    7 +++++++
+ 1 files changed, 7 insertions(+), 0 deletions(-)
+
+diff --git a/drivers/usb/otg/xilinx_usbps_otg.c b/drivers/usb/otg/xilinx_usbps_otg.c
+index f5a41de..92330ce 100644
+--- a/drivers/usb/otg/xilinx_usbps_otg.c
++++ b/drivers/usb/otg/xilinx_usbps_otg.c
+@@ -1943,6 +1943,13 @@ static int xusbps_otg_probe(struct platform_device *pdev)
+ 	}
+ 	the_transceiver = xotg;
+ 
++	xotg->otg.otg = kzalloc(sizeof(struct usb_otg), GFP_KERNEL);
++	if (!xotg->otg.otg) {
++		kfree(xotg);
++		retval = -ENOMEM;
++		goto done;
++	}
++
+ 	xotg->base = pdata->regs;
+ 	xotg->irq = pdata->irq;
+ 	if (!xotg->base || !xotg->irq) {
+-- 
+1.7.1
+

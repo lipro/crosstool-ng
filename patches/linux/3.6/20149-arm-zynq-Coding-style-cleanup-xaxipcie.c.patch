@@ -1,0 +1,26 @@
+From 1f8aa2a694c639f9e84ece18d516bbac4f7e6d18 Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Fri, 1 Feb 2013 10:35:22 +0100
+Subject: [PATCH] arm: zynq: Coding style cleanup xaxipcie.c
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+---
+ arch/arm/mach-zynq/xaxipcie.c |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/arch/arm/mach-zynq/xaxipcie.c b/arch/arm/mach-zynq/xaxipcie.c
+index 447a613..11e7745 100644
+--- a/arch/arm/mach-zynq/xaxipcie.c
++++ b/arch/arm/mach-zynq/xaxipcie.c
+@@ -38,7 +38,7 @@
+ #include <linux/io.h>
+ #include <linux/interrupt.h>
+ #include <linux/slab.h>
+-#include <asm/sizes.h>
++#include <linux/sizes.h>
+ 
+ #include <linux/pci.h>
+ #include <asm/mach/pci.h>
+-- 
+1.7.1
+

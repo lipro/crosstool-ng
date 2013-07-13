@@ -1,0 +1,26 @@
+From 2f7aea37d14cbd721d31a2250a38d2657189c512 Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Fri, 1 Feb 2013 10:45:40 +0100
+Subject: [PATCH] arm: zynq: Coding style cleanup common.c
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+---
+ arch/arm/mach-zynq/common.c |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/arch/arm/mach-zynq/common.c b/arch/arm/mach-zynq/common.c
+index a5f22ef..00d422c 100644
+--- a/arch/arm/mach-zynq/common.c
++++ b/arch/arm/mach-zynq/common.c
+@@ -214,7 +214,7 @@ static void __init xilinx_init_machine(void)
+ 	of_platform_populate(NULL, of_default_bus_match_table, NULL, NULL);
+ }
+ 
+-static const char *xilinx_dt_match[] = {
++static const char * const xilinx_dt_match[] = {
+ 	"xlnx,zynq-zc702",
+ 	"xlnx,zynq-zc706",
+ 	"xlnx,zynq-zc770",
+-- 
+1.7.1
+

@@ -1,0 +1,35 @@
+From b51bed509bd20c7d21be7528c10332d6d9350bdf Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Mon, 17 Dec 2012 16:49:23 +0100
+Subject: [PATCH] arm: zynq: pl330: Remove return after BUG calls
+
+Remove this not reachable code.
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+---
+ arch/arm/mach-zynq/pl330.c |    2 --
+ 1 files changed, 0 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/mach-zynq/pl330.c b/arch/arm/mach-zynq/pl330.c
+index 49a0503..4ea031f 100644
+--- a/arch/arm/mach-zynq/pl330.c
++++ b/arch/arm/mach-zynq/pl330.c
+@@ -1099,7 +1099,6 @@ static int pl330_build_dma_prog(struct prog_build_args *build_args)
+ 			pr_cont("DMA length or increase the burst size or ");
+ 			pr_cont("length");
+ 			BUG();
+-			return 0;
+ 		}
+ 		loop_residue = loop_count % 256;
+ 
+@@ -1950,7 +1949,6 @@ static void pl330_enable_dma(unsigned int channel,
+ 	if (!client_data) {
+ 		pr_err("client data is not set for DMA channel %d\n", channel);
+ 		BUG();
+-		return;
+ 	}
+ 
+ 	/*
+-- 
+1.7.1
+

@@ -1,0 +1,37 @@
+From ba3b9aeee0d486090819a27d42d4cff4e3ed3308 Mon Sep 17 00:00:00 2001
+From: Soren Brinkmann <soren.brinkmann@xilinx.com>
+Date: Tue, 27 Nov 2012 10:22:49 -0800
+Subject: [PATCH] mtd: xilinx_nandps: Remove unused struct member
+
+Removing the unused pdev member of struct xnandps_info.
+
+Signed-off-by: Soren Brinkmann <soren.brinkmann@xilinx.com>
+Acked-by: Michal Simek <michal.simek@xilinx.com>
+---
+ drivers/mtd/nand/xilinx_nandps.c |    3 ---
+ 1 files changed, 0 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/mtd/nand/xilinx_nandps.c b/drivers/mtd/nand/xilinx_nandps.c
+index 3108971..d1fa453 100644
+--- a/drivers/mtd/nand/xilinx_nandps.c
++++ b/drivers/mtd/nand/xilinx_nandps.c
+@@ -150,8 +150,6 @@ struct xnandps_info {
+ 	struct nand_chip	chip;
+ 	struct mtd_info		mtd;
+ 	struct mtd_partition	*parts;
+-	struct platform_device	*pdev;
+-
+ 	void __iomem		*nand_base;
+ 	void __iomem		*smc_regs;
+ 	unsigned long		end_cmd_pending;
+@@ -1050,7 +1048,6 @@ static int __devinit xnandps_probe(struct platform_device *pdev)
+ 		pdata->options &= ~NAND_BUSWIDTH_16;
+ 	}
+ 
+-	xnand->pdev = pdev;
+ 	/* Link the private data with the MTD structure */
+ 	mtd = &xnand->mtd;
+ 	nand_chip = &xnand->chip;
+-- 
+1.7.1
+

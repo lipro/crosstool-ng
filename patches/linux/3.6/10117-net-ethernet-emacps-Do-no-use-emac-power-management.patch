@@ -1,0 +1,31 @@
+From 012ad7b10bf82b80775f8a0075933d360593160d Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Thu, 29 Nov 2012 17:12:38 +0100
+Subject: [PATCH] net: ethernet: emacps: Do no use emac power management
+
+This is workaround for problem with busybox udhcp client
+which is not able to obtain IP address when PM is on.
+But on the other hand we need PM in menuconfig for
+others driver that's why I am blocking PM code in the driver.
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+---
+ drivers/net/ethernet/xilinx/xilinx_emacps.c |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/drivers/net/ethernet/xilinx/xilinx_emacps.c b/drivers/net/ethernet/xilinx/xilinx_emacps.c
+index 9bbf785..e04cded 100644
+--- a/drivers/net/ethernet/xilinx/xilinx_emacps.c
++++ b/drivers/net/ethernet/xilinx/xilinx_emacps.c
+@@ -3127,7 +3127,7 @@ static int __exit xemacps_remove(struct platform_device *pdev)
+ 	return 0;
+ }
+ 
+-#ifdef CONFIG_PM
++#ifdef CONFIG_PM_NOT_DEFINE
+ #ifdef CONFIG_PM_SLEEP
+ /**
+  * xemacps_suspend - Suspend event
+-- 
+1.7.1
+

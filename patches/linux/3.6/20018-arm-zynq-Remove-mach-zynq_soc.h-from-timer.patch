@@ -1,0 +1,300 @@
+From 4bec02d0aebffb79b071005966f67c871df9508e Mon Sep 17 00:00:00 2001
+From: Soren Brinkmann <soren.brinkmann@xilinx.com>
+Date: Mon, 10 Dec 2012 09:50:09 -0800
+Subject: [PATCH] arm: zynq: Remove mach/zynq_soc.h from timer
+
+Getting rid of DT-/hardcoded fallbacks for obtaining the timer's
+input clock frequency. The common clock framework is used now as
+only option.
+
+Removing redundant include.
+Removing no longer needed attributes from device tree.
+
+Signed-off-by: Soren Brinkmann <soren.brinkmann@xilinx.com>
+Acked-by: Michal Simek <michal.simek@xilinx.com>
+Acked-by: John Linn <john.linn@xilinx.com>
+---
+ arch/arm/boot/dts/zynq-afx-nand.dts        |    3 -
+ arch/arm/boot/dts/zynq-afx-nor.dts         |    3 -
+ arch/arm/boot/dts/zynq-ep107.dts           |    3 -
+ arch/arm/boot/dts/zynq-zc702.dts           |    3 -
+ arch/arm/boot/dts/zynq-zc706.dts           |    3 -
+ arch/arm/boot/dts/zynq-zc770-xm010.dts     |    3 -
+ arch/arm/boot/dts/zynq-zc770-xm011.dts     |    3 -
+ arch/arm/boot/dts/zynq-zc770-xm012.dts     |    3 -
+ arch/arm/boot/dts/zynq-zc770-xm013.dts     |    3 -
+ arch/arm/boot/dts/zynq-zed.dts             |   10 ----
+ arch/arm/mach-zynq/include/mach/zynq_soc.h |    2 -
+ arch/arm/mach-zynq/timer.c                 |   67 ++++++++-------------------
+ 12 files changed, 20 insertions(+), 86 deletions(-)
+
+diff --git a/arch/arm/boot/dts/zynq-afx-nand.dts b/arch/arm/boot/dts/zynq-afx-nand.dts
+index 053baf6..e19456b 100644
+--- a/arch/arm/boot/dts/zynq-afx-nand.dts
++++ b/arch/arm/boot/dts/zynq-afx-nand.dts
+@@ -59,9 +59,6 @@
+ 			reg = <0xf8001000 0x1000>;
+ 			interrupts = <0 10 0>,<0 11 0>,<0 12 0>;
+ 			interrupt-parent = <&gic>;
+-			clock-frequency-timer0 = <133000000>;
+-			clock-frequency-timer1 = <133000000>;
+-			clock-frequency-timer2 = <133000000>;
+ 		};
+ 
+ 		nand@e1000000 {
+diff --git a/arch/arm/boot/dts/zynq-afx-nor.dts b/arch/arm/boot/dts/zynq-afx-nor.dts
+index 3f04969..f059bfc 100644
+--- a/arch/arm/boot/dts/zynq-afx-nor.dts
++++ b/arch/arm/boot/dts/zynq-afx-nor.dts
+@@ -59,9 +59,6 @@
+ 			reg = <0xf8001000 0x1000>;
+ 			interrupts = <0 10 0>,<0 11 0>,<0 12 0>;
+ 			interrupt-parent = <&gic>;
+-			clock-frequency-timer0 = <133000000>;
+-			clock-frequency-timer1 = <133000000>;
+-			clock-frequency-timer2 = <133000000>;
+ 		};
+ 
+ 		nor: nor@e2000000 {
+diff --git a/arch/arm/boot/dts/zynq-ep107.dts b/arch/arm/boot/dts/zynq-ep107.dts
+index e27a87f..cf55a75 100644
+--- a/arch/arm/boot/dts/zynq-ep107.dts
++++ b/arch/arm/boot/dts/zynq-ep107.dts
+@@ -63,9 +63,6 @@
+ 			reg = <0xF8001000 0x1000>;
+ 			interrupts = <0 10 0>,<0 11 0>,<0 12 0>;
+ 			interrupt-parent = <&gic>;
+-			clock-frequency-timer0 = <2500000>;
+-			clock-frequency-timer1 = <2500000>;
+-			clock-frequency-timer2 = <2500000>;
+ 		};
+ 
+ 		slcr: slcr@f8000000 {
+diff --git a/arch/arm/boot/dts/zynq-zc702.dts b/arch/arm/boot/dts/zynq-zc702.dts
+index 4f04365..34534a8 100644
+--- a/arch/arm/boot/dts/zynq-zc702.dts
++++ b/arch/arm/boot/dts/zynq-zc702.dts
+@@ -58,9 +58,6 @@
+ 			reg = <0xf8001000 0x1000>;
+ 			interrupts = <0 10 4>,<0 11 4>,<0 12 4>;
+ 			interrupt-parent = <&gic>;
+-			clock-frequency-timer0 = <111111111>;
+-			clock-frequency-timer1 = <111111111>;
+-			clock-frequency-timer2 = <111111111>;
+ 		};
+ 
+ 		timer@f8f00600 {
+diff --git a/arch/arm/boot/dts/zynq-zc706.dts b/arch/arm/boot/dts/zynq-zc706.dts
+index 9b2864c..b894394 100644
+--- a/arch/arm/boot/dts/zynq-zc706.dts
++++ b/arch/arm/boot/dts/zynq-zc706.dts
+@@ -58,9 +58,6 @@
+ 			reg = <0xf8001000 0x1000>;
+ 			interrupts = <0 10 4>,<0 11 4>,<0 12 4>;
+ 			interrupt-parent = <&gic>;
+-			clock-frequency-timer0 = <111111111>;
+-			clock-frequency-timer1 = <111111111>;
+-			clock-frequency-timer2 = <111111111>;
+ 		};
+ 
+ 		timer@f8f00600 {
+diff --git a/arch/arm/boot/dts/zynq-zc770-xm010.dts b/arch/arm/boot/dts/zynq-zc770-xm010.dts
+index f1f8e41..06fcc5b 100644
+--- a/arch/arm/boot/dts/zynq-zc770-xm010.dts
++++ b/arch/arm/boot/dts/zynq-zc770-xm010.dts
+@@ -58,9 +58,6 @@
+ 			reg = <0xf8001000 0x1000>;
+ 			interrupts = <0 10 4>,<0 11 4>,<0 12 4>;
+ 			interrupt-parent = <&gic>;
+-			clock-frequency-timer0 = <133000000>;
+-			clock-frequency-timer1 = <133000000>;
+-			clock-frequency-timer2 = <133000000>;
+ 		};
+ 
+ 		timer@f8f00600 {
+diff --git a/arch/arm/boot/dts/zynq-zc770-xm011.dts b/arch/arm/boot/dts/zynq-zc770-xm011.dts
+index c8062de..ad82a17 100644
+--- a/arch/arm/boot/dts/zynq-zc770-xm011.dts
++++ b/arch/arm/boot/dts/zynq-zc770-xm011.dts
+@@ -59,9 +59,6 @@
+ 			reg = <0xf8001000 0x1000>;
+ 			interrupts = <0 10 4>,<0 11 4>,<0 12 4>;
+ 			interrupt-parent = <&gic>;
+-			clock-frequency-timer0 = <0x7ed6b40>;
+-			clock-frequency-timer1 = <0x7ed6b40>;
+-			clock-frequency-timer2 = <0x7ed6b40>;
+ 		};
+ 
+ 		timer@f8f00600 {
+diff --git a/arch/arm/boot/dts/zynq-zc770-xm012.dts b/arch/arm/boot/dts/zynq-zc770-xm012.dts
+index 232fdb7..1e9ed03 100644
+--- a/arch/arm/boot/dts/zynq-zc770-xm012.dts
++++ b/arch/arm/boot/dts/zynq-zc770-xm012.dts
+@@ -60,9 +60,6 @@
+ 			reg = <0xf8001000 0x1000>;
+ 			interrupts = <0 10 4>,<0 11 4>,<0 12 4>;
+ 			interrupt-parent = <&gic>;
+-			clock-frequency-timer0 = <133000000>;
+-			clock-frequency-timer1 = <133000000>;
+-			clock-frequency-timer2 = <133000000>;
+ 		};
+ 
+ 		swdt@f8005000 {
+diff --git a/arch/arm/boot/dts/zynq-zc770-xm013.dts b/arch/arm/boot/dts/zynq-zc770-xm013.dts
+index ca07f39..1f898fd 100644
+--- a/arch/arm/boot/dts/zynq-zc770-xm013.dts
++++ b/arch/arm/boot/dts/zynq-zc770-xm013.dts
+@@ -58,9 +58,6 @@
+ 			reg = <0xf8002000 0x1000>;
+ 			interrupts = <0 37 4>,<0 38 4>,<0 39 4>;
+ 			interrupt-parent = <&gic>;
+-			clock-frequency-timer0 = <133000000>;
+-			clock-frequency-timer1 = <133000000>;
+-			clock-frequency-timer2 = <133000000>;
+ 		};
+ 
+ 		timer@f8f00600 {
+diff --git a/arch/arm/boot/dts/zynq-zed.dts b/arch/arm/boot/dts/zynq-zed.dts
+index 3de9dc6..5e9ff6b 100644
+--- a/arch/arm/boot/dts/zynq-zed.dts
++++ b/arch/arm/boot/dts/zynq-zed.dts
+@@ -269,20 +269,10 @@
+ 			reg = < 0xf8000000 0x1000 >;
+ 		} ;
+ 		ps7_ttc_0: ps7-ttc@f8001000 {
+-			clock-frequency = <111111115>;
+-			clock-frequency-timer0 = <111111115>;
+-			clock-frequency-timer1 = <111111115>;
+-			clock-frequency-timer2 = <111111115>;
+ 			compatible = "xlnx,ps7-ttc-1.00.a";
+ 			interrupt-parent = <&ps7_scugic_0>;
+ 			interrupts = < 0 10 0 0 11 0 0 12 0 >;
+ 			reg = < 0xf8001000 0x1000 >;
+-			xlnx,ttc-clk0-clksrc = <0x0>;
+-			xlnx,ttc-clk0-freq-hz = <0x69f6bcb>;
+-			xlnx,ttc-clk1-clksrc = <0x0>;
+-			xlnx,ttc-clk1-freq-hz = <0x69f6bcb>;
+-			xlnx,ttc-clk2-clksrc = <0x0>;
+-			xlnx,ttc-clk2-freq-hz = <0x69f6bcb>;
+ 		} ;
+ 		ps7_uart_1: serial@e0001000 {
+ 			clock = <50000000>;
+diff --git a/arch/arm/mach-zynq/include/mach/zynq_soc.h b/arch/arm/mach-zynq/include/mach/zynq_soc.h
+index 3ae2c2e..9c4cdd2 100644
+--- a/arch/arm/mach-zynq/include/mach/zynq_soc.h
++++ b/arch/arm/mach-zynq/include/mach/zynq_soc.h
+@@ -15,8 +15,6 @@
+ #ifndef __MACH_XILINX_SOC_H__
+ #define __MACH_XILINX_SOC_H__
+ 
+-#define PERIPHERAL_CLOCK_RATE		2500000
+-
+ /* For now, all mappings are flat (physical = virtual)
+  */
+ #define UART0_PHYS		0xE0000000
+diff --git a/arch/arm/mach-zynq/timer.c b/arch/arm/mach-zynq/timer.c
+index b9ef09e..2349a92 100644
+--- a/arch/arm/mach-zynq/timer.c
++++ b/arch/arm/mach-zynq/timer.c
+@@ -32,7 +32,6 @@
+ 
+ #include <asm/smp_twd.h>
+ 
+-#include <mach/zynq_soc.h>
+ #include "common.h"
+ 
+ /*
+@@ -326,8 +325,6 @@ void __init xttcpss_timer_init(void)
+ {
+ 	u32 irq;
+ 	struct device_node *timer = NULL;
+-	void *prop1 = NULL;
+-	void *prop2 = NULL;
+ 	u32 timer_baseaddr;
+ 	const char * const timer_list[] = {
+ 		"xlnx,ps7-ttc-1.00.a",
+@@ -355,8 +352,6 @@ void __init xttcpss_timer_init(void)
+ 			pr_err("Xilinx, timer irq missing, using default\n");
+ 			irq = irq_of_parse_and_map(timer, 0) + 1;
+ 		}
+-		prop1 = (void *)of_get_property(timer, "clock-frequency-timer0", NULL);
+-		prop2 = (void *)of_get_property(timer, "clock-frequency-timer1", NULL);
+ 	} else {
+ 		pr_err("Xilinx, no compatible timer found, using default\n");
+ 		timer_baseaddr = (u32)ioremap(0xF8001000, SZ_4K);
+@@ -375,52 +370,30 @@ void __init xttcpss_timer_init(void)
+ 	pr_info("%s #0 at 0x%08x, irq=%d\n",
+ 		timer_list[0], timer_baseaddr, irq);
+ 
+-	/*
+-	 * If there is clock-frequency property then use it, otherwise use a
+-	 * default * that may not be the right timing, but might boot the
+-	 * kernel, the event * timer is the only one that needs the frequency,
+-	 * but make them match
+-	 */
++
+ 	clk = clk_get_sys("CPU_1X_CLK", NULL);
+ 	if (IS_ERR(clk)) {
+-		pr_warn("Xilinx: timer: Clock not found.");
+-		timers[XTTCPSS_CLOCKSOURCE].clk = NULL;
+-		timers[XTTCPSS_CLOCKEVENT].clk = NULL;
+-		if (prop1) {
+-			timers[XTTCPSS_CLOCKSOURCE].frequency =
+-				be32_to_cpup(prop1) / PRESCALE;
+-		} else {
+-			pr_err("Error, no clock-frequency specified for timer\n");
+-			timers[XTTCPSS_CLOCKSOURCE].frequency =
+-				PERIPHERAL_CLOCK_RATE / PRESCALE;
+-		}
+-		if (prop2) {
+-			timers[XTTCPSS_CLOCKEVENT].frequency =
+-				be32_to_cpup(prop2) / PRESCALE;
+-		} else {
+-			pr_err("Error, no clock-frequency specified for timer\n");
+-			timers[XTTCPSS_CLOCKEVENT].frequency =
+-				PERIPHERAL_CLOCK_RATE / PRESCALE;
+-		}
+-	} else {
+-		clk_prepare_enable(clk);
+-		timers[XTTCPSS_CLOCKSOURCE].clk = clk;
+-		timers[XTTCPSS_CLOCKEVENT].clk = clk;
+-		timers[XTTCPSS_CLOCKSOURCE].clk_rate_change_nb.notifier_call =
+-			xttcpss_timer_rate_change_cb;
+-		timers[XTTCPSS_CLOCKEVENT].clk_rate_change_nb.notifier_call =
+-			xttcpss_timer_rate_change_cb;
+-		timers[XTTCPSS_CLOCKSOURCE].clk_rate_change_nb.next = NULL;
+-		timers[XTTCPSS_CLOCKEVENT].clk_rate_change_nb.next = NULL;
+-		timers[XTTCPSS_CLOCKSOURCE].frequency =
+-			clk_get_rate(clk) / PRESCALE;
+-		timers[XTTCPSS_CLOCKEVENT].frequency =
+-			clk_get_rate(clk) / PRESCALE;
+-		if (clk_notifier_register(clk,
+-			&timers[XTTCPSS_CLOCKSOURCE].clk_rate_change_nb))
+-			pr_warn("Unable to register clock notifier.\n");
++		pr_err("ERROR: timer input clock not found\n");
++		BUG();
+ 	}
+ 
++	clk_prepare_enable(clk);
++	timers[XTTCPSS_CLOCKSOURCE].clk = clk;
++	timers[XTTCPSS_CLOCKEVENT].clk = clk;
++	timers[XTTCPSS_CLOCKSOURCE].clk_rate_change_nb.notifier_call =
++		xttcpss_timer_rate_change_cb;
++	timers[XTTCPSS_CLOCKEVENT].clk_rate_change_nb.notifier_call =
++		xttcpss_timer_rate_change_cb;
++	timers[XTTCPSS_CLOCKSOURCE].clk_rate_change_nb.next = NULL;
++	timers[XTTCPSS_CLOCKEVENT].clk_rate_change_nb.next = NULL;
++	timers[XTTCPSS_CLOCKSOURCE].frequency =
++		clk_get_rate(clk) / PRESCALE;
++	timers[XTTCPSS_CLOCKEVENT].frequency =
++		clk_get_rate(clk) / PRESCALE;
++	if (clk_notifier_register(clk,
++		&timers[XTTCPSS_CLOCKSOURCE].clk_rate_change_nb))
++		pr_warn("Unable to register clock notifier.\n");
++
+ 	xttcpss_timer_hardware_init();
+ 	clocksource_register_hz(&clocksource_xttcpss,
+ 				timers[XTTCPSS_CLOCKSOURCE].frequency);
+-- 
+1.7.1
+

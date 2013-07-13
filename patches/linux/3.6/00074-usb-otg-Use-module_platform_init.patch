@@ -1,0 +1,35 @@
+From f6b6bad46477cf532ab5db0ce2aad6d8685bde45 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Tue, 9 Oct 2012 14:02:57 +0200
+Subject: [PATCH] usb: otg: Use module_platform_init
+
+Simplify initialization and use prepared macro.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ drivers/usb/otg/xilinx_usbps_otg.c |   12 +-----------
+ 1 files changed, 1 insertions(+), 11 deletions(-)
+
+diff --git a/drivers/usb/otg/xilinx_usbps_otg.c b/drivers/usb/otg/xilinx_usbps_otg.c
+index 93fd29e..6df9e3c 100755
+--- a/drivers/usb/otg/xilinx_usbps_otg.c
++++ b/drivers/usb/otg/xilinx_usbps_otg.c
+@@ -2278,14 +2278,4 @@ error:
+ 	return ret;
+ }
+ 
+-static int __init xusbps_otg_init(void)
+-{
+-	return platform_driver_register(&xusbps_otg_driver);
+-}
+-subsys_initcall(xusbps_otg_init);
+-
+-static void __exit xusbps_otg_cleanup(void)
+-{
+-	platform_driver_unregister(&xusbps_otg_driver);
+-}
+-module_exit(xusbps_otg_cleanup);
++module_platform_driver(xusbps_otg_driver);
+-- 
+1.7.1
+

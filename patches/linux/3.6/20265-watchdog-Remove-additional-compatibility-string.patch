@@ -1,0 +1,28 @@
+From 0a52ec86b784d02f757d603348013561e91dc48e Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Thu, 28 Mar 2013 16:41:49 +0100
+Subject: [PATCH] watchdog: Remove additional compatibility string
+
+Device-tree bsp generate proper compatible string
+and all IPs are backward compatible to 1.00.a version.
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+---
+ drivers/watchdog/of_xilinx_wdt.c |    1 -
+ 1 files changed, 0 insertions(+), 1 deletions(-)
+
+diff --git a/drivers/watchdog/of_xilinx_wdt.c b/drivers/watchdog/of_xilinx_wdt.c
+index eb36e9f..b877fbd 100644
+--- a/drivers/watchdog/of_xilinx_wdt.c
++++ b/drivers/watchdog/of_xilinx_wdt.c
+@@ -397,7 +397,6 @@ static int __devexit xwdt_remove(struct platform_device *dev)
+ 
+ /* Match table for of_platform binding */
+ static struct of_device_id __devinitdata xwdt_of_match[] = {
+-	{ .compatible = "xlnx,xps-timebase-wdt-1.01.a", },
+ 	{ .compatible = "xlnx,xps-timebase-wdt-1.00.a", },
+ 	{},
+ };
+-- 
+1.7.1
+

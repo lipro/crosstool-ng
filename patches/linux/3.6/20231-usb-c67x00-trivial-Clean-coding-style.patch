@@ -1,0 +1,34 @@
+From 87e23598afdfb3440e8c2599b4fd7300ccc5bf10 Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Tue, 12 Mar 2013 12:11:05 +0100
+Subject: [PATCH] usb: c67x00: trivial: Clean coding style
+
+Remove trailing white spaces.
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+---
+ drivers/usb/c67x00/c67x00-drv.c |    6 +++---
+ 1 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/usb/c67x00/c67x00-drv.c b/drivers/usb/c67x00/c67x00-drv.c
+index bf1c3ad..761a916 100644
+--- a/drivers/usb/c67x00/c67x00-drv.c
++++ b/drivers/usb/c67x00/c67x00-drv.c
+@@ -42,11 +42,11 @@
+ #include <linux/usb.h>
+ #include <linux/usb/c67x00.h>
+ 
+-#if defined(CONFIG_OF) 
++#if defined(CONFIG_OF)
+ #include <linux/of_device.h>
+ #include <linux/of_platform.h>
+-#include <linux/of_address.h> 
+-#endif 
++#include <linux/of_address.h>
++#endif
+ 
+ #include "c67x00.h"
+ #include "c67x00-hcd.h"
+-- 
+1.7.1
+

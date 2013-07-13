@@ -1,0 +1,81 @@
+From 8ab6ed742641abb955cf21aa3ee09d0ad91ce1c2 Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Fri, 4 Jan 2013 09:14:46 +0100
+Subject: [PATCH] microblaze: Fix pci compilation and sparse warnings
+
+Warning log:
+  CHECK   arch/microblaze/pci/pci-common.c
+arch/microblaze/pci/pci-common.c:290:14: warning: Using plain integer as NULL pointer
+arch/microblaze/pci/pci-common.c:1127:6: warning: symbol
+'pcibios_allocate_bus_resources' was not declared. Should it be static?
+arch/microblaze/pci/pci-common.c:1436:61: warning: incorrect type in argument 3 (different base types)
+arch/microblaze/pci/pci-common.c:1436:61:    expected unsigned int [unsigned] [usertype] offset
+arch/microblaze/pci/pci-common.c:1436:61:    got void [noderef] <asn:2>*
+  CC      arch/microblaze/pci/pci-common.o
+arch/microblaze/pci/pci-common.c: In function 'pci_proc_domain':
+arch/microblaze/pci/pci-common.c:825:25: warning: unused variable 'hose' [-Wunused-variable]
+arch/microblaze/pci/pci-common.c: In function 'pcibios_allocate_bus_resources':
+arch/microblaze/pci/pci-common.c:1182:1: warning: label 'clear_resource' defined but not used [-Wunused-label]
+arch/microblaze/pci/pci-common.c: In function 'pcibios_setup_phb_resources':
+arch/microblaze/pci/pci-common.c:1436:2: warning: passing argument 3 of
+'pci_add_resource_offset' makes integer from pointer without a cast [enabled by default]
+include/linux/pci.h:999:6: note: expected 'resource_size_t' but argument is of type 'void *'
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+---
+ arch/microblaze/pci/pci-common.c |   11 +++++------
+ 1 files changed, 5 insertions(+), 6 deletions(-)
+
+diff --git a/arch/microblaze/pci/pci-common.c b/arch/microblaze/pci/pci-common.c
+index 52e6ab4..26afc2f 100644
+--- a/arch/microblaze/pci/pci-common.c
++++ b/arch/microblaze/pci/pci-common.c
+@@ -287,7 +287,7 @@ static struct resource *__pci_mmap_make_offset(struct pci_dev *dev,
+ 	unsigned long io_offset = 0;
+ 	int i, res_bit;
+ 
+-	if (hose == 0)
++	if (!hose)
+ 		return NULL;		/* should never happen */
+ 
+ 	/* If memory, add on the PCI bridge address offset */
+@@ -823,8 +823,6 @@ void __devinit pci_process_bridge_OF_ranges(struct pci_controller *hose,
+ /* Decide whether to display the domain number in /proc */
+ int pci_proc_domain(struct pci_bus *bus)
+ {
+-	struct pci_controller *hose = pci_bus_to_host(bus);
+-
+ 	return 0;
+ }
+ 
+@@ -1130,7 +1128,7 @@ static int __init reparent_resources(struct resource *parent,
+  *	    as well.
+  */
+ 
+-void pcibios_allocate_bus_resources(struct pci_bus *bus)
++static void pcibios_allocate_bus_resources(struct pci_bus *bus)
+ {
+ 	struct pci_bus *b;
+ 	int i;
+@@ -1185,7 +1183,7 @@ void pcibios_allocate_bus_resources(struct pci_bus *bus)
+ 		}
+ 		printk(KERN_WARNING "PCI: Cannot allocate resource region "
+ 		       "%d of PCI bridge %d, will remap\n", i, bus->number);
+-clear_resource:
++
+ 		res->start = res->end = 0;
+ 		res->flags = 0;
+ 	}
+@@ -1443,7 +1441,8 @@ static void __devinit pcibios_setup_phb_resources(struct pci_controller *hose, s
+ 		res->end = res->start + IO_SPACE_LIMIT;
+ 		res->flags = IORESOURCE_IO;
+ 	}
+-	pci_add_resource_offset(resources, res, hose->io_base_virt - _IO_BASE);
++	pci_add_resource_offset(resources, res,
++		(__force resource_size_t)(hose->io_base_virt - _IO_BASE));
+ 
+ 	pr_debug("PCI: PHB IO resource    = %016llx-%016llx [%lx]\n",
+ 		 (unsigned long long)res->start,
+-- 
+1.7.1
+

@@ -1,0 +1,45 @@
+From 7d1a721aa559ca1e2fbc17ed1f27d6195d77cca7 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Tue, 31 Jul 2012 12:01:00 +0200
+Subject: [PATCH] microblaze: Use predefined macro for ESR_DIZ
+
+Just use macro instead of hardcoded value.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ arch/microblaze/kernel/hw_exception_handler.S |    5 +++--
+ 1 files changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/arch/microblaze/kernel/hw_exception_handler.S b/arch/microblaze/kernel/hw_exception_handler.S
+index 0a573df..52b9feb 100644
+--- a/arch/microblaze/kernel/hw_exception_handler.S
++++ b/arch/microblaze/kernel/hw_exception_handler.S
+@@ -75,6 +75,7 @@
+ #include <asm/mmu.h>
+ #include <asm/pgtable.h>
+ #include <asm/signal.h>
++#include <asm/registers.h>
+ #include <asm/asm-offsets.h>
+ 
+ #undef DEBUG
+@@ -581,7 +582,7 @@ ex_handler_done:
+ 		 * tried to access a kernel or read-protected page - always
+ 		 * a SEGV). All other faults here must be stores, so no
+ 		 * need to check ESR_S as well. */
+-		andi	r4, r4, 0x800		/* ESR_Z - zone protection */
++		andi	r4, r4, ESR_DIZ		/* ESR_Z - zone protection */
+ 		bnei	r4, ex2
+ 
+ 		ori	r4, r0, swapper_pg_dir
+@@ -595,7 +596,7 @@ ex_handler_done:
+ 		 * tried to access a kernel or read-protected page - always
+ 		 * a SEGV). All other faults here must be stores, so no
+ 		 * need to check ESR_S as well. */
+-		andi	r4, r4, 0x800		/* ESR_Z */
++		andi	r4, r4, ESR_DIZ		/* ESR_Z */
+ 		bnei	r4, ex2
+ 		/* get current task address */
+ 		addi	r4 ,CURRENT_TASK, TOPHYS(0);
+-- 
+1.7.1
+

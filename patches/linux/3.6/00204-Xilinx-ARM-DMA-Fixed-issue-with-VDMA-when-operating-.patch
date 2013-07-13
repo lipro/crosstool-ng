@@ -1,0 +1,39 @@
+From efc283441e4bf78476906c8eb12ad81e2bdd6419 Mon Sep 17 00:00:00 2001
+From: SrikanthT <sthokal@xilinx.com>
+Date: Sat, 13 Oct 2012 00:29:55 +0530
+Subject: [PATCH] Xilinx: ARM: DMA: Fixed issue with VDMA when operating in circular mode
+
+Parameters 'direction' & 'park_frm' of DMA configuration structure
+are uninitialized, as a result, it looks for park pointer update
+when operating in circular mode.  They are now initialized to fix
+this issue.
+
+Signed-off-by: SrikanthT <sthokal@xilinx.com>
+---
+ drivers/dma/xilinx_dma.c |    3 +++
+ 1 files changed, 3 insertions(+), 0 deletions(-)
+
+diff --git a/drivers/dma/xilinx_dma.c b/drivers/dma/xilinx_dma.c
+index e218b69..681026b 100644
+--- a/drivers/dma/xilinx_dma.c
++++ b/drivers/dma/xilinx_dma.c
+@@ -1511,6 +1511,7 @@ static int xilinx_vdma_device_control(struct dma_chan *dchan,
+ 		chan->config.stride = cfg->stride;
+ 		chan->config.frm_dly = cfg->frm_dly;
+ 		chan->config.park = cfg->park;
++		chan->config.direction = cfg->direction;
+ 
+ 		/* genlock settings */
+ 		chan->config.gen_lock = cfg->gen_lock;
+@@ -1526,6 +1527,8 @@ static int xilinx_vdma_device_control(struct dma_chan *dchan,
+ 		chan->config.frm_cnt_en = cfg->frm_cnt_en;
+ 		if (cfg->park)
+ 			chan->config.park_frm = cfg->park_frm;
++		else
++			chan->config.park_frm = -1;
+ 
+ 		chan->config.coalesc = cfg->coalesc;
+ 		chan->config.delay = cfg->delay;
+-- 
+1.7.1
+

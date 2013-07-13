@@ -1,0 +1,28 @@
+From a059f6e8b1109e4bb08535b16822a0fda9972ccf Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Mon, 8 Oct 2012 16:07:37 +0200
+Subject: [PATCH] arm: Kconfig ARCH_XILINX doesn't exist anymore
+
+Remove old reference.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ arch/arm/mm/Kconfig |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/arch/arm/mm/Kconfig b/arch/arm/mm/Kconfig
+index 8624cda..101b968 100644
+--- a/arch/arm/mm/Kconfig
++++ b/arch/arm/mm/Kconfig
+@@ -381,7 +381,7 @@ config CPU_V6K
+ 
+ # ARMv7
+ config CPU_V7
+-	bool "Support ARM V7 processor" if ARCH_INTEGRATOR || MACH_REALVIEW_EB || MACH_REALVIEW_PBX  || ARCH_XILINX
++	bool "Support ARM V7 processor" if ARCH_INTEGRATOR || MACH_REALVIEW_EB || MACH_REALVIEW_PBX
+ 	select CPU_32v6K
+ 	select CPU_32v7
+ 	select CPU_ABRT_EV7
+-- 
+1.7.1
+

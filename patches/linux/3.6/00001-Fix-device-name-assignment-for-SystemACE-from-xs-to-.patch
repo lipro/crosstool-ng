@@ -1,0 +1,33 @@
+From f002bb989f849a7bbb797cf3fe301fcb178c2331 Mon Sep 17 00:00:00 2001
+From: Graeme Smecher <gsmecher@threespeedlogic.com>
+Date: Mon, 9 Apr 2012 12:29:04 -0700
+Subject: [PATCH] Fix device name assignment for SystemACE (from "xs`" to "xsa").
+
+This fixes a bug introduced in 5d10302f46d, where device trees that don't
+provide the "port-number" attribute are mistakenly assigned the device "xs`".
+The error check that's supposed to assign a default letter can't succeed,
+since it tests an unsigned type against a negative return code.
+
+Signed-off-by: Graeme Smecher <gsmecher@threespeedlogic.com>
+Acked-by: Grant Likely <grant.likely@secretlab.ca>
+---
+ drivers/block/xsysace.c |    3 +--
+ 1 files changed, 1 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/block/xsysace.c b/drivers/block/xsysace.c
+index 6e9a86b..8850cf6 100644
+--- a/drivers/block/xsysace.c
++++ b/drivers/block/xsysace.c
+@@ -1162,8 +1162,7 @@ static int __devinit ace_probe(struct platform_device *dev)
+ 	dev_dbg(&dev->dev, "ace_probe(%p)\n", dev);
+ 
+ 	/* device id and bus width */
+-	of_property_read_u32(dev->dev.of_node, "port-number", &id);
+-	if (id < 0)
++	if (of_property_read_u32(dev->dev.of_node, "port-number", &id))
+ 		id = 0;
+ 	if (of_find_property(dev->dev.of_node, "8-bit", NULL))
+ 		bus_width = ACE_BUS_WIDTH_8;
+-- 
+1.7.1
+

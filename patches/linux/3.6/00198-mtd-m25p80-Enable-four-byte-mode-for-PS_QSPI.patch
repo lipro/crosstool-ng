@@ -1,0 +1,43 @@
+From 7bd6da4dc91b10b7be3d25e30128fbdcfdadc87e Mon Sep 17 00:00:00 2001
+From: Jason Wu <jason.wu@petalogix.com>
+Date: Wed, 24 Oct 2012 17:03:10 +1000
+Subject: [PATCH] mtd: m25p80: Enable four byte mode for PS_QSPI
+
+Enable mtd 4 byte mode if the mtd.size is larger than 16MB for PS_QSPI
+controller
+
+This hack bypass the 4 byte mode configuration for the qspi flash chip.
+It sets mtd to 4 byte mode but leave the qspi flash in 3 byte mode (or
+flash default mode). This can be issue when two 32MB flash is configured
+as dual mode, it will not work if the qspi flash chip is configured in 3
+byte mode as it require 4 byte addressing to access the entire 32MB.
+
+Signed-off-by: Jason Wu <huanyu@xilinx.com>
+---
+ drivers/mtd/devices/m25p80.c |   10 ++++++++++
+ 1 files changed, 10 insertions(+), 0 deletions(-)
+
+diff --git a/drivers/mtd/devices/m25p80.c b/drivers/mtd/devices/m25p80.c
+index 642efce..94fc63d 100644
+--- a/drivers/mtd/devices/m25p80.c
++++ b/drivers/mtd/devices/m25p80.c
+@@ -930,6 +930,16 @@ static int __devinit m25p_probe(struct spi_device *spi)
+ 			if (be32_to_cpup(prop)) {
+ 				info->sector_size *= 2;
+ 				flash->mtd.size *= 2;
++				/* This hack bypass the 4 byte mode configuration for the
++				 * qspi flash chip. It sets mtd to 4 byte mode but leave
++				 * the qspi flash in 3 byte mode (or flash default mode).
++				 * This can be issue when two 32MB flash is configured as
++				 * dual mode, it will not work if the qspi flash chip
++				 * is configured in 3 byte mode as it require 4 byte
++				 * addressing to access the entire 32MB
++				 */
++				if (flash->mtd.size > 0x1000000)
++					info->addr_width = 4;
+ 			}
+ 		}
+ 	}
+-- 
+1.7.1
+

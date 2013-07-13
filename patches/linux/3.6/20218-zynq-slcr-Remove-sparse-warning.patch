@@ -1,0 +1,28 @@
+From 7c76ee875a7479c9e30b050c967615da8a8069f6 Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Thu, 7 Mar 2013 13:42:27 +0100
+Subject: [PATCH] zynq: slcr: Remove sparse warning
+
+zynq_slcr_base should be declared in the header.
+Let's add it.
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+---
+ arch/arm/mach-zynq/slcr.c |    1 +
+ 1 files changed, 1 insertions(+), 0 deletions(-)
+
+diff --git a/arch/arm/mach-zynq/slcr.c b/arch/arm/mach-zynq/slcr.c
+index b0c3eb9..c3a62ee 100644
+--- a/arch/arm/mach-zynq/slcr.c
++++ b/arch/arm/mach-zynq/slcr.c
+@@ -28,6 +28,7 @@
+ #include <linux/string.h>
+ #include <mach/slcr.h>
+ #include <linux/clk/zynq.h>
++#include "common.h"
+ 
+ #define DRIVER_NAME "xslcr"
+ 
+-- 
+1.7.1
+

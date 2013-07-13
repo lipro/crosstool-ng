@@ -1,0 +1,40 @@
+From 538138904325f4dbedc3392fc87b2b68df406f11 Mon Sep 17 00:00:00 2001
+From: Srikanth Thokala <srikanth.thokala@xilinx.com>
+Date: Wed, 13 Mar 2013 19:58:09 +0530
+Subject: [PATCH] net: ethernet: axienet: Support for RGMII
+
+This patch adds support for the RGMII. The h/w configuration
+parameter C_PHY_TYPE, which represents the interface configured in
+the design, is used to differentiate various interfaces supported
+by AXI Ethernet.
+
+Signed-off-by: Srikanth Thokala <sthokal@xilinx.com>
+---
+ drivers/net/ethernet/xilinx/xilinx_axienet_main.c |    9 ++++++++-
+ 1 files changed, 8 insertions(+), 1 deletions(-)
+
+diff --git a/drivers/net/ethernet/xilinx/xilinx_axienet_main.c b/drivers/net/ethernet/xilinx/xilinx_axienet_main.c
+index 96087be..6401b03 100644
+--- a/drivers/net/ethernet/xilinx/xilinx_axienet_main.c
++++ b/drivers/net/ethernet/xilinx/xilinx_axienet_main.c
+@@ -940,9 +940,16 @@ static int axienet_open(struct net_device *ndev)
+ 		return ret;
+ 
+ 	if (lp->phy_node) {
+-		lp->phy_dev = of_phy_connect(lp->ndev, lp->phy_node,
++		if (lp->phy_type == XAE_PHY_TYPE_GMII) {
++			lp->phy_dev = of_phy_connect(lp->ndev, lp->phy_node,
+ 					     axienet_adjust_link, 0,
+ 					     PHY_INTERFACE_MODE_GMII);
++		} else if (lp->phy_type == XAE_PHY_TYPE_RGMII_2_0) {
++			lp->phy_dev = of_phy_connect(lp->ndev, lp->phy_node,
++					     axienet_adjust_link, 0,
++					     PHY_INTERFACE_MODE_RGMII_ID);
++		}
++
+ 		if (!lp->phy_dev) {
+ 			dev_err(lp->dev, "of_phy_connect() failed\n");
+ 			return -ENODEV;
+-- 
+1.7.1
+

@@ -1,0 +1,85 @@
+From 1283d02389feef1b63a5e935b7f7776324968312 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Mon, 8 Oct 2012 16:17:01 +0200
+Subject: [PATCH] arm: zynq: gic: Use OF initialization
+
+Use OF gic initialization.
+Also introduce new git_set_cpu function which is very important
+for AMP to be able to forward specific IRQ to the second ARM core.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ arch/arm/common/gic.c               |   20 +++++++++++++++++++-
+ arch/arm/include/asm/hardware/gic.h |    2 ++
+ 2 files changed, 21 insertions(+), 1 deletions(-)
+
+diff --git a/arch/arm/common/gic.c b/arch/arm/common/gic.c
+index aa52699..60692ae 100644
+--- a/arch/arm/common/gic.c
++++ b/arch/arm/common/gic.c
+@@ -22,6 +22,7 @@
+  * As such, the enable set/clear, pending set/clear and active bit
+  * registers are banked per-cpu for these sources.
+  */
++#include <linux/module.h>
+ #include <linux/init.h>
+ #include <linux/kernel.h>
+ #include <linux/err.h>
+@@ -235,9 +236,14 @@ static int gic_set_affinity(struct irq_data *d, const struct cpumask *mask_val,
+ {
+ 	void __iomem *reg = gic_dist_base(d) + GIC_DIST_TARGET + (gic_irq(d) & ~3);
+ 	unsigned int shift = (gic_irq(d) % 4) * 8;
+-	unsigned int cpu = cpumask_any_and(mask_val, cpu_online_mask);
++	unsigned int cpu;
+ 	u32 val, mask, bit;
+ 
++	if (force)
++		cpu = cpumask_any_and(mask_val, cpu_possible_mask);
++	else
++		cpu = cpumask_any_and(mask_val, cpu_online_mask);
++
+ 	if (cpu >= 8 || cpu >= nr_cpu_ids)
+ 		return -EINVAL;
+ 
+@@ -251,6 +257,17 @@ static int gic_set_affinity(struct irq_data *d, const struct cpumask *mask_val,
+ 
+ 	return IRQ_SET_MASK_OK;
+ }
++
++void __init gic_set_cpu(unsigned int cpu, unsigned int irq)
++{
++	struct irq_data *d = irq_get_irq_data(irq);
++	struct cpumask mask;
++
++	cpumask_clear(&mask);
++	cpumask_set_cpu(cpu, &mask);
++        gic_set_affinity (d, &mask, true);
++}
++EXPORT_SYMBOL(gic_set_cpu);
+ #endif
+ 
+ #ifdef CONFIG_PM
+@@ -748,6 +765,7 @@ void gic_raise_softirq(const struct cpumask *mask, unsigned int irq)
+ 	/* this always happens on GIC0 */
+ 	writel_relaxed(map << 16 | irq, gic_data_dist_base(&gic_data[0]) + GIC_DIST_SOFTINT);
+ }
++EXPORT_SYMBOL(gic_raise_softirq);
+ #endif
+ 
+ #ifdef CONFIG_OF
+diff --git a/arch/arm/include/asm/hardware/gic.h b/arch/arm/include/asm/hardware/gic.h
+index 4b1ce6c..8aa9631 100644
+--- a/arch/arm/include/asm/hardware/gic.h
++++ b/arch/arm/include/asm/hardware/gic.h
+@@ -46,6 +46,8 @@ void gic_handle_irq(struct pt_regs *regs);
+ void gic_cascade_irq(unsigned int gic_nr, unsigned int irq);
+ void gic_raise_softirq(const struct cpumask *mask, unsigned int irq);
+ 
++void gic_set_cpu(unsigned int cpu, unsigned int irq);
++
+ static inline void gic_init(unsigned int nr, int start,
+ 			    void __iomem *dist , void __iomem *cpu)
+ {
+-- 
+1.7.1
+

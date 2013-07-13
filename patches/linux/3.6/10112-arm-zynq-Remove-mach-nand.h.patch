@@ -1,0 +1,72 @@
+From 0856b5a1d17030fa7a65e2329a67bd5222486922 Mon Sep 17 00:00:00 2001
+From: Soren Brinkmann <soren.brinkmann@xilinx.com>
+Date: Wed, 28 Nov 2012 17:09:52 -0800
+Subject: [PATCH] arm: zynq: Remove mach/nand.h
+
+The only user of mach/nand.h is the Zynq nandps driver. Required
+content is moved from the header to the actual driver and the
+redundant header is removed.
+
+Signed-off-by: Soren Brinkmann <soren.brinkmann@xilinx.com>
+Acked-by: Michal Simek <michal.simek@xilinx.com>
+---
+ arch/arm/mach-zynq/include/mach/nand.h |   21 ---------------------
+ drivers/mtd/nand/xilinx_nandps.c       |    7 ++++++-
+ 2 files changed, 6 insertions(+), 22 deletions(-)
+ delete mode 100644 arch/arm/mach-zynq/include/mach/nand.h
+
+diff --git a/arch/arm/mach-zynq/include/mach/nand.h b/arch/arm/mach-zynq/include/mach/nand.h
+deleted file mode 100644
+index e9f9260..0000000
+--- a/arch/arm/mach-zynq/include/mach/nand.h
++++ /dev/null
+@@ -1,21 +0,0 @@
+-/*
+- * nand.h - xilinx nand details
+- *
+- * Copyright (c) 2010 Xilinx Inc.
+- *
+- * This file is released under the GPLv2
+- *
+- */
+-
+-#ifndef __ASM_ARCH_NAND_H_
+-#define __ASM_ARCH_NAND_H_
+-
+-#include <linux/mtd/partitions.h>
+-
+-struct xnand_platform_data {
+-        unsigned int            options;
+-        struct mtd_partition    *parts;
+-	int			nr_parts;
+-};
+-
+-#endif
+diff --git a/drivers/mtd/nand/xilinx_nandps.c b/drivers/mtd/nand/xilinx_nandps.c
+index 2050180..6f31920 100644
+--- a/drivers/mtd/nand/xilinx_nandps.c
++++ b/drivers/mtd/nand/xilinx_nandps.c
+@@ -34,7 +34,6 @@
+ #include <linux/of_platform.h>
+ #include <linux/platform_device.h>
+ #include <linux/slab.h>
+-#include <mach/nand.h>
+ #include <mach/smc.h>
+ 
+ #define XNANDPS_DRIVER_NAME "xilinx_nandps"
+@@ -122,6 +121,12 @@
+ #define xnandps_write32(addr, val)	__raw_writel((val), (addr))
+ 
+ 
++struct xnand_platform_data {
++	unsigned int            options;
++	struct mtd_partition    *parts;
++	int			nr_parts;
++};
++
+ /**
+  * struct xnandps_command_format - Defines NAND flash command format
+  * @start_cmd:		First cycle command (Start command)
+-- 
+1.7.1
+

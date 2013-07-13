@@ -1,0 +1,34 @@
+From d1aa6fc80b8bd87a0266b97812c34129130b3334 Mon Sep 17 00:00:00 2001
+From: John Linn <john.linn@xilinx.com>
+Date: Fri, 26 Oct 2012 12:35:16 -0700
+Subject: [PATCH] serial: xilinx_uartps: Fix bad register write in console_write
+
+The commit:
+serial: xilinx_uartps: Force enable the UART in xuartps_console_write
+(sha1: d21aec67c1c782314d20b3d619e76cf8aae593dc)
+caused  a new bug as the write to the control register had
+the offset and the value to write reversed.
+
+Reported-by: Jason Andrews <jasona@cadence.com>
+Signed-off-by: John Linn <john.linn@xilinx.com>
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+---
+ drivers/tty/serial/xilinx_uartps.c |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/drivers/tty/serial/xilinx_uartps.c b/drivers/tty/serial/xilinx_uartps.c
+index 984b77e..f8260bf 100644
+--- a/drivers/tty/serial/xilinx_uartps.c
++++ b/drivers/tty/serial/xilinx_uartps.c
+@@ -1140,7 +1140,7 @@ static void xuartps_console_write(struct console *co, const char *s,
+ 	uart_console_write(port, s, count, xuartps_console_putchar);
+ 	xuartps_console_wait_tx(port);
+ 
+-	xuartps_writel(XUARTPS_CR_OFFSET, ctrl);
++	xuartps_writel(ctrl, XUARTPS_CR_OFFSET);
+ 
+ 	/* restore interrupt state, it seems like there may be a h/w bug
+ 	 * in that the interrupt enable register should not need to be
+-- 
+1.7.1
+

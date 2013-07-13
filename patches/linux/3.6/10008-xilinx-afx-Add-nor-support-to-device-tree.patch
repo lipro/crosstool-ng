@@ -1,0 +1,62 @@
+From 96ff9761ccef29e93eeba98ed273f8ce683ee017 Mon Sep 17 00:00:00 2001
+From: Jagannadha Sutradharudu Teki <jagannadha.sutradharudu-teki@xilinx.com>
+Date: Tue, 6 Nov 2012 16:36:04 +0530
+Subject: [PATCH] xilinx: afx: Add nor support to device tree
+
+This patch adds support for NOR on AFX device tree assuming
+NOR module is preset on the AFX board.
+
+Signed-off-by: Jagannadha Sutradharudu Teki <jaganna@xilinx.com>
+Acked-by: Michal Simek <michal.simek@xilinx.com>
+---
+ arch/arm/boot/dts/zynq-afx.dts |   35 +++++++++++++++++++++++++++++++++++
+ 1 files changed, 35 insertions(+), 0 deletions(-)
+
+diff --git a/arch/arm/boot/dts/zynq-afx.dts b/arch/arm/boot/dts/zynq-afx.dts
+index b909db8..c472d5e 100644
+--- a/arch/arm/boot/dts/zynq-afx.dts
++++ b/arch/arm/boot/dts/zynq-afx.dts
+@@ -64,5 +64,40 @@
+ 			clock-frequency-timer2 = <133000000>;
+ 		};
+ 
++		nor: nor@e2000000 {
++			compatible = "cfi-flash";
++			bank-width = <1>;
++			reg = <0xE2000000 0x2000000>; /* 32MB */
++			#address-cells = <1>;
++			#size-cells = <1>;
++			partition@0 {
++				label = "nor-fsbl";
++				reg = <0x0 0x80000>; /* 512K */
++			};
++			partition@1 {
++				label = "nor-u-boot";
++				reg = <0x80000 0x80000>; /* 512K */
++			};
++			partition@2 {
++				label = "nor-linux";
++				reg = <0x100000 0x500000>; /* 5MB */
++			};
++			partition@3 {
++				label = "nor-device-tree";
++				reg = <0x600000 0x20000>; /* 128K */
++			};
++			partition@4 {
++				label = "nor-user";
++				reg = <0x620000 0x8E0000>; /* 8875K */
++			};
++			partition@5 {
++				label = "nor-scratch";
++				reg = <0xF00000 0x100000>; /* 1MB */
++			};
++			partition@6 {
++				label = "nor-rootfs";
++				reg = <0x1000000 0x1000000>; /* 16MB */
++			};
++		};
+ 	};
+ };
+-- 
+1.7.1
+
