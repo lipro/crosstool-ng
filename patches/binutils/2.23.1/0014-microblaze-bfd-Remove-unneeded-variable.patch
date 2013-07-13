@@ -1,0 +1,30 @@
+From ffd91edba57a83ec174c1d322902e7a44c6398ea Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Mon, 21 Nov 2011 11:02:05 +0100
+Subject: [PATCH 14/24] microblaze: bfd: Remove unneeded variable
+
+It should be the part of patch:
+"microblaze: Correct adjustment of global symbols after linker relaxation"
+(sha1: 74dbd8cc0ac2374ab6897e82298838e83e3f886d)
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+Signed-off-by: Edgar E. Iglesias <edgar.iglesias@gmail.com>
+---
+ bfd/elf32-microblaze.c |    1 -
+ 1 files changed, 0 insertions(+), 1 deletions(-)
+
+diff --git a/bfd/elf32-microblaze.c b/bfd/elf32-microblaze.c
+index 8a4a0c3..a628d99 100644
+--- a/bfd/elf32-microblaze.c
++++ b/bfd/elf32-microblaze.c
+@@ -1819,7 +1819,6 @@ microblaze_elf_relax_section (bfd *abfd,
+       /* Now adjust the global symbols defined in this section.  */
+       isym = isymbuf + symtab_hdr->sh_info;
+       symcount =  (symtab_hdr->sh_size / sizeof (Elf32_External_Sym)) - symtab_hdr->sh_info;
+-      isymend = isymbuf + (symtab_hdr->sh_size / sizeof (Elf32_External_Sym));
+       for (sym_index = 0; sym_index < symcount; sym_index++)
+         {
+           sym_hash = elf_sym_hashes (abfd)[sym_index];
+-- 
+1.7.1
+

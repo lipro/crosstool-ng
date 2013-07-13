@@ -1,0 +1,29 @@
+From 127ab95bca79170a821eda8c377018da363ffdd8 Mon Sep 17 00:00:00 2001
+From: Edgar E. Iglesias <edgar.iglesias@gmail.com>
+Date: Sun, 21 Aug 2011 23:10:04 +0200
+Subject: [PATCH 01/24] gas-microblaze: Fix weak symbols
+
+This is from Xilinx. Need to verify it.
+
+Signed-off-by: Edgar E. Iglesias <edgar.iglesias@gmail.com>
+---
+ gas/config/tc-microblaze.c |    3 ++-
+ 1 files changed, 2 insertions(+), 1 deletions(-)
+
+diff --git a/gas/config/tc-microblaze.c b/gas/config/tc-microblaze.c
+index 3ab854f..86ac90b 100644
+--- a/gas/config/tc-microblaze.c
++++ b/gas/config/tc-microblaze.c
+@@ -2065,7 +2065,8 @@ md_estimate_size_before_relax (fragS * fragP,
+           as_bad (_("Absolute PC-relative value in relaxation code.  Assembler error....."));
+           abort ();
+         }
+-      else if ((S_GET_SEGMENT (fragP->fr_symbol) == segment_type))
++      else if (S_GET_SEGMENT (fragP->fr_symbol) == segment_type &&
++               !S_IS_WEAK (fragP->fr_symbol))
+         {
+           fragP->fr_subtype = DEFINED_PC_OFFSET;
+           /* Don't know now whether we need an imm instruction.  */
+-- 
+1.7.1
+

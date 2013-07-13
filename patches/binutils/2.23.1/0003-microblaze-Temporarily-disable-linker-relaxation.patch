@@ -1,0 +1,27 @@
+From 6c3ecc5edd355f8893c72fc632a019db4905c7cf Mon Sep 17 00:00:00 2001
+From: Edgar E. Iglesias <edgar.iglesias@gmail.com>
+Date: Wed, 21 Sep 2011 22:58:49 +0200
+Subject: [PATCH 03/24] microblaze: Temporarily disable linker relaxation
+
+It's broken.
+
+Signed-off-by: Edgar E. Iglesias <edgar.iglesias@gmail.com>
+---
+ bfd/elf32-microblaze.c |    1 +
+ 1 files changed, 1 insertions(+), 0 deletions(-)
+
+diff --git a/bfd/elf32-microblaze.c b/bfd/elf32-microblaze.c
+index 6375d9c..f5289ee 100644
+--- a/bfd/elf32-microblaze.c
++++ b/bfd/elf32-microblaze.c
+@@ -1317,6 +1317,7 @@ microblaze_elf_relax_section (bfd *abfd,
+   /* We only do this once per section.  We may be able to delete some code
+      by running multiple passes, but it is not worth it.  */
+   *again = FALSE;
++  return TRUE;
+ 
+   /* Only do this for a text section.  */
+   if (link_info->relocatable
+-- 
+1.7.1
+
