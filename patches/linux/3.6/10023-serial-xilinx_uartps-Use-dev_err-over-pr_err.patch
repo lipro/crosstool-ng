@@ -1,0 +1,61 @@
+From 86fc371e6b03dbb173cadf15233fb93cbd22973d Mon Sep 17 00:00:00 2001
+From: Soren Brinkmann <soren.brinkmann@xilinx.com>
+Date: Mon, 12 Nov 2012 11:58:43 -0800
+Subject: [PATCH] serial: xilinx_uartps: Use dev_err over pr_err
+
+Replacing uses of pr_err through dev_err.
+
+Signed-off-by: Soren Brinkmann <soren.brinkmann@xilinx.com>
+Acked-by: Michal Simek <michal.simek@xilinx.com>
+---
+ drivers/tty/serial/xilinx_uartps.c |   10 +++++-----
+ 1 files changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/drivers/tty/serial/xilinx_uartps.c b/drivers/tty/serial/xilinx_uartps.c
+index f8260bf..5247157 100644
+--- a/drivers/tty/serial/xilinx_uartps.c
++++ b/drivers/tty/serial/xilinx_uartps.c
+@@ -1292,7 +1292,7 @@ static int __devinit xuartps_probe(struct platform_device *pdev)
+ 	else
+ 		xuartps->aperclk = clk_get_sys("UART0_APER", NULL);
+ 	if (IS_ERR(xuartps->aperclk)) {
+-		pr_err("Xilinx UARTPS APER clock not found.\n");
++		dev_err(&pdev->dev, "APER clock not found.\n");
+ 		ret = PTR_ERR(xuartps->aperclk);
+ 		goto err_out_free;
+ 	}
+@@ -1301,19 +1301,19 @@ static int __devinit xuartps_probe(struct platform_device *pdev)
+ 	else
+ 		xuartps->devclk = clk_get_sys("UART0", NULL);
+ 	if (IS_ERR(xuartps->devclk)) {
+-		pr_err("Xilinx UARTPS device clock not found.\n");
++		dev_err(&pdev->dev, "Device clock not found.\n");
+ 		ret = PTR_ERR(xuartps->devclk);
+ 		goto err_out_clk_put_aper;
+ 	}
+ 
+ 	ret = clk_prepare_enable(xuartps->aperclk);
+ 	if (ret) {
+-		pr_err("Xilinx UARTPS unable to enable APER clock.\n");
++		dev_err(&pdev->dev, "Unable to enable APER clock.\n");
+ 		goto err_out_clk_put;
+ 	}
+ 	ret = clk_prepare_enable(xuartps->devclk);
+ 	if (ret) {
+-		pr_err("Xilinx UARTPS unable to enable device clock.\n");
++		dev_err(&pdev->dev, "Unable to enable device clock.\n");
+ 		goto err_out_clk_dis_aper;
+ 	}
+ 
+@@ -1322,7 +1322,7 @@ static int __devinit xuartps_probe(struct platform_device *pdev)
+ 	xuartps->clk_rate_change_nb.next = NULL;
+ 	if (clk_notifier_register(xuartps->devclk,
+ 				&xuartps->clk_rate_change_nb))
+-		pr_warn("Unable to register clock notifier.\n");
++		dev_warn(&pdev->dev, "Unable to register clock notifier.\n");
+ #endif
+ 
+ 	/* Initialize the port structure */
+-- 
+1.7.1
+

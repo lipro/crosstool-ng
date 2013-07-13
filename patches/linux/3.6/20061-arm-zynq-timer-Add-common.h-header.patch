@@ -1,0 +1,28 @@
+From 7ec318de1157c80bc124918da1759422e54187e5 Mon Sep 17 00:00:00 2001
+From: Soren Brinkmann <soren.brinkmann@xilinx.com>
+Date: Mon, 17 Dec 2012 10:26:58 -0800
+Subject: [PATCH] arm: zynq: timer: Add common.h header
+
+Adding the header to avoid sparse complaining about undeclared
+functions.
+
+Signed-off-by: Soren Brinkmann <soren.brinkmann@xilinx.com>
+---
+ arch/arm/mach-zynq/timer.c |    1 +
+ 1 files changed, 1 insertions(+), 0 deletions(-)
+
+diff --git a/arch/arm/mach-zynq/timer.c b/arch/arm/mach-zynq/timer.c
+index 89924a1..f43f607 100644
+--- a/arch/arm/mach-zynq/timer.c
++++ b/arch/arm/mach-zynq/timer.c
+@@ -21,6 +21,7 @@
+ #include <linux/of_irq.h>
+ #include <linux/of_address.h>
+ #include <asm/smp_twd.h>
++#include "common.h"
+ 
+ /*
+  * This driver configures the 2 16-bit count-up timers as follows:
+-- 
+1.7.1
+

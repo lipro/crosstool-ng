@@ -1,0 +1,28 @@
+From 01f57a7697644eecb34f91c9ceeddc9be3243861 Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Thu, 22 Nov 2012 14:13:09 +0100
+Subject: [PATCH] usb: otg: ulpi: Add IDs from SMSC USB3320
+
+This ulpi phy is placed on zc702 board and maybe
+on others too.
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+---
+ drivers/usb/otg/ulpi.c |    1 +
+ 1 files changed, 1 insertions(+), 0 deletions(-)
+
+diff --git a/drivers/usb/otg/ulpi.c b/drivers/usb/otg/ulpi.c
+index cd6dd21..17ea3f2 100644
+--- a/drivers/usb/otg/ulpi.c
++++ b/drivers/usb/otg/ulpi.c
+@@ -47,6 +47,7 @@ struct ulpi_info {
+ static struct ulpi_info ulpi_ids[] = {
+ 	ULPI_INFO(ULPI_ID(0x04cc, 0x1504), "NXP ISP1504"),
+ 	ULPI_INFO(ULPI_ID(0x0424, 0x0006), "SMSC USB331x"),
++	ULPI_INFO(ULPI_ID(0x0424, 0x0007), "SMSC USB3320"),
+ 	ULPI_INFO(ULPI_ID(0x0451, 0x1507), "TI TUSB1210"),
+ };
+ 
+-- 
+1.7.1
+

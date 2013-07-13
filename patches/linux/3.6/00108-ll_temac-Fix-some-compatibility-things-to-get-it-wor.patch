@@ -1,0 +1,42 @@
+From 898b18df67b7f20238e9c189f4d40c6f13188d29 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Thu, 18 Oct 2012 17:27:19 +0200
+Subject: [PATCH] ll_temac: Fix some compatibility things to get it work on 3.3
+
+because of ll_temac.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ drivers/of/of_net.c    |    2 +-
+ include/linux/of_net.h |    2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/of/of_net.c b/drivers/of/of_net.c
+index ffab033..fafb6ca 100644
+--- a/drivers/of/of_net.c
++++ b/drivers/of/of_net.c
+@@ -38,7 +38,7 @@ static const char *phy_modes[] = {
+  * The function gets phy interface string from property 'phy-mode',
+  * and return its index in phy_modes table, or errno in error case.
+  */
+-const int of_get_phy_mode(struct device_node *np)
++int of_get_phy_mode(struct device_node *np)
+ {
+ 	const char *pm;
+ 	int err, i;
+diff --git a/include/linux/of_net.h b/include/linux/of_net.h
+index f474641..41eea62 100644
+--- a/include/linux/of_net.h
++++ b/include/linux/of_net.h
+@@ -9,7 +9,7 @@
+ 
+ #ifdef CONFIG_OF_NET
+ #include <linux/of.h>
+-extern const int of_get_phy_mode(struct device_node *np);
++extern int of_get_phy_mode(struct device_node *np);
+ extern const void *of_get_mac_address(struct device_node *np);
+ #endif
+ 
+-- 
+1.7.1
+

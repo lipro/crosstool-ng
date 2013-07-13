@@ -1,0 +1,28 @@
+From 98805ce2fddca2b3349a7c6e8543f2aefdf01736 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Mon, 22 Oct 2012 13:54:14 +0200
+Subject: [PATCH] arm: zynq: Remove secondary_startup from common.h
+
+Probably no reason to have it here.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ arch/arm/mach-zynq/common.h |    2 --
+ 1 files changed, 0 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/mach-zynq/common.h b/arch/arm/mach-zynq/common.h
+index 90f453a..9d391f9 100644
+--- a/arch/arm/mach-zynq/common.h
++++ b/arch/arm/mach-zynq/common.h
+@@ -20,8 +20,6 @@
+ #include <asm/mach/time.h>
+ #include <mach/slcr.h>
+ 
+-void secondary_startup(void);
+-
+ extern struct sys_timer xttcpss_sys_timer;
+ 
+ void platform_device_init(void);
+-- 
+1.7.1
+

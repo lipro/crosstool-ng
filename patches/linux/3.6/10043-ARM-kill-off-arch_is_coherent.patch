@@ -1,0 +1,101 @@
+From 7368a5df55faf9822aabf35249a075d3e8cfbad8 Mon Sep 17 00:00:00 2001
+From: Rob Herring <rob.herring@calxeda.com>
+Date: Mon, 5 Nov 2012 10:13:14 -0800
+Subject: [PATCH] ARM: kill off arch_is_coherent
+
+With ixp2xxx removed, there are no platforms that define arch_is_coherent,
+so the last occurrences of arch_is_coherent can be removed. Any new
+platform with coherent i/o should use coherent dma mapping functions.
+
+Signed-off-by: Rob Herring <rob.herring@calxeda.com>
+Cc: Russell King <linux@arm.linux.org.uk>
+Cc: Marek Szyprowski <m.szyprowski@samsung.com>
+Signed-off-by: Marek Szyprowski <m.szyprowski@samsung.com>
+---
+ arch/arm/include/asm/barrier.h |    7 +++----
+ arch/arm/include/asm/memory.h  |    8 --------
+ arch/arm/mm/mmu.c              |   17 +++--------------
+ 3 files changed, 6 insertions(+), 26 deletions(-)
+
+diff --git a/arch/arm/include/asm/barrier.h b/arch/arm/include/asm/barrier.h
+index 0511238..8dcd9c7 100644
+--- a/arch/arm/include/asm/barrier.h
++++ b/arch/arm/include/asm/barrier.h
+@@ -44,10 +44,9 @@
+ #define rmb()		dsb()
+ #define wmb()		mb()
+ #else
+-#include <asm/memory.h>
+-#define mb()	do { if (arch_is_coherent()) dmb(); else barrier(); } while (0)
+-#define rmb()	do { if (arch_is_coherent()) dmb(); else barrier(); } while (0)
+-#define wmb()	do { if (arch_is_coherent()) dmb(); else barrier(); } while (0)
++#define mb()		barrier()
++#define rmb()		barrier()
++#define wmb()		barrier()
+ #endif
+ 
+ #ifndef CONFIG_SMP
+diff --git a/arch/arm/include/asm/memory.h b/arch/arm/include/asm/memory.h
+index 5f6ddcc..73cf03a 100644
+--- a/arch/arm/include/asm/memory.h
++++ b/arch/arm/include/asm/memory.h
+@@ -275,14 +275,6 @@ static inline __deprecated void *bus_to_virt(unsigned long x)
+ #define virt_to_page(kaddr)	pfn_to_page(__pa(kaddr) >> PAGE_SHIFT)
+ #define virt_addr_valid(kaddr)	((unsigned long)(kaddr) >= PAGE_OFFSET && (unsigned long)(kaddr) < (unsigned long)high_memory)
+ 
+-/*
+- * Optional coherency support.  Currently used only by selected
+- * Intel XSC3-based systems.
+- */
+-#ifndef arch_is_coherent
+-#define arch_is_coherent()		0
+-#endif
+-
+ #endif
+ 
+ #include <asm-generic/memory_model.h>
+diff --git a/arch/arm/mm/mmu.c b/arch/arm/mm/mmu.c
+index c2fa21d..8fd0399 100644
+--- a/arch/arm/mm/mmu.c
++++ b/arch/arm/mm/mmu.c
+@@ -216,7 +216,7 @@ static struct mem_type mem_types[] = {
+ 		.prot_l1	= PMD_TYPE_TABLE,
+ 		.prot_sect	= PROT_SECT_DEVICE | PMD_SECT_WB,
+ 		.domain		= DOMAIN_IO,
+-	},	
++	},
+ 	[MT_DEVICE_WC] = {	/* ioremap_wc */
+ 		.prot_pte	= PROT_PTE_DEVICE | L_PTE_MT_DEV_WC,
+ 		.prot_l1	= PMD_TYPE_TABLE,
+@@ -422,17 +422,6 @@ static void __init build_mem_type_table(void)
+ 	vecs_pgprot = kern_pgprot = user_pgprot = cp->pte;
+ 
+ 	/*
+-	 * Enable CPU-specific coherency if supported.
+-	 * (Only available on XSC3 at the moment.)
+-	 */
+-	if (arch_is_coherent() && cpu_is_xsc3()) {
+-		mem_types[MT_MEMORY].prot_sect |= PMD_SECT_S;
+-		mem_types[MT_MEMORY].prot_pte |= L_PTE_SHARED;
+-		mem_types[MT_MEMORY_DMA_READY].prot_pte |= L_PTE_SHARED;
+-		mem_types[MT_MEMORY_NONCACHED].prot_sect |= PMD_SECT_S;
+-		mem_types[MT_MEMORY_NONCACHED].prot_pte |= L_PTE_SHARED;
+-	}
+-	/*
+ 	 * ARMv6 and above have extended page tables.
+ 	 */
+ 	if (cpu_arch >= CPU_ARCH_ARMv6 && (cr & CR_XP)) {
+@@ -777,8 +766,8 @@ void __init iotable_init(struct map_desc *io_desc, int nr)
+ 		create_mapping(md);
+ 		vm->addr = (void *)(md->virtual & PAGE_MASK);
+ 		vm->size = PAGE_ALIGN(md->length + (md->virtual & ~PAGE_MASK));
+-		vm->phys_addr = __pfn_to_phys(md->pfn); 
+-		vm->flags = VM_IOREMAP | VM_ARM_STATIC_MAPPING; 
++		vm->phys_addr = __pfn_to_phys(md->pfn);
++		vm->flags = VM_IOREMAP | VM_ARM_STATIC_MAPPING;
+ 		vm->flags |= VM_ARM_MTYPE(md->type);
+ 		vm->caller = iotable_init;
+ 		vm_area_add_early(vm++);
+-- 
+1.7.1
+

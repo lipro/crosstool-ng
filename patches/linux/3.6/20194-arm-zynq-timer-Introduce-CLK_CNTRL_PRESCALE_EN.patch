@@ -1,0 +1,30 @@
+From d2ccb14258b68142366db80f273ae26654f01cc4 Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Thu, 14 Feb 2013 09:49:18 +0100
+Subject: [PATCH] arm: zynq: timer: Introduce CLK_CNTRL_PRESCALE_EN
+
+Define and replace magic value in CLK_CNTRL_PRESCALE.
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+---
+ arch/arm/mach-zynq/timer.c |    4 +++-
+ 1 files changed, 3 insertions(+), 1 deletions(-)
+
+diff --git a/arch/arm/mach-zynq/timer.c b/arch/arm/mach-zynq/timer.c
+index b165e92..a760b90 100644
+--- a/arch/arm/mach-zynq/timer.c
++++ b/arch/arm/mach-zynq/timer.c
+@@ -59,7 +59,9 @@
+  */
+ #define PRESCALE_EXPONENT	11	/* 2 ^ PRESCALE_EXPONENT = PRESCALE */
+ #define PRESCALE		2048	/* The exponent must match this */
+-#define CLK_CNTRL_PRESCALE (((PRESCALE_EXPONENT - 1) << 1) | 0x1)
++#define CLK_CNTRL_PRESCALE_EN	1
++#define CLK_CNTRL_PRESCALE	(((PRESCALE_EXPONENT - 1) << 1) | \
++				CLK_CNTRL_PRESCALE_EN)
+ #define CNT_CNTRL_RESET		(1 << 4)
+ 
+ /**
+-- 
+1.7.1
+

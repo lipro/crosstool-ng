@@ -1,0 +1,24 @@
+From 04ab2fa7a7392bab919d5876428ddc5c4a82e1ed Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Sun, 21 Oct 2012 15:00:50 +0200
+Subject: [PATCH] usb: gadget: Clean makefile
+
+Remove broken extra cflags.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ drivers/usb/gadget/Makefile |    1 -
+ 1 files changed, 0 insertions(+), 1 deletions(-)
+
+diff --git a/drivers/usb/gadget/Makefile b/drivers/usb/gadget/Makefile
+index a52ac7c..a4d7374 100644
+--- a/drivers/usb/gadget/Makefile
++++ b/drivers/usb/gadget/Makefile
+@@ -1,4 +1,3 @@
+-XTRA_CFLAGS		+= -Idrivers/xilinx_common/
+ #
+ # USB peripheral controller drivers
+ #
+-- 
+1.7.1
+

@@ -1,0 +1,29 @@
+From f3765f4414196a2bb460eb8227b40d85a0dfb0f0 Mon Sep 17 00:00:00 2001
+From: Naveen Mamindlapalli <naveen.mamindlapalli@xilinx.com>
+Date: Tue, 12 Mar 2013 13:19:49 +0530
+Subject: [PATCH] arm: amba: Increased number of irqs to handle Zynq PL330 interrupts.
+
+Increased number of irqs to handle PL330 DMA interrupts. There are
+total 9 interrupts supported by Zynq PL330 DMA block.
+
+Signed-off-by: Naveen Mamindlapalli <naveenm@xilinx.com>
+---
+ include/linux/amba/bus.h |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/include/linux/amba/bus.h b/include/linux/amba/bus.h
+index d364171..69a2cd9 100644
+--- a/include/linux/amba/bus.h
++++ b/include/linux/amba/bus.h
+@@ -21,7 +21,7 @@
+ #include <linux/resource.h>
+ #include <linux/regulator/consumer.h>
+ 
+-#define AMBA_NR_IRQS	2
++#define AMBA_NR_IRQS	10
+ #define AMBA_CID	0xb105f00d
+ 
+ struct clk;
+-- 
+1.7.1
+

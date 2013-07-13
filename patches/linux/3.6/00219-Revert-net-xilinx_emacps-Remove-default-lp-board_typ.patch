@@ -1,0 +1,33 @@
+From 56aba15de5326009b2368f58d4236befbfa82140 Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Fri, 26 Oct 2012 09:36:16 +0200
+Subject: [PATCH] Revert "net: xilinx_emacps: Remove default lp->board_type setup"
+
+This reverts commit 82038ad7e4cf5a8a83c93d1fed09af35e8e7be0b.
+
+This really smells bad. Setup lp->board_type before register_netdev
+is weird. It is probably because of xemacps_mii_probe or xemacps_init_hw
+function. register_netdev should be probably at different place.
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+---
+ drivers/net/ethernet/xilinx/xilinx_emacps.c |    3 +++
+ 1 files changed, 3 insertions(+), 0 deletions(-)
+
+diff --git a/drivers/net/ethernet/xilinx/xilinx_emacps.c b/drivers/net/ethernet/xilinx/xilinx_emacps.c
+index 9952395..cdff041 100644
+--- a/drivers/net/ethernet/xilinx/xilinx_emacps.c
++++ b/drivers/net/ethernet/xilinx/xilinx_emacps.c
+@@ -3082,6 +3082,9 @@ static int __devinit xemacps_probe(struct platform_device *pdev)
+ 	netif_napi_add(ndev, &lp->napi, xemacps_rx_poll, XEMACPS_NAPI_WEIGHT);
+ 
+ 	lp->ip_summed = CHECKSUM_UNNECESSARY;
++#ifdef CONFIG_OF
++	lp->board_type = BOARD_TYPE_ZYNQ;
++#endif
+ 
+ 	rc = register_netdev(ndev);
+ 	if (rc) {
+-- 
+1.7.1
+

@@ -1,0 +1,33 @@
+From fb4c346c20e0f6809de283ffde220c29f3a859a9 Mon Sep 17 00:00:00 2001
+From: Soren Brinkmann <soren.brinkmann@xilinx.com>
+Date: Tue, 11 Dec 2012 17:47:16 -0800
+Subject: [PATCH] arm: zynq: pl330: Remove type casts
+
+The register accessor macros used some weird type casting.
+
+Signed-off-by: Soren Brinkmann <soren.brinkmann@xilinx.com>
+Acked-by: Michal Simek <michal.simek@xilinx.com>
+---
+ arch/arm/mach-zynq/pl330.c |    6 ++----
+ 1 files changed, 2 insertions(+), 4 deletions(-)
+
+diff --git a/arch/arm/mach-zynq/pl330.c b/arch/arm/mach-zynq/pl330.c
+index 017baa3..d9f2078 100644
+--- a/arch/arm/mach-zynq/pl330.c
++++ b/arch/arm/mach-zynq/pl330.c
+@@ -233,10 +233,8 @@ static struct pl330_driver_data driver_data;
+  * read and write macros for register IO.
+  */
+ 
+-#define pl330_readreg(base, offset) \
+-	__raw_readl((void __iomem *)((u32)(base) + (u32)(offset)))
+-#define pl330_writereg(data, base, offset) \
+-	__raw_writel(data, (void __iomem *)((u32)(base) + (u32)(offset)))
++#define pl330_readreg(base, offset) __raw_readl(base + offset)
++#define pl330_writereg(data, base, offset) __raw_writel(data, base + offset)
+ 
+ 
+ /*
+-- 
+1.7.1
+

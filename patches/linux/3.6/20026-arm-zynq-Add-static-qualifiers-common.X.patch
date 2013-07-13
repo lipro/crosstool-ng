@@ -1,0 +1,81 @@
+From fdec739d956570b4d1367f074bf90ea4e700b4f0 Mon Sep 17 00:00:00 2001
+From: Soren Brinkmann <soren.brinkmann@xilinx.com>
+Date: Tue, 11 Dec 2012 17:47:11 -0800
+Subject: [PATCH] arm: zynq: Add static qualifiers - common.X
+
+Commit "arm: zynq: Remove board files for clean up"
+(sha1: bd2f74204e9043e55eb7bc89cc76cbdf441983c6) removed board
+files and consolidated the code in common.c. This allows to
+declare several functions static and removing their prototypes
+from the header file.
+
+Signed-off-by: Soren Brinkmann <soren.brinkmann@xilinx.com>
+Acked-by: Michal Simek <michal.simek@xilinx.com>
+---
+ arch/arm/mach-zynq/common.c |    8 ++++----
+ arch/arm/mach-zynq/common.h |    7 -------
+ 2 files changed, 4 insertions(+), 11 deletions(-)
+
+diff --git a/arch/arm/mach-zynq/common.c b/arch/arm/mach-zynq/common.c
+index 08af439..52a4816 100644
+--- a/arch/arm/mach-zynq/common.c
++++ b/arch/arm/mach-zynq/common.c
+@@ -94,7 +94,7 @@ static struct sys_timer xttcpss_sys_timer = {
+ /**
+  * xilinx_map_io() - Create memory mappings needed for early I/O.
+  */
+-void __init xilinx_map_io(void)
++static void __init xilinx_map_io(void)
+ {
+ 	iotable_init(io_desc, ARRAY_SIZE(io_desc));
+ }
+@@ -105,7 +105,7 @@ void __init xilinx_map_io(void)
+  * We need to stop things allocating the low memory as DMA can't work in
+  * the 1st 512K of memory.  Using reserve vs remove is not totally clear yet.
+  */
+-void __init xilinx_memory_init()
++static void __init xilinx_memory_init(void)
+ {
+ #if defined(CONFIG_PHYS_OFFSET) && (CONFIG_PHYS_OFFSET == 0)
+ 	/* Reserve the 0-0x4000 addresses (before page tables and kernel)
+@@ -184,7 +184,7 @@ early_initcall(xilinx_l2c_init);
+ /**
+  * xilinx_irq_init() - Interrupt controller initialization for the GIC.
+  */
+-void __init xilinx_irq_init(void)
++static void __init xilinx_irq_init(void)
+ {
+ 	of_irq_init(zynq_dt_irq_match);
+ }
+@@ -193,7 +193,7 @@ void __init xilinx_irq_init(void)
+  * xilinx_init_machine() - System specific initialization, intended to be
+  *			   called from board specific initialization.
+  */
+-void __init xilinx_init_machine(void)
++static void __init xilinx_init_machine(void)
+ {
+ 	of_platform_bus_probe(NULL, zynq_of_bus_ids, NULL);
+ 	platform_device_init();
+diff --git a/arch/arm/mach-zynq/common.h b/arch/arm/mach-zynq/common.h
+index 71fbd92..1a79919 100644
+--- a/arch/arm/mach-zynq/common.h
++++ b/arch/arm/mach-zynq/common.h
+@@ -20,15 +20,8 @@
+ #include <mach/slcr.h>
+ 
+ void __init xttcpss_timer_init(void);
+-
+ void platform_device_init(void);
+ 
+-void xilinx_init_machine(void);
+-void xilinx_irq_init(void);
+-void xilinx_map_io(void);
+-void xilinx_memory_init(void);
+-
+-
+ static inline void xilinx_system_reset(char mode, const char *cmd)
+ {
+ 	xslcr_system_reset();
+-- 
+1.7.1
+

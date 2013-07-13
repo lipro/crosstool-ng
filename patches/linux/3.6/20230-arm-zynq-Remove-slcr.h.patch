@@ -1,0 +1,135 @@
+From 2091e7343a828f6e44c7575066c6597408b3e72f Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Tue, 12 Mar 2013 12:05:35 +0100
+Subject: [PATCH] arm: zynq: Remove slcr.h
+
+It is controversial patch because xilinx_devcfg
+contains some externs which shouldn't contain
+but we can live with this for now because that driver
+needs to be changed anyway.
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+---
+ arch/arm/mach-zynq/common.h                 |   11 ++++++++-
+ arch/arm/mach-zynq/include/mach/slcr.h      |   28 ---------------------------
+ arch/arm/mach-zynq/pm.c                     |    1 -
+ arch/arm/mach-zynq/slcr.c                   |    1 -
+ drivers/char/xilinx_devcfg.c                |    3 +-
+ drivers/net/ethernet/xilinx/xilinx_emacps.c |    1 -
+ 6 files changed, 11 insertions(+), 34 deletions(-)
+ delete mode 100644 arch/arm/mach-zynq/include/mach/slcr.h
+
+diff --git a/arch/arm/mach-zynq/common.h b/arch/arm/mach-zynq/common.h
+index 6999af9..61e9fa3 100644
+--- a/arch/arm/mach-zynq/common.h
++++ b/arch/arm/mach-zynq/common.h
+@@ -17,13 +17,20 @@
+ #ifndef __MACH_ZYNQ_COMMON_H__
+ #define __MACH_ZYNQ_COMMON_H__
+ 
+-#include <mach/slcr.h>
+-
+ void __init xttcps_timer_init_old(void);
+ void platform_device_init(void);
+ 
+ int __cpuinit zynq_cpun_start(u32 address, int cpu);
+ 
++extern void xslcr_write(u32 val, u32 offset);
++extern u32 xslcr_read(u32 offset);
++
++extern int xslcr_init(void);
++extern void xslcr_system_reset(void);
++
++extern void xslcr_init_preload_fpga(void);
++extern void xslcr_init_postload_fpga(void);
++
+ /* multiplatform use core.h for this purpose */
+ extern void secondary_startup(void);
+ 
+diff --git a/arch/arm/mach-zynq/include/mach/slcr.h b/arch/arm/mach-zynq/include/mach/slcr.h
+deleted file mode 100644
+index be5e995..0000000
+--- a/arch/arm/mach-zynq/include/mach/slcr.h
++++ /dev/null
+@@ -1,28 +0,0 @@
+-/* arch/arm/mach-zynq/include/mach/slcr.h
+- *
+- *  Copyright (C) 2012 Xilinx
+- *
+- * This software is licensed under the terms of the GNU General Public
+- * License version 2, as published by the Free Software Foundation, and
+- * may be copied, distributed, and modified under those terms.
+- *
+- * This program is distributed in the hope that it will be useful,
+- * but WITHOUT ANY WARRANTY; without even the implied warranty of
+- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+- * GNU General Public License for more details.
+- */
+-
+-#ifndef __MACH_SLCR_H__
+-#define __MACH_SLCR_H__
+-
+-extern void xslcr_write(u32 val, u32 offset);
+-extern u32 xslcr_read(u32 offset);
+-
+-extern int xslcr_init(void);
+-extern void xslcr_system_reset(void);
+-
+-extern void xslcr_init_preload_fpga(void);
+-extern void xslcr_init_postload_fpga(void);
+-
+-#endif /* __MACH_SLCR_H__ */
+-
+diff --git a/arch/arm/mach-zynq/pm.c b/arch/arm/mach-zynq/pm.c
+index 1a38e65..e1b8b8a 100644
+--- a/arch/arm/mach-zynq/pm.c
++++ b/arch/arm/mach-zynq/pm.c
+@@ -32,7 +32,6 @@
+ #include <asm/hardware/cache-l2x0.h>
+ #include <asm/mach/map.h>
+ #include <asm/suspend.h>
+-#include <mach/slcr.h>
+ #include "common.h"
+ 
+ #define DDRC_CTRL_REG1_OFFS		0x60
+diff --git a/arch/arm/mach-zynq/slcr.c b/arch/arm/mach-zynq/slcr.c
+index c3a62ee..4b5aee5 100644
+--- a/arch/arm/mach-zynq/slcr.c
++++ b/arch/arm/mach-zynq/slcr.c
+@@ -26,7 +26,6 @@
+ #include <linux/platform_device.h>
+ #include <linux/slab.h>
+ #include <linux/string.h>
+-#include <mach/slcr.h>
+ #include <linux/clk/zynq.h>
+ #include "common.h"
+ 
+diff --git a/drivers/char/xilinx_devcfg.c b/drivers/char/xilinx_devcfg.c
+index c95787c..58c1df3 100644
+--- a/drivers/char/xilinx_devcfg.c
++++ b/drivers/char/xilinx_devcfg.c
+@@ -33,7 +33,8 @@
+ #include <linux/types.h>
+ #include <linux/uaccess.h>
+ 
+-#include <mach/slcr.h>
++extern void xslcr_init_preload_fpga(void);
++extern void xslcr_init_postload_fpga(void);
+ 
+ #define DRIVER_NAME "xdevcfg"
+ 
+diff --git a/drivers/net/ethernet/xilinx/xilinx_emacps.c b/drivers/net/ethernet/xilinx/xilinx_emacps.c
+index 205bb58..23be8ac 100644
+--- a/drivers/net/ethernet/xilinx/xilinx_emacps.c
++++ b/drivers/net/ethernet/xilinx/xilinx_emacps.c
+@@ -39,7 +39,6 @@
+ #include <linux/vmalloc.h>
+ #include <linux/version.h>
+ #include <linux/of.h>
+-#include <mach/slcr.h>
+ #include <linux/interrupt.h>
+ #include <linux/clocksource.h>
+ #include <linux/timecompare.h>
+-- 
+1.7.1
+

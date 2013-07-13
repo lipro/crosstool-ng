@@ -1,0 +1,32 @@
+From 638bf18e0c103251c31f0f94626ed440d409c4e2 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Tue, 31 Jul 2012 12:03:20 +0200
+Subject: [PATCH] microblaze: Remove PAGE properties duplication
+
+HWEXEC and HWWRITE is define above. Remove them.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ arch/microblaze/include/asm/pgtable.h |    6 ------
+ 1 files changed, 0 insertions(+), 6 deletions(-)
+
+diff --git a/arch/microblaze/include/asm/pgtable.h b/arch/microblaze/include/asm/pgtable.h
+index ab71156..a104846 100644
+--- a/arch/microblaze/include/asm/pgtable.h
++++ b/arch/microblaze/include/asm/pgtable.h
+@@ -234,12 +234,6 @@ static inline pte_t pte_mkspecial(pte_t pte)	{ return pte; }
+ #ifndef _PAGE_SHARED
+ #define _PAGE_SHARED	0
+ #endif
+-#ifndef _PAGE_HWWRITE
+-#define _PAGE_HWWRITE	0
+-#endif
+-#ifndef _PAGE_HWEXEC
+-#define _PAGE_HWEXEC	0
+-#endif
+ #ifndef _PAGE_EXEC
+ #define _PAGE_EXEC	0
+ #endif
+-- 
+1.7.1
+

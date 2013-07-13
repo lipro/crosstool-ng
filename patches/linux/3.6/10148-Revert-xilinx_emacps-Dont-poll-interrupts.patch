@@ -1,0 +1,50 @@
+From c35061604b851449e31405ddcbd30b80d77e74ea Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Tue, 11 Dec 2012 17:12:01 +0100
+Subject: [PATCH] Revert "xilinx_emacps: Dont poll interrupts"
+
+This reverts commit 8c5e47575ddd6cb91851490fead2fde50fd61dcf.
+
+Let's keep this patch for the next release when
+we exactly know performance impacts.
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+Acked-by: John Linn <john.linn@xilinx.com>
+---
+ drivers/net/ethernet/xilinx/xilinx_emacps.c |   20 ++++++++++++--------
+ 1 files changed, 12 insertions(+), 8 deletions(-)
+
+diff --git a/drivers/net/ethernet/xilinx/xilinx_emacps.c b/drivers/net/ethernet/xilinx/xilinx_emacps.c
+index c6ceb09..3ddd39d 100644
+--- a/drivers/net/ethernet/xilinx/xilinx_emacps.c
++++ b/drivers/net/ethernet/xilinx/xilinx_emacps.c
+@@ -1753,14 +1753,18 @@ static irqreturn_t xemacps_interrupt(int irq, void *dev_id)
+ 	}
+ 	xemacps_write(lp->baseaddr, XEMACPS_ISR_OFFSET, regisr);
+ 
+-	if (regisr & (XEMACPS_IXR_TXCOMPL_MASK |
+-			XEMACPS_IXR_TX_ERR_MASK)) {
+-		xemacps_tx_poll(ndev);
+-	} else {
+-		xemacps_write(lp->baseaddr, XEMACPS_IDR_OFFSET,
+-				(XEMACPS_IXR_FRAMERX_MASK |
+-				XEMACPS_IXR_RX_ERR_MASK));
+-		napi_schedule(&lp->napi);
++	while (regisr) {
++		if (regisr & (XEMACPS_IXR_TXCOMPL_MASK |
++				XEMACPS_IXR_TX_ERR_MASK)) {
++			xemacps_tx_poll(ndev);
++		} else {
++			xemacps_write(lp->baseaddr, XEMACPS_IDR_OFFSET,
++					(XEMACPS_IXR_FRAMERX_MASK |
++					XEMACPS_IXR_RX_ERR_MASK));
++			napi_schedule(&lp->napi);
++		}
++		regisr = xemacps_read(lp->baseaddr, XEMACPS_ISR_OFFSET);
++		xemacps_write(lp->baseaddr, XEMACPS_ISR_OFFSET, regisr);
+ 	}
+ 	spin_unlock(&lp->lock);
+ 
+-- 
+1.7.1
+

@@ -1,0 +1,44 @@
+From dbbd6f41710de08b1e2436848292c16fbb848de6 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Sun, 21 Oct 2012 16:26:48 +0200
+Subject: [PATCH] Revert "USB: Disable auto-suspend for USB 3.0 hubs."
+
+This reverts commit 0c9ffe0f6286a02bf82f8d7fb7274aec2ad977f1.
+
+Do not apply non mainline patches. Zynq also doesn't
+not support USB3.0 that's why better to revert this patch.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ drivers/usb/core/hub.c |   13 +++----------
+ 1 files changed, 3 insertions(+), 10 deletions(-)
+
+diff --git a/drivers/usb/core/hub.c b/drivers/usb/core/hub.c
+index 5024247..79fa769 100644
+--- a/drivers/usb/core/hub.c
++++ b/drivers/usb/core/hub.c
+@@ -1548,18 +1548,11 @@ static int hub_probe(struct usb_interface *intf, const struct usb_device_id *id)
+ 	desc = intf->cur_altsetting;
+ 	hdev = interface_to_usbdev(intf);
+ 
+-	/* Hubs have proper suspend/resume support.  USB 3.0 device suspend is
+-	 * different from USB 2.0/1.1 device suspend, and unfortunately we
+-	 * don't support it yet.  So leave autosuspend disabled for USB 3.0
+-	 * external hubs for now.  Enable autosuspend for USB 3.0 roothubs,
+-	 * since that isn't a "real" hub.
+-	 */
+-	if (!hub_is_superspeed(hdev) || !hdev->parent)
+-
++	/* Hubs have proper suspend/resume support. */
+ #ifdef CONFIG_USB_XUSBPS_OTG
+-		usb_disable_autosuspend(hdev);
++	usb_disable_autosuspend(hdev);
+ #else
+-		usb_enable_autosuspend(hdev);
++	usb_enable_autosuspend(hdev);
+ #endif
+ 
+ 	if (hdev->level == MAX_TOPO_LEVEL) {
+-- 
+1.7.1
+

@@ -1,0 +1,116 @@
+From b12366e09bb0de5097033dfe334c3abda3d40052 Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Fri, 1 Feb 2013 13:54:44 +0100
+Subject: [PATCH] Revert "Xilinx: ARM: Exported Kernel Symbols for High Performance Xilinx DMA driver"
+
+This reverts commit a495887c6643cdd21f799907a562b50bc2b27eb9.
+
+Dma drivers have been changed and don't require these functions.
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+---
+ arch/arm/mm/flush.c |    1 -
+ mm/highmem.c        |    1 -
+ mm/init-mm.c        |    2 --
+ mm/memory.c         |    5 -----
+ mm/mmap.c           |    2 +-
+ 5 files changed, 1 insertions(+), 10 deletions(-)
+
+diff --git a/arch/arm/mm/flush.c b/arch/arm/mm/flush.c
+index d0ef23f..40ca11e 100644
+--- a/arch/arm/mm/flush.c
++++ b/arch/arm/mm/flush.c
+@@ -337,4 +337,3 @@ void __flush_anon_page(struct vm_area_struct *vma, struct page *page, unsigned l
+ 	 */
+ 	__cpuc_flush_dcache_area(page_address(page), PAGE_SIZE);
+ }
+-EXPORT_SYMBOL(__flush_anon_page);
+diff --git a/mm/highmem.c b/mm/highmem.c
+index a8433e6..d517cd1 100644
+--- a/mm/highmem.c
++++ b/mm/highmem.c
+@@ -259,7 +259,6 @@ void *kmap_high_get(struct page *page)
+ 	unlock_kmap_any(flags);
+ 	return (void*) vaddr;
+ }
+-EXPORT_SYMBOL(kmap_high_get);
+ #endif
+ 
+ /**
+diff --git a/mm/init-mm.c b/mm/init-mm.c
+index fe1a329..a56a851 100644
+--- a/mm/init-mm.c
++++ b/mm/init-mm.c
+@@ -8,7 +8,6 @@
+ #include <linux/atomic.h>
+ #include <asm/pgtable.h>
+ #include <asm/mmu.h>
+-#include <linux/export.h>
+ 
+ #ifndef INIT_MM_CONTEXT
+ #define INIT_MM_CONTEXT(name)
+@@ -24,4 +23,3 @@ struct mm_struct init_mm = {
+ 	.mmlist		= LIST_HEAD_INIT(init_mm.mmlist),
+ 	INIT_MM_CONTEXT(init_mm)
+ };
+-EXPORT_SYMBOL(init_mm);
+diff --git a/mm/memory.c b/mm/memory.c
+index d1d549a..5736170 100644
+--- a/mm/memory.c
++++ b/mm/memory.c
+@@ -825,7 +825,6 @@ check_pfn:
+ out:
+ 	return pfn_to_page(pfn);
+ }
+-EXPORT_SYMBOL(vm_normal_page);
+ 
+ /*
+  * copy one vm_area from one task to the other. Assumes the page tables
+@@ -1614,7 +1613,6 @@ no_page_table:
+ 		return ERR_PTR(-EFAULT);
+ 	return page;
+ }
+-EXPORT_SYMBOL(follow_page);
+ 
+ static inline int stack_guard_page(struct vm_area_struct *vma, unsigned long addr)
+ {
+@@ -3564,7 +3562,6 @@ retry:
+ 
+ 	return handle_pte_fault(mm, vma, address, pte, pmd, flags);
+ }
+-EXPORT_SYMBOL(handle_mm_fault);
+ 
+ #ifndef __PAGETABLE_PUD_FOLDED
+ /*
+@@ -3669,7 +3666,6 @@ struct vm_area_struct *get_gate_vma(struct mm_struct *mm)
+ 	return NULL;
+ #endif
+ }
+-EXPORT_SYMBOL(get_gate_vma);
+ 
+ int in_gate_area_no_mm(unsigned long addr)
+ {
+@@ -3679,7 +3675,6 @@ int in_gate_area_no_mm(unsigned long addr)
+ #endif
+ 	return 0;
+ }
+-EXPORT_SYMBOL(in_gate_area_no_mm);
+ 
+ #endif	/* __HAVE_ARCH_GATE_AREA */
+ 
+diff --git a/mm/mmap.c b/mm/mmap.c
+index 39576e9..ae18a48 100644
+--- a/mm/mmap.c
++++ b/mm/mmap.c
+@@ -1870,7 +1870,7 @@ find_extend_vma(struct mm_struct * mm, unsigned long addr)
+ 	return vma;
+ }
+ #endif
+-EXPORT_SYMBOL(find_extend_vma);
++
+ /*
+  * Ok - we have the memory areas we should free on the vma list,
+  * so release them, and do the vma updates.
+-- 
+1.7.1
+

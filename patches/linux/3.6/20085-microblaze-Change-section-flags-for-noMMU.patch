@@ -1,0 +1,36 @@
+From 7857a9b101e20b66dd4673c6e9eaba0d47e0e904 Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Fri, 21 Dec 2012 10:53:40 +0100
+Subject: [PATCH] microblaze: Change section flags for noMMU
+
+All files which uses user unified macros from uaccess.h
+(get_user/put_user/clear_user/copy_tofrom_user/
+strnlen_user and strncpy_user) generate this
+warning messages:
+Assembler messages:
+Warning: ignoring changed section attributes for .discard
+
+Setting up discard executable section flang for __EX_TABLE_SECTION
+macro removed all these warnings.
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+---
+ arch/microblaze/include/asm/uaccess.h |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/arch/microblaze/include/asm/uaccess.h b/arch/microblaze/include/asm/uaccess.h
+index 927540d..a1ab5f0 100644
+--- a/arch/microblaze/include/asm/uaccess.h
++++ b/arch/microblaze/include/asm/uaccess.h
+@@ -108,7 +108,7 @@ static inline int ___range_ok(unsigned long addr, unsigned long size)
+ # define __EX_TABLE_SECTION	".section __ex_table,\"a\"\n"
+ #else
+ # define __FIXUP_SECTION	".section .discard,\"ax\"\n"
+-# define __EX_TABLE_SECTION	".section .discard,\"a\"\n"
++# define __EX_TABLE_SECTION	".section .discard,\"ax\"\n"
+ #endif
+ 
+ extern unsigned long __copy_tofrom_user(void __user *to,
+-- 
+1.7.1
+

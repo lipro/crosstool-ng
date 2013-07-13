@@ -1,0 +1,30 @@
+From db331a67adb3882899499d2356f2ca5c96bb840a Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Fri, 19 Oct 2012 17:52:13 +0200
+Subject: [PATCH] usb: Kconfig: Resort Kconfig option
+
+And also remove old ARCH_XILINX.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ drivers/usb/Kconfig |    3 +--
+ 1 files changed, 1 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/usb/Kconfig b/drivers/usb/Kconfig
+index 9dac09b..c2ed1dd 100644
+--- a/drivers/usb/Kconfig
++++ b/drivers/usb/Kconfig
+@@ -44,9 +44,8 @@ config USB_ARCH_HAS_EHCI
+ 	default y if PLAT_SPEAR
+ 	default y if PLAT_S5P
+ 	default y if ARCH_MSM
+-	default y if ARCH_XILINX
+-	default y if ARCH_ZYNQ
+ 	default y if MICROBLAZE
++	default y if ARCH_ZYNQ
+ 	default y if SPARC_LEON
+ 	default y if ARCH_MMP
+ 	default y if MACH_LOONGSON1
+-- 
+1.7.1
+

@@ -1,0 +1,43 @@
+From bbe8263f1e9e5c781c189f6afc53657ba912041d Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Wed, 1 Aug 2012 10:09:28 +0200
+Subject: [PATCH] microblaze: Remove additional andi which has been already done
+
+Remove one additional step.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ arch/microblaze/kernel/hw_exception_handler.S |    3 ---
+ 1 files changed, 0 insertions(+), 3 deletions(-)
+
+diff --git a/arch/microblaze/kernel/hw_exception_handler.S b/arch/microblaze/kernel/hw_exception_handler.S
+index 52b9feb..61b3a1f 100644
+--- a/arch/microblaze/kernel/hw_exception_handler.S
++++ b/arch/microblaze/kernel/hw_exception_handler.S
+@@ -615,7 +615,6 @@ ex_handler_done:
+ 		tophys(r5,r5)
+ 		BSRLI(r6,r3,PTE_SHIFT) /* Compute PTE address */
+ 		andi	r6, r6, PAGE_SIZE - 4
+-		andi	r5, r5, PAGE_MASK + 0x3
+ 		or	r5, r5, r6
+ 		lwi	r4, r5, 0		/* Get Linux PTE */
+ 
+@@ -717,7 +716,6 @@ ex_handler_done:
+ 		tophys(r5,r5)
+ 		BSRLI(r6,r3,PTE_SHIFT) /* Compute PTE address */
+ 		andi	r6, r6, PAGE_SIZE - 4
+-		andi	r5, r5, PAGE_MASK + 0x3
+ 		or	r5, r5, r6
+ 		lwi	r4, r5, 0		/* Get Linux PTE */
+ 
+@@ -789,7 +787,6 @@ ex_handler_done:
+ 		tophys(r5,r5)
+ 		BSRLI(r6,r3,PTE_SHIFT) /* Compute PTE address */
+ 		andi	r6, r6, PAGE_SIZE - 4
+-		andi	r5, r5, PAGE_MASK + 0x3
+ 		or	r5, r5, r6
+ 		lwi	r4, r5, 0		/* Get Linux PTE */
+ 
+-- 
+1.7.1
+

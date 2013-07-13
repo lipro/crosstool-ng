@@ -1,0 +1,236 @@
+From f24dce068a0fd557e37b5cffbe63e36874a794b1 Mon Sep 17 00:00:00 2001
+From: Soren Brinkmann <soren.brinkmann@xilinx.com>
+Date: Wed, 9 Jan 2013 14:29:12 -0800
+Subject: [PATCH] arm: zynq: Move PMU to DT
+
+Remove the PMU device from BSP code and move the PMU into the dts.
+
+Signed-off-by: Soren Brinkmann <soren.brinkmann@xilinx.com>
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+---
+ arch/arm/boot/dts/zynq-afx-nand.dts    |    6 ++++++
+ arch/arm/boot/dts/zynq-afx-nor.dts     |    6 ++++++
+ arch/arm/boot/dts/zynq-ep107.dts       |    6 ++++++
+ arch/arm/boot/dts/zynq-zc702.dts       |    6 ++++++
+ arch/arm/boot/dts/zynq-zc706.dts       |    6 ++++++
+ arch/arm/boot/dts/zynq-zc770-xm010.dts |    6 ++++++
+ arch/arm/boot/dts/zynq-zc770-xm011.dts |    6 ++++++
+ arch/arm/boot/dts/zynq-zc770-xm012.dts |    7 +++++++
+ arch/arm/boot/dts/zynq-zc770-xm013.dts |    6 ++++++
+ arch/arm/boot/dts/zynq-zed.dts         |    5 +++++
+ arch/arm/mach-zynq/platform_devices.c  |   15 ---------------
+ 11 files changed, 60 insertions(+), 15 deletions(-)
+
+diff --git a/arch/arm/boot/dts/zynq-afx-nand.dts b/arch/arm/boot/dts/zynq-afx-nand.dts
+index ce646ea..32c6d71 100644
+--- a/arch/arm/boot/dts/zynq-afx-nand.dts
++++ b/arch/arm/boot/dts/zynq-afx-nand.dts
+@@ -17,6 +17,12 @@
+ 		linux,stdout-path = "/amba@0/uart@E0001000";
+ 	};
+ 
++	pmu {
++		compatible = "arm,cortex-a9-pmu";
++		interrupts = <0 5 4>, <0 6 4>;
++		interrupt-parent = <&gic>;
++	};
++
+ 	amba@0 {
+ 		compatible = "simple-bus";
+ 		#address-cells = <0x1>;
+diff --git a/arch/arm/boot/dts/zynq-afx-nor.dts b/arch/arm/boot/dts/zynq-afx-nor.dts
+index fff2ea6..a0197ba 100644
+--- a/arch/arm/boot/dts/zynq-afx-nor.dts
++++ b/arch/arm/boot/dts/zynq-afx-nor.dts
+@@ -17,6 +17,12 @@
+ 		linux,stdout-path = "/amba@0/uart@E0001000";
+ 	};
+ 
++	pmu {
++		compatible = "arm,cortex-a9-pmu";
++		interrupts = <0 5 4>, <0 6 4>;
++		interrupt-parent = <&gic>;
++	};
++
+ 	amba@0 {
+ 		compatible = "simple-bus";
+ 		#address-cells = <0x1>;
+diff --git a/arch/arm/boot/dts/zynq-ep107.dts b/arch/arm/boot/dts/zynq-ep107.dts
+index 09b46fa..31b89db 100644
+--- a/arch/arm/boot/dts/zynq-ep107.dts
++++ b/arch/arm/boot/dts/zynq-ep107.dts
+@@ -29,6 +29,12 @@
+ 		linux,stdout-path = &uart0;
+ 	};
+ 
++	pmu {
++		compatible = "arm,cortex-a9-pmu";
++		interrupts = <0 5 4>, <0 6 4>;
++		interrupt-parent = <&gic>;
++	};
++
+ 	amba {
+ 		compatible = "simple-bus";
+ 		#address-cells = <1>;
+diff --git a/arch/arm/boot/dts/zynq-zc702.dts b/arch/arm/boot/dts/zynq-zc702.dts
+index 782c228..4c9d69f 100644
+--- a/arch/arm/boot/dts/zynq-zc702.dts
++++ b/arch/arm/boot/dts/zynq-zc702.dts
+@@ -16,6 +16,12 @@
+ 		linux,stdout-path = "/amba@0/uart@E0001000";
+ 	};
+ 
++	pmu {
++		compatible = "arm,cortex-a9-pmu";
++		interrupts = <0 5 4>, <0 6 4>;
++		interrupt-parent = <&gic>;
++	};
++
+ 	amba@0 {
+ 		compatible = "simple-bus";
+ 		#address-cells = <0x1>;
+diff --git a/arch/arm/boot/dts/zynq-zc706.dts b/arch/arm/boot/dts/zynq-zc706.dts
+index 1561c07..5872865 100644
+--- a/arch/arm/boot/dts/zynq-zc706.dts
++++ b/arch/arm/boot/dts/zynq-zc706.dts
+@@ -16,6 +16,12 @@
+ 		linux,stdout-path = "/amba@0/uart@E0001000";
+ 	};
+ 
++	pmu {
++		compatible = "arm,cortex-a9-pmu";
++		interrupts = <0 5 4>, <0 6 4>;
++		interrupt-parent = <&gic>;
++	};
++
+ 	amba@0 {
+ 		compatible = "simple-bus";
+ 		#address-cells = <0x1>;
+diff --git a/arch/arm/boot/dts/zynq-zc770-xm010.dts b/arch/arm/boot/dts/zynq-zc770-xm010.dts
+index 5da863c..177965d 100644
+--- a/arch/arm/boot/dts/zynq-zc770-xm010.dts
++++ b/arch/arm/boot/dts/zynq-zc770-xm010.dts
+@@ -16,6 +16,12 @@
+ 		linux,stdout-path = "/amba@0/uart@E0001000";
+ 	};
+ 
++	pmu {
++		compatible = "arm,cortex-a9-pmu";
++		interrupts = <0 5 4>, <0 6 4>;
++		interrupt-parent = <&gic>;
++	};
++
+ 	amba@0 {
+ 		compatible = "simple-bus";
+ 		#address-cells = <0x1>;
+diff --git a/arch/arm/boot/dts/zynq-zc770-xm011.dts b/arch/arm/boot/dts/zynq-zc770-xm011.dts
+index 651bcb9..e8bf6ea 100644
+--- a/arch/arm/boot/dts/zynq-zc770-xm011.dts
++++ b/arch/arm/boot/dts/zynq-zc770-xm011.dts
+@@ -17,6 +17,12 @@
+ 		linux,stdout-path = "/amba@0/uart@E0001000";
+ 	};
+ 
++	pmu {
++		compatible = "arm,cortex-a9-pmu";
++		interrupts = <0 5 4>, <0 6 4>;
++		interrupt-parent = <&gic>;
++	};
++
+ 	amba@0 {
+ 		compatible = "simple-bus";
+ 		#address-cells = <0x1>;
+diff --git a/arch/arm/boot/dts/zynq-zc770-xm012.dts b/arch/arm/boot/dts/zynq-zc770-xm012.dts
+index 1111f1a..b081c4c 100644
+--- a/arch/arm/boot/dts/zynq-zc770-xm012.dts
++++ b/arch/arm/boot/dts/zynq-zc770-xm012.dts
+@@ -17,6 +17,13 @@
+ 		linux,stdout-path = "/amba@0/uart@E0001000";
+ 	};
+ 
++	pmu {
++		compatible = "arm,cortex-a9-pmu";
++		interrupts = <0 5 4>, <0 6 4>;
++		interrupt-parent = <&gic>;
++	};
++
++
+ 	amba@0 {
+ 		compatible = "simple-bus";
+ 		#address-cells = <0x1>;
+diff --git a/arch/arm/boot/dts/zynq-zc770-xm013.dts b/arch/arm/boot/dts/zynq-zc770-xm013.dts
+index b1f70b0..01ea70e 100644
+--- a/arch/arm/boot/dts/zynq-zc770-xm013.dts
++++ b/arch/arm/boot/dts/zynq-zc770-xm013.dts
+@@ -16,6 +16,12 @@
+ 		linux,stdout-path = "/amba@0/uart@E0000000";
+ 	};
+ 
++	pmu {
++		compatible = "arm,cortex-a9-pmu";
++		interrupts = <0 5 4>, <0 6 4>;
++		interrupt-parent = <&gic>;
++	};
++
+ 	amba@0 {
+ 		compatible = "simple-bus";
+ 		#address-cells = <0x1>;
+diff --git a/arch/arm/boot/dts/zynq-zed.dts b/arch/arm/boot/dts/zynq-zed.dts
+index 5e9ff6b..897fa49 100644
+--- a/arch/arm/boot/dts/zynq-zed.dts
++++ b/arch/arm/boot/dts/zynq-zed.dts
+@@ -173,6 +173,11 @@
+ 			compatible = "xlnx,ps7-pl310-1.00.a", "arm,pl310-cache";
+ 			reg = < 0xf8f02000 0x1000 >;
+ 		} ;
++		pmu {
++			compatible = "arm,cortex-a9-pmu";
++			interrupts = <0 5 4>, <0 6 4>;
++			interrupt-parent = <&ps7_scugic_0>;
++		};
+ 		ps7_qspi_0: ps7-qspi@e000d000 {
+ 			bus-num = <0>;
+ 			compatible = "xlnx,ps7-qspi-1.00.a";
+diff --git a/arch/arm/mach-zynq/platform_devices.c b/arch/arm/mach-zynq/platform_devices.c
+index c3e3500..f4094e1 100644
+--- a/arch/arm/mach-zynq/platform_devices.c
++++ b/arch/arm/mach-zynq/platform_devices.c
+@@ -22,7 +22,6 @@
+ #include <linux/amba/xilinx_dma.h>
+ #include <linux/xilinx_devices.h>
+ #include <mach/dma.h>
+-#include <asm/pmu.h>
+ #include "common.h"
+ 
+ #define DMAC0_BASE		(0xF8003000)
+@@ -86,19 +85,6 @@ static struct platform_device xilinx_dma_test = {
+ 
+ #endif
+ 
+-static struct resource xilinx_pmu_resource = {
+-        .start  = 37,
+-        .end    = 38,
+-        .flags  = IORESOURCE_IRQ,
+-};
+-
+-static struct platform_device xilinx_pmu_device = {
+-        .name           = "arm-pmu",
+-        .id             = ARM_PMU_DEVICE_CPU,
+-        .num_resources  = 1,
+-	.resource	= &xilinx_pmu_resource,
+-};
+-
+ /* add all platform devices to the following table so they
+  * will be registered
+  */
+@@ -108,7 +94,6 @@ static struct platform_device *xilinx_pdevices[] __initdata = {
+ #ifdef CONFIG_XILINX_TEST
+ 	&xilinx_dma_test,
+ #endif
+-	&xilinx_pmu_device,
+ };
+ 
+ /**
+-- 
+1.7.1
+

@@ -1,0 +1,32 @@
+From 8eb1006e9687236aa6f50d313624171d8328004e Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Fri, 1 Feb 2013 13:16:16 +0100
+Subject: [PATCH] xilinx: Remove ancient xi2cps_platform_data structure
+
+Remove this unused structure.
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+---
+ include/linux/xilinx_devices.h |    6 ------
+ 1 files changed, 0 insertions(+), 6 deletions(-)
+
+diff --git a/include/linux/xilinx_devices.h b/include/linux/xilinx_devices.h
+index 38ad997..84c1402 100644
+--- a/include/linux/xilinx_devices.h
++++ b/include/linux/xilinx_devices.h
+@@ -100,12 +100,6 @@ struct xlltemac_platform_data {
+ /* Flags related to XGPIO device features */
+ #define XGPIO_IS_DUAL		0x00000001
+ 
+-/* PSS-I2C platform data */
+-struct xi2cps_platform_data {
+-	unsigned int input_clk;
+-	unsigned int i2c_clk;
+-};
+-
+ /*- PS USB Controller IP -*/
+ enum xusbps_usb2_operating_modes {
+ 	XUSBPS_USB2_MPH_HOST,
+-- 
+1.7.1
+

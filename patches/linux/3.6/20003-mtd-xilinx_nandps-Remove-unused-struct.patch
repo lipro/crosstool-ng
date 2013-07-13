@@ -1,0 +1,34 @@
+From a10f5eaf89595f9c8480c7606e12e7510cf47f6a Mon Sep 17 00:00:00 2001
+From: Soren Brinkmann <soren.brinkmann@xilinx.com>
+Date: Mon, 3 Dec 2012 14:10:43 -0800
+Subject: [PATCH] mtd: xilinx_nandps: Remove unused struct
+
+struct xnand_platform_data is never used.
+
+Signed-off-by: Soren Brinkmann <soren.brinkmann@xilinx.com>
+Acked-by: John Linn <john.linn@xilinx.com>
+Acked-by: Michal Simek <michal.simek@xilinx.com>
+---
+ drivers/mtd/nand/xilinx_nandps.c |    6 ------
+ 1 files changed, 0 insertions(+), 6 deletions(-)
+
+diff --git a/drivers/mtd/nand/xilinx_nandps.c b/drivers/mtd/nand/xilinx_nandps.c
+index 263acf2..24b8dae 100644
+--- a/drivers/mtd/nand/xilinx_nandps.c
++++ b/drivers/mtd/nand/xilinx_nandps.c
+@@ -137,12 +137,6 @@
+ #define xnandps_write32(addr, val)	__raw_writel((val), (addr))
+ 
+ 
+-struct xnand_platform_data {
+-	unsigned int            options;
+-	struct mtd_partition    *parts;
+-	int			nr_parts;
+-};
+-
+ /**
+  * struct xnandps_command_format - Defines NAND flash command format
+  * @start_cmd:		First cycle command (Start command)
+-- 
+1.7.1
+

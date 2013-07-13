@@ -1,0 +1,28 @@
+From 81478d08b1358caf4d72f13b6235328359bf6ff2 Mon Sep 17 00:00:00 2001
+From: Paul Bolle <pebolle@tiscali.nl>
+Date: Sun, 10 Jun 2012 20:42:20 +0200
+Subject: [PATCH] microblaze: clinkage.h
+
+Nothing includes <asm/clinkage.h>. It has actually never been included
+since it was added to the tree in commit
+9981cd94d526a300dbef58048b1d281386b7289c ("microblaze_v8: clinkage.h
+linkage.h sections.h kmap_types.h"). That's not surprising, since
+including it is indistinguishable from including <linux/linkage.h>. It
+can safely be removed.
+
+Signed-off-by: Paul Bolle <pebolle@tiscali.nl>
+---
+ arch/microblaze/include/asm/clinkage.h |    1 -
+ 1 files changed, 0 insertions(+), 1 deletions(-)
+ delete mode 100644 arch/microblaze/include/asm/clinkage.h
+
+diff --git a/arch/microblaze/include/asm/clinkage.h b/arch/microblaze/include/asm/clinkage.h
+deleted file mode 100644
+index 9e21843..0000000
+--- a/arch/microblaze/include/asm/clinkage.h
++++ /dev/null
+@@ -1 +0,0 @@
+-#include <linux/linkage.h>
+-- 
+1.7.1
+

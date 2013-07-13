@@ -1,0 +1,45 @@
+From 431eb9fd05c6f5ffdf08862a8057e68a2c211bc3 Mon Sep 17 00:00:00 2001
+From: Soren Brinkmann <soren.brinkmann@xilinx.com>
+Date: Mon, 10 Dec 2012 09:50:12 -0800
+Subject: [PATCH] arm: zynq: timer: Remove unnecessary #includes
+
+Signed-off-by: Soren Brinkmann <soren.brinkmann@xilinx.com>
+Acked-by: Michal Simek <michal.simek@xilinx.com>
+Acked-by: John Linn <john.linn@xilinx.com>
+---
+ arch/arm/mach-zynq/timer.c |   10 ----------
+ 1 files changed, 0 insertions(+), 10 deletions(-)
+
+diff --git a/arch/arm/mach-zynq/timer.c b/arch/arm/mach-zynq/timer.c
+index b4633c3..05ab1b2 100644
+--- a/arch/arm/mach-zynq/timer.c
++++ b/arch/arm/mach-zynq/timer.c
+@@ -15,25 +15,15 @@
+  * GNU General Public License for more details.
+  */
+ 
+-#include <linux/kernel.h>
+-#include <linux/init.h>
+ #include <linux/interrupt.h>
+-#include <linux/irq.h>
+-#include <linux/types.h>
+-#include <linux/clocksource.h>
+ #include <linux/clockchips.h>
+-#include <linux/io.h>
+-#include <linux/of.h>
+ #include <linux/of_irq.h>
+ #include <linux/of_address.h>
+ 
+ #include <linux/clk.h>
+-#include <linux/err.h>
+ 
+ #include <asm/smp_twd.h>
+ 
+-#include "common.h"
+-
+ /*
+  * This driver configures the 2 16-bit count-up timers as follows:
+  *
+-- 
+1.7.1
+

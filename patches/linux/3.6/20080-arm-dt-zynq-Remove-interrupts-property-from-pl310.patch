@@ -1,0 +1,133 @@
+From 109576ea40247b7494291c94d3f30b565fcc40f0 Mon Sep 17 00:00:00 2001
+From: Soren Brinkmann <soren.brinkmann@xilinx.com>
+Date: Wed, 19 Dec 2012 12:06:06 -0800
+Subject: [PATCH] arm: dt: zynq: Remove interrupts property from pl310
+
+The interrupt property in the pl310 node used the wrong interrupt ID and
+is not used by the driver anyway.
+
+Reported-by: Thomas Wismer <thomas.wismer@scs.ch>
+Signed-off-by: Soren Brinkmann <soren.brinkmann@xilinx.com>
+---
+ arch/arm/boot/dts/zynq-afx-nand.dts    |    1 -
+ arch/arm/boot/dts/zynq-afx-nor.dts     |    1 -
+ arch/arm/boot/dts/zynq-ep107.dts       |    1 -
+ arch/arm/boot/dts/zynq-zc702.dts       |    1 -
+ arch/arm/boot/dts/zynq-zc706.dts       |    1 -
+ arch/arm/boot/dts/zynq-zc770-xm010.dts |    1 -
+ arch/arm/boot/dts/zynq-zc770-xm011.dts |    1 -
+ arch/arm/boot/dts/zynq-zc770-xm012.dts |    1 -
+ arch/arm/boot/dts/zynq-zc770-xm013.dts |    1 -
+ 9 files changed, 0 insertions(+), 9 deletions(-)
+
+diff --git a/arch/arm/boot/dts/zynq-afx-nand.dts b/arch/arm/boot/dts/zynq-afx-nand.dts
+index e19456b..f7e37b9 100644
+--- a/arch/arm/boot/dts/zynq-afx-nand.dts
++++ b/arch/arm/boot/dts/zynq-afx-nand.dts
+@@ -43,7 +43,6 @@
+                         reg = <0xf8f02000 0x1000>;
+                         arm,data-latency = <3 2 2>;
+                         arm,tag-latency = <2 2 2>;
+-                        interrupts = <0 34 4>;
+                 };
+ 
+ 		uart@e0001000 {
+diff --git a/arch/arm/boot/dts/zynq-afx-nor.dts b/arch/arm/boot/dts/zynq-afx-nor.dts
+index f059bfc..a7f54b0 100644
+--- a/arch/arm/boot/dts/zynq-afx-nor.dts
++++ b/arch/arm/boot/dts/zynq-afx-nor.dts
+@@ -43,7 +43,6 @@
+                         reg = <0xf8f02000 0x1000>;
+                         arm,data-latency = <3 2 2>;
+                         arm,tag-latency = <2 2 2>;
+-                        interrupts = <0 34 4>;
+                 };
+ 
+ 		uart@e0001000 {
+diff --git a/arch/arm/boot/dts/zynq-ep107.dts b/arch/arm/boot/dts/zynq-ep107.dts
+index cf55a75..e386e1c 100644
+--- a/arch/arm/boot/dts/zynq-ep107.dts
++++ b/arch/arm/boot/dts/zynq-ep107.dts
+@@ -55,7 +55,6 @@
+ 			reg = <0xf8f02000 0x1000>;
+ 			arm,data-latency = <3 2 2>;
+ 			arm,tag-latency = <3 2 2>;
+-			interrupts = <0 34 4>;
+ 		};
+ 
+ 		timer0: timer@0xf8001000 {
+diff --git a/arch/arm/boot/dts/zynq-zc702.dts b/arch/arm/boot/dts/zynq-zc702.dts
+index 34534a8..b2a7fcc 100644
+--- a/arch/arm/boot/dts/zynq-zc702.dts
++++ b/arch/arm/boot/dts/zynq-zc702.dts
+@@ -42,7 +42,6 @@
+ 			reg = <0xf8f02000 0x1000>;
+ 			arm,data-latency = <3 2 2>;
+ 			arm,tag-latency = <2 2 2>;
+-			interrupts = <0 34 4>;
+ 		};
+ 
+ 		uart@e0001000 {
+diff --git a/arch/arm/boot/dts/zynq-zc706.dts b/arch/arm/boot/dts/zynq-zc706.dts
+index b894394..d1013a3 100644
+--- a/arch/arm/boot/dts/zynq-zc706.dts
++++ b/arch/arm/boot/dts/zynq-zc706.dts
+@@ -42,7 +42,6 @@
+ 			reg = <0xf8f02000 0x1000>;
+ 			arm,data-latency = <3 2 2>;
+ 			arm,tag-latency = <2 2 2>;
+-			interrupts = <0 34 4>;
+ 		};
+ 
+ 		uart@e0001000 {
+diff --git a/arch/arm/boot/dts/zynq-zc770-xm010.dts b/arch/arm/boot/dts/zynq-zc770-xm010.dts
+index 06fcc5b..e017384 100644
+--- a/arch/arm/boot/dts/zynq-zc770-xm010.dts
++++ b/arch/arm/boot/dts/zynq-zc770-xm010.dts
+@@ -42,7 +42,6 @@
+ 			reg = <0xf8f02000 0x1000>;
+ 			arm,data-latency = <3 2 2>;
+ 			arm,tag-latency = <2 2 2>;
+-			interrupts = <0 34 4>;
+ 		};
+ 
+ 		uart@e0001000 {
+diff --git a/arch/arm/boot/dts/zynq-zc770-xm011.dts b/arch/arm/boot/dts/zynq-zc770-xm011.dts
+index ad82a17..db96c5d 100644
+--- a/arch/arm/boot/dts/zynq-zc770-xm011.dts
++++ b/arch/arm/boot/dts/zynq-zc770-xm011.dts
+@@ -43,7 +43,6 @@
+ 			reg = <0xf8f02000 0x1000>;
+ 			arm,data-latency = <3 2 2>;
+ 			arm,tag-latency = <2 2 2>;
+-			interrupts = <0 34 4>;
+ 		};
+ 
+ 		uart@e0001000 {
+diff --git a/arch/arm/boot/dts/zynq-zc770-xm012.dts b/arch/arm/boot/dts/zynq-zc770-xm012.dts
+index 1e9ed03..bea78be 100644
+--- a/arch/arm/boot/dts/zynq-zc770-xm012.dts
++++ b/arch/arm/boot/dts/zynq-zc770-xm012.dts
+@@ -44,7 +44,6 @@
+ 			reg = <0xf8f02000 0x1000>;
+ 			arm,data-latency = <3 2 2>;
+ 			arm,tag-latency = <2 2 2>;
+-			interrupts = <0 34 4>;
+ 		};
+ 
+ 		uart@e0001000 {
+diff --git a/arch/arm/boot/dts/zynq-zc770-xm013.dts b/arch/arm/boot/dts/zynq-zc770-xm013.dts
+index 1f898fd..0fdcd20 100644
+--- a/arch/arm/boot/dts/zynq-zc770-xm013.dts
++++ b/arch/arm/boot/dts/zynq-zc770-xm013.dts
+@@ -42,7 +42,6 @@
+ 			reg = <0xf8f02000 0x1000>;
+ 			arm,data-latency = <3 2 2>;
+ 			arm,tag-latency = <2 2 2>;
+-			interrupts = <0 34 4>;
+ 		};
+ 
+ 		uart@e0000000 {
+-- 
+1.7.1
+

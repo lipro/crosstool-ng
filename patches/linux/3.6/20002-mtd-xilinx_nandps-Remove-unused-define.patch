@@ -1,0 +1,27 @@
+From 95f8609b5a9692d5355e8c8b4b10cef2c9947d9f Mon Sep 17 00:00:00 2001
+From: Soren Brinkmann <soren.brinkmann@xilinx.com>
+Date: Mon, 3 Dec 2012 14:10:42 -0800
+Subject: [PATCH] mtd: xilinx_nandps: Remove unused #define
+
+Signed-off-by: Soren Brinkmann <soren.brinkmann@xilinx.com>
+Acked-by: John Linn <john.linn@xilinx.com>
+Acked-by: Michal Simek <michal.simek@xilinx.com>
+---
+ drivers/mtd/nand/xilinx_nandps.c |    1 -
+ 1 files changed, 0 insertions(+), 1 deletions(-)
+
+diff --git a/drivers/mtd/nand/xilinx_nandps.c b/drivers/mtd/nand/xilinx_nandps.c
+index 1dac1f6..263acf2 100644
+--- a/drivers/mtd/nand/xilinx_nandps.c
++++ b/drivers/mtd/nand/xilinx_nandps.c
+@@ -121,7 +121,6 @@
+  * ECC block registers bit position and bit mask
+  */
+ #define XNANDPS_ECC_BUSY	(1 << 6)	/* ECC block is busy */
+-#define XNANDPS_ECC_MASK	0x00FFFFFF	/* ECC value mask */
+ 
+ /*
+  * ONFI Get/Set features command
+-- 
+1.7.1
+

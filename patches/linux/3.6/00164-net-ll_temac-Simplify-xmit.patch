@@ -1,0 +1,36 @@
+From d925ddc6d1146c48b4f2589571b0cb4c479ed7de Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Thu, 21 Apr 2011 12:09:08 +0200
+Subject: [PATCH] net: ll_temac: Simplify xmit
+
+Use one return statement instead of two.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+CC: Anirudha Sarangi <anirudh@xilinx.com>
+CC: John Linn <John.Linn@xilinx.com>
+CC: Grant Likely <grant.likely@secretlab.ca>
+CC: Rob Herring <rob.herring@calxeda.com>
+CC: David S. Miller <davem@davemloft.net>
+---
+ drivers/net/ethernet/xilinx/ll_temac_main.c |    4 +---
+ 1 files changed, 1 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/net/ethernet/xilinx/ll_temac_main.c b/drivers/net/ethernet/xilinx/ll_temac_main.c
+index 3062e34..c060795 100644
+--- a/drivers/net/ethernet/xilinx/ll_temac_main.c
++++ b/drivers/net/ethernet/xilinx/ll_temac_main.c
+@@ -690,10 +690,8 @@ static int temac_start_xmit(struct sk_buff *skb, struct net_device *ndev)
+ 	cur_p = &lp->tx_bd_v[lp->tx_bd_tail];
+ 
+ 	if (temac_check_tx_bd_space(lp, num_frag)) {
+-		if (!netif_queue_stopped(ndev)) {
++		if (!netif_queue_stopped(ndev))
+ 			netif_stop_queue(ndev);
+-			return NETDEV_TX_BUSY;
+-		}
+ 		return NETDEV_TX_BUSY;
+ 	}
+ 
+-- 
+1.7.1
+

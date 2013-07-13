@@ -1,0 +1,28 @@
+From d900447376ae27c19e3c76693f48ec332e2a9913 Mon Sep 17 00:00:00 2001
+From: John Linn <john.linn@xilinx.com>
+Date: Fri, 7 Dec 2012 15:38:12 -0800
+Subject: [PATCH] zynq: Update defconfig
+
+Add a local version to indicate a Xilinx kernel.
+
+Signed-off-by: John Linn <john.linn@xilinx.com>
+---
+ arch/arm/configs/xilinx_zynq_defconfig |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/arch/arm/configs/xilinx_zynq_defconfig b/arch/arm/configs/xilinx_zynq_defconfig
+index a58a12c..1e62e85 100644
+--- a/arch/arm/configs/xilinx_zynq_defconfig
++++ b/arch/arm/configs/xilinx_zynq_defconfig
+@@ -28,7 +28,7 @@ CONFIG_IRQ_WORK=y
+ CONFIG_EXPERIMENTAL=y
+ CONFIG_INIT_ENV_ARG_LIMIT=32
+ CONFIG_CROSS_COMPILE=""
+-CONFIG_LOCALVERSION=""
++CONFIG_LOCALVERSION="-xilinx"
+ CONFIG_LOCALVERSION_AUTO=y
+ CONFIG_HAVE_KERNEL_GZIP=y
+ CONFIG_HAVE_KERNEL_LZMA=y
+-- 
+1.7.1
+

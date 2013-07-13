@@ -1,0 +1,28 @@
+From 2d04b74a733762e6479b32cdb98202392c06d84e Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Thu, 14 Feb 2013 09:56:18 +0100
+Subject: [PATCH] arm: zynq: timer: Fix comment
+
+Add information about structure vars.
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+---
+ arch/arm/mach-zynq/timer.c |    2 ++
+ 1 files changed, 2 insertions(+), 0 deletions(-)
+
+diff --git a/arch/arm/mach-zynq/timer.c b/arch/arm/mach-zynq/timer.c
+index a760b90..c812c81 100644
+--- a/arch/arm/mach-zynq/timer.c
++++ b/arch/arm/mach-zynq/timer.c
+@@ -68,6 +68,8 @@
+  * struct xttcps_timer - This definition defines local timer structure
+  *
+  * @base_addr:	Base address of timer
++ * @clk:	Associated clock source
++ * @clk_rate_change_nb	Notifier block for clock rate changes
+  */
+ struct xttcps_timer {
+ 	void __iomem *base_addr;
+-- 
+1.7.1
+

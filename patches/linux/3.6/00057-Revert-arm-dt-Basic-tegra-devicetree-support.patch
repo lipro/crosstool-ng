@@ -1,0 +1,29 @@
+From e1b40cd31c5f807e2e2a3a8bf7c281c9e1a59729 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Mon, 8 Oct 2012 16:05:07 +0200
+Subject: [PATCH] Revert "arm/dt: Basic tegra devicetree support"
+
+This reverts commit 70fe4244cc05aea886e82e862e5be84a76a57fc7.
+---
+ arch/arm/mach-tegra/board-harmony.c |    5 -----
+ 1 files changed, 0 insertions(+), 5 deletions(-)
+
+diff --git a/arch/arm/mach-tegra/board-harmony.c b/arch/arm/mach-tegra/board-harmony.c
+index 5aa3dc0..e65e837 100644
+--- a/arch/arm/mach-tegra/board-harmony.c
++++ b/arch/arm/mach-tegra/board-harmony.c
+@@ -183,11 +183,6 @@ static void __init tegra_harmony_init(void)
+ 	harmony_regulator_init();
+ }
+ 
+-static const char * tegra_harmony_board_compat[] = {
+-	"nvidia,harmony",
+-	NULL
+-};
+-
+ MACHINE_START(HARMONY, "harmony")
+ 	.atag_offset	= 0x100,
+ 	.fixup		= tegra_harmony_fixup,
+-- 
+1.7.1
+

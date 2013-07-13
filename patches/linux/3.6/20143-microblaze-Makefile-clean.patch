@@ -1,0 +1,39 @@
+From fcb7955047b4ad6e673191ccd4cfd9be636e4783 Mon Sep 17 00:00:00 2001
+From: Jason Wu <j.wu@xilinx.com>
+Date: Thu, 31 Jan 2013 13:59:09 +1000
+Subject: [PATCH] microblaze: Makefile clean
+
+Remove unnecessary variables
+
+Signed-off-by: Jason Wu <huanyu@xilinx.com>
+---
+ arch/microblaze/Makefile |    9 +++------
+ 1 files changed, 3 insertions(+), 6 deletions(-)
+
+diff --git a/arch/microblaze/Makefile b/arch/microblaze/Makefile
+index b23c40e..12bd2ea 100644
+--- a/arch/microblaze/Makefile
++++ b/arch/microblaze/Makefile
+@@ -69,16 +69,13 @@ export MMU DTB
+ 
+ all: linux.bin
+ 
+-# With make 3.82 we cannot mix normal and wildcard targets
+-BOOT_TARGETS1 = linux.bin linux.bin.gz
+-BOOT_TARGETS2 = simpleImage.%
+-
+ archclean:
+ 	$(Q)$(MAKE) $(clean)=$(boot)
+ 
+-$(BOOT_TARGETS1): vmlinux
++linux.bin linux.bin.gz: vmlinux
+ 	$(Q)$(MAKE) $(build)=$(boot) $(boot)/$@
+-$(BOOT_TARGETS2): vmlinux
++
++simpleImage.%: vmlinux
+ 	$(Q)$(MAKE) $(build)=$(boot) $(boot)/$@
+ 
+ define archhelp
+-- 
+1.7.1
+

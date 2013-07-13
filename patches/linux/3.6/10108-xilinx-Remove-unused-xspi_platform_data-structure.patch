@@ -1,0 +1,37 @@
+From bf5bb6eeedf85f221418edb4156c59366df2130e Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Wed, 28 Nov 2012 17:12:02 +0100
+Subject: [PATCH] xilinx: Remove unused xspi_platform_data structure
+
+spi-xilinx is using the same structure name but
+it is defined in include/linux/spi/xilinx_spi.h.
+It is historical relic that it wasn't removed when
+spi driver went to mainline.
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+Acked-by: John Linn <john.linn@xilinx.com>
+---
+ include/linux/xilinx_devices.h |    7 -------
+ 1 files changed, 0 insertions(+), 7 deletions(-)
+
+diff --git a/include/linux/xilinx_devices.h b/include/linux/xilinx_devices.h
+index 12a717b..454deed 100644
+--- a/include/linux/xilinx_devices.h
++++ b/include/linux/xilinx_devices.h
+@@ -95,13 +95,6 @@ struct xlltemac_platform_data {
+ 	u8 mac_addr[6];
+ };
+ 
+-/* SPI Controller IP */
+-struct xspi_platform_data {
+-	s16 bus_num;
+-	u16 num_chipselect;
+-	u32 speed_hz;
+-};
+-
+ /*- GPIO -*/
+ 
+ /* Flags related to XGPIO device features */
+-- 
+1.7.1
+

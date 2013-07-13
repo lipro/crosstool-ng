@@ -1,0 +1,209 @@
+From 1e0de27fb76e0eeb0c8db6b74fb0d9790220a5b4 Mon Sep 17 00:00:00 2001
+From: John Linn <john.linn@xilinx.com>
+Date: Wed, 14 Nov 2012 13:38:05 -0800
+Subject: [PATCH] arm: zynq: Move devices to DT for the 770-DC4
+
+The I2C Si570 and the SPI EEPROM are removed from
+the platform data and added to the device tree
+for the ZC770 with DC4 (XM013).
+
+Now there is no longer any board specific file
+needed for this board.
+
+Signed-off-by: John Linn <john.linn@xilinx.com>
+Acked-by: Michal Simek <michal.simek@xilinx.com>
+---
+ arch/arm/boot/dts/zynq-zc770-xm013.dts |   23 ++++++-
+ arch/arm/mach-zynq/Makefile            |    2 +-
+ arch/arm/mach-zynq/board_zc770_xm013.c |  118 --------------------------------
+ 3 files changed, 23 insertions(+), 120 deletions(-)
+ delete mode 100644 arch/arm/mach-zynq/board_zc770_xm013.c
+
+diff --git a/arch/arm/boot/dts/zynq-zc770-xm013.dts b/arch/arm/boot/dts/zynq-zc770-xm013.dts
+index 97ade92..faab8e3 100644
+--- a/arch/arm/boot/dts/zynq-zc770-xm013.dts
++++ b/arch/arm/boot/dts/zynq-zc770-xm013.dts
+@@ -2,7 +2,7 @@
+ 
+ / {
+ 	model = "Xilinx Zynq ZC770 XM013 (DC4)";
+-	compatible = "xlnx,zynq-zc770-xm013";
++	compatible = "xlnx,zynq-zc770";
+ 	#address-cells = <0x1>;
+ 	#size-cells = <0x1>;
+ 	interrupt-parent = <0x1>;
+@@ -97,6 +97,18 @@
+ 			speed-hz = <166666700>;
+ 			bus-num = <0>;
+ 			num-chip-select = <4>;
++
++			#address-cells = <1>;
++			#size-cells = <0>;
++			eeprom: at25@0 {
++				at25,byte-len = <8192>;
++				at25,addr-mode = <2>;
++				at25,page-size = <32>;
++
++				compatible = "atmel,at25";
++				reg = <2>;
++				spi-max-frequency = <1000000>;
++			};
+ 		};
+ 
+ 		i2c1: i2c@e0005000 {
+@@ -107,6 +119,15 @@
+ 			bus-id = <0>;
+ 			input-clk = <133000000>;
+ 			i2c-clk = <100000>;
++
++			#address-cells = <1>;
++			#size-cells = <0>;
++			osc@55 {
++				compatible = "si570";
++				reg = <0x55>;
++				factory-fout = <156250000>;
++				initial-fout = <148500000>;
++			};
+ 		};
+ 
+ 		qspi0: spi@e000d000 {
+diff --git a/arch/arm/mach-zynq/Makefile b/arch/arm/mach-zynq/Makefile
+index b5e80d1..88667fb 100644
+--- a/arch/arm/mach-zynq/Makefile
++++ b/arch/arm/mach-zynq/Makefile
+@@ -5,7 +5,7 @@
+ # Common support
+ obj-y	:= common.o timer.o slcr.o \
+ 		scu_gtimer.o board_ep107.o board_zc702.o board_zc770.o \
+-		board_zc770_xm013.o pl330.o platform_devices.o
++		pl330.o platform_devices.o
+ 
+ obj-$(CONFIG_HOTPLUG_CPU)	+= hotplug.o
+ obj-$(CONFIG_SMP)		+= platsmp.o
+diff --git a/arch/arm/mach-zynq/board_zc770_xm013.c b/arch/arm/mach-zynq/board_zc770_xm013.c
+deleted file mode 100644
+index 8680a91..0000000
+--- a/arch/arm/mach-zynq/board_zc770_xm013.c
++++ /dev/null
+@@ -1,118 +0,0 @@
+-/*
+- *  Copyright (C) 2011 Xilinx
+- *
+- * This program is free software; you can redistribute it and/or modify
+- * it under the terms of the GNU General Public License as published by
+- * the Free Software Foundation; either version 2 of the License, or
+- * (at your option) any later version.
+- *
+- * You should have received a copy of the GNU General Public License
+- * along with this program; if not, write to the Free Software
+- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+- */
+-
+-#include <linux/types.h>
+-#include <linux/init.h>
+-#include <linux/of_platform.h>
+-
+-#include <linux/spi/spi.h>
+-#include <linux/spi/eeprom.h>
+-#include <linux/platform_device.h>
+-#include <linux/device.h>
+-#include <linux/mtd/physmap.h>
+-#include <linux/spi/flash.h>
+-#include <linux/xilinx_devices.h>
+-#include <linux/i2c.h>
+-#include <linux/i2c/si570.h>
+-
+-#include <asm/mach-types.h>
+-#include <asm/mach/arch.h>
+-
+-#include <asm/hardware/gic.h>
+-#include "common.h"
+-
+-#define IRQ_QSPI0		51
+-#define IRQ_SPI1		58
+-
+-#ifdef CONFIG_SPI_SPIDEV
+-
+-static struct xspi_platform_data spi_0_pdata = {
+-	.speed_hz = 10000000,
+-	.bus_num = 0,
+-	.num_chipselect = 1
+-};
+-
+-#else 
+-
+-static struct spi_eeprom at25640_0 = {
+-        .name           = "at25LC640",
+-        .byte_len       = 8*1024,
+-        .page_size      = 32,
+-        .flags          = EE_ADDR2,
+-};
+-
+-static struct spi_board_info spi_devs[] __initdata = {
+-        {
+-                .modalias = "at25",
+-                .max_speed_hz = 1000000,
+-                .bus_num = 0,
+-                .chip_select = 2,
+-                .platform_data = &at25640_0,
+-        },
+-};
+-
+-#endif
+-
+-#if defined(CONFIG_SI570)
+-
+-static struct si570_platform_data si570_0 = {
+-	.factory_fout = 10000000LL,
+-	.initial_fout = 133000000,
+-};
+-
+-static struct i2c_board_info __initdata si570_board_info[] = {
+-	{
+-		I2C_BOARD_INFO("si570", 0x55),
+-		.platform_data = &si570_0,
+-	}
+-};
+-
+-#endif /* CONFIG_SI570 */
+-	
+-extern struct sys_timer xttcpss_sys_timer;
+-
+-static void __init board_zc770_xm013_init(void)
+-{
+-
+-	/* initialize the xilinx common code before the board
+-	 * specific
+-	 */
+-	xilinx_init_machine();
+-
+-#ifndef CONFIG_SPI_SPIDEV
+-	spi_register_board_info(&spi_devs[0], 
+-		ARRAY_SIZE(spi_devs));
+-#endif
+-
+-#if defined(CONFIG_SI570)
+-	i2c_register_board_info(0, si570_board_info,
+-				ARRAY_SIZE(si570_board_info));
+-#endif
+-
+-}
+-
+-static const char *xilinx_dt_match[] = {
+-	"xlnx,zynq-zc770-xm013",
+-	NULL
+-};
+-
+-MACHINE_START(XILINX_EP107, "Xilinx Zynq Platform")
+-	.map_io		= xilinx_map_io,
+-	.init_irq	= xilinx_irq_init,
+-	.handle_irq	= gic_handle_irq,
+-	.init_machine	= board_zc770_xm013_init,
+-	.timer		= &xttcpss_sys_timer,
+-	.dt_compat	= xilinx_dt_match,
+-	.reserve	= xilinx_memory_init,
+-	.restart	= xilinx_system_reset,
+-MACHINE_END
+-- 
+1.7.1
+

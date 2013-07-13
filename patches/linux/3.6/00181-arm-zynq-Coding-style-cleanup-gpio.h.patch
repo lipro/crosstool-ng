@@ -1,0 +1,25 @@
+From 2f5ac72a4f9757b52e98254f90a4c39372e82bc9 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Mon, 22 Oct 2012 12:36:54 +0200
+Subject: [PATCH] arm: zynq: Coding style cleanup gpio.h
+
+No functional changes.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ arch/arm/mach-zynq/include/mach/gpio.h |    2 --
+ 1 files changed, 0 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/mach-zynq/include/mach/gpio.h b/arch/arm/mach-zynq/include/mach/gpio.h
+index df1b13a..47d0c96 100755
+--- a/arch/arm/mach-zynq/include/mach/gpio.h
++++ b/arch/arm/mach-zynq/include/mach/gpio.h
+@@ -64,5 +64,3 @@ void xgpiodf_set_bypass_mode(struct gpio_chip *chip, unsigned int pin);
+ void xgpiodf_set_normal_mode(struct gpio_chip *chip, unsigned int pin);
+ 
+ #endif /* __ASM_ARCH_GPIO_H */
+-
+-
+-- 
+1.7.1
+

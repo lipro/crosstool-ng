@@ -1,0 +1,29 @@
+From b422c6a69174fd59a3ac1e0970522f80b3d1751c Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Mon, 8 Oct 2012 13:24:09 +0200
+Subject: [PATCH] dma: Resort options in Makefile
+
+List should be sorted by name. Move xilinx to the end.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ drivers/dma/Makefile |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/drivers/dma/Makefile b/drivers/dma/Makefile
+index 853d7a4..2be9587 100644
+--- a/drivers/dma/Makefile
++++ b/drivers/dma/Makefile
+@@ -28,8 +28,8 @@ obj-$(CONFIG_TEGRA20_APB_DMA) += tegra20-apb-dma.o
+ obj-$(CONFIG_PL330_DMA) += pl330.o
+ obj-$(CONFIG_PCH_DMA) += pch_dma.o
+ obj-$(CONFIG_AMBA_PL08X) += amba-pl08x.o
+-obj-$(CONFIG_XILINX_DMA) += xilinx_dma.o
+ obj-$(CONFIG_EP93XX_DMA) += ep93xx_dma.o
+ obj-$(CONFIG_DMA_SA11X0) += sa11x0-dma.o
+ obj-$(CONFIG_MMP_TDMA) += mmp_tdma.o
+ obj-$(CONFIG_DMA_OMAP) += omap-dma.o
++obj-$(CONFIG_XILINX_DMA) += xilinx_dma.o
+-- 
+1.7.1
+

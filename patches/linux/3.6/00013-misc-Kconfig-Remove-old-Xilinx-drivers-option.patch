@@ -1,0 +1,47 @@
+From 8a3e04baa2369404f8de5ced3a4186241ce2dadd Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Mon, 8 Oct 2012 13:46:44 +0200
+Subject: [PATCH] misc: Kconfig: Remove old Xilinx drivers option
+
+Remove these options for old device drivers.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ drivers/misc/Kconfig |   23 -----------------------
+ 1 files changed, 0 insertions(+), 23 deletions(-)
+
+diff --git a/drivers/misc/Kconfig b/drivers/misc/Kconfig
+index ee7ea3b..3d51788 100644
+--- a/drivers/misc/Kconfig
++++ b/drivers/misc/Kconfig
+@@ -528,27 +528,4 @@ source "drivers/misc/lis3lv02d/Kconfig"
+ source "drivers/misc/carma/Kconfig"
+ source "drivers/misc/altera-stapl/Kconfig"
+ source "drivers/misc/mei/Kconfig"
+-
+-#
+-# Xilinx devices and common device driver infrastructure
+-#
+-
+-config XILINX_DRIVERS
+-	bool
+-	depends on PPC32 || MICROBLAZE
+-   default y
+-	---help---
+-	  This option is used to enable all of the Xilinx drivers on
+-	  supported architectures.  This is often useful if you have a
+-	  Xilinx FPGA in a system, either using embedded processors
+-	  internal to the FPGA or external processors.
+-
+-config NEED_XILINX_DMAV3
+-  bool
+-
+-config NEED_XILINX_LLDMA
+-  bool
+-
+-config NEED_XILINX_IPIF
+-  bool
+ endmenu
+-- 
+1.7.1
+

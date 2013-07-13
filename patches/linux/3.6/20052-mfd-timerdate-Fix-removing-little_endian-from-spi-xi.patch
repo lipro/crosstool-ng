@@ -1,0 +1,31 @@
+From a604263e946123aa96c325b8cf26e225c699da32 Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Wed, 12 Dec 2012 13:50:02 +0100
+Subject: [PATCH] mfd: timerdate: Fix removing little_endian from spi-xilinx platform_data
+
+This fix should be the part of this patch
+"spi: spi-xilinx: Run run-time endian detection"
+(sha1: ec4170a251c1c68f9173b27e70616a13adaa33f9)
+where endian detection has been changed.
+It is done automatically now.
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+---
+ drivers/mfd/timberdale.c |    1 -
+ 1 files changed, 0 insertions(+), 1 deletions(-)
+
+diff --git a/drivers/mfd/timberdale.c b/drivers/mfd/timberdale.c
+index cccc626..1bd00d0 100644
+--- a/drivers/mfd/timberdale.c
++++ b/drivers/mfd/timberdale.c
+@@ -145,7 +145,6 @@ static struct spi_board_info timberdale_spi_8bit_board_info[] = {
+ 
+ static __devinitdata struct xspi_platform_data timberdale_xspi_platform_data = {
+ 	.num_chipselect = 3,
+-	.little_endian = true,
+ 	/* bits per word and devices will be filled in runtime depending
+ 	 * on the HW config
+ 	 */
+-- 
+1.7.1
+

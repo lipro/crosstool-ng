@@ -1,0 +1,34 @@
+From 0abc869ac5f744fff2b3f842fa1b720ec5e459c9 Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Mon, 17 Dec 2012 16:56:25 +0100
+Subject: [PATCH] arm: zynq: pl330: Do not work with NULL res variable
+
+Return when error is found because the code below works
+with res variable with is expected to be NULL when error happen.
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+---
+ arch/arm/mach-zynq/pl330.c |    4 +++-
+ 1 files changed, 3 insertions(+), 1 deletions(-)
+
+diff --git a/arch/arm/mach-zynq/pl330.c b/arch/arm/mach-zynq/pl330.c
+index 05ed7ba..1dc2efd 100644
+--- a/arch/arm/mach-zynq/pl330.c
++++ b/arch/arm/mach-zynq/pl330.c
+@@ -1639,10 +1639,12 @@ static void pl330_init_device_data(unsigned int dev_id,
+ 
+ 	/* The 1st IRQ resource is for fault irq */
+ 	res = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
+-	if (!res)
++	if (!res) {
+ 		dev_err(&pdev->dev,
+ 			    "get_resource for IRQ resource for dev %d failed\n",
+ 			    dev_id);
++		return;
++	}
+ 
+ 	if (res->start != res->end)
+ 		dev_err(&pdev->dev, "the first IRQ resource for dev %d should "
+-- 
+1.7.1
+

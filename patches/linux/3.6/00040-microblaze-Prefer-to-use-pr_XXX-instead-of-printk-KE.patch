@@ -1,0 +1,142 @@
+From d2c34f883e5462a74e8bfe1ff0e6e09df1d04c8d Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Thu, 4 Oct 2012 14:24:58 +0200
+Subject: [PATCH] microblaze: Prefer to use pr_XXX instead of printk(KERN_XX)
+
+Fix reset.c, timer.c, setup.c file.
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ arch/microblaze/kernel/reset.c |   14 +++++++-------
+ arch/microblaze/kernel/setup.c |    2 +-
+ arch/microblaze/kernel/timer.c |   14 +++++++-------
+ 3 files changed, 15 insertions(+), 15 deletions(-)
+
+diff --git a/arch/microblaze/kernel/reset.c b/arch/microblaze/kernel/reset.c
+index 6ce60fb..2e5079a 100644
+--- a/arch/microblaze/kernel/reset.c
++++ b/arch/microblaze/kernel/reset.c
+@@ -26,14 +26,14 @@ void of_platform_reset_gpio_probe(void)
+ 				   "hard-reset-gpios", 0);
+ 
+ 	if (!gpio_is_valid(handle)) {
+-		printk(KERN_INFO "Skipping unavailable RESET gpio %d (%s)\n",
++		pr_info("Skipping unavailable RESET gpio %d (%s)\n",
+ 				handle, "reset");
+ 		return;
+ 	}
+ 
+ 	ret = gpio_request(handle, "reset");
+ 	if (ret < 0) {
+-		printk(KERN_INFO "GPIO pin is already allocated\n");
++		pr_info("GPIO pin is already allocated\n");
+ 		return;
+ 	}
+ 
+@@ -50,7 +50,7 @@ void of_platform_reset_gpio_probe(void)
+ 	/* Setup output direction */
+ 	gpio_set_value(handle, 0);
+ 
+-	printk(KERN_INFO "RESET: Registered gpio device: %d, current val: %d\n",
++	pr_info("RESET: Registered gpio device: %d, current val: %d\n",
+ 							handle, reset_val);
+ 	return;
+ err:
+@@ -76,7 +76,7 @@ void of_platform_reset_gpio_probe(void)
+ 
+ void machine_restart(char *cmd)
+ {
+-	printk(KERN_NOTICE "Machine restart...\n");
++	pr_notice("Machine restart...\n");
+ 	gpio_system_reset();
+ 	while (1)
+ 		;
+@@ -84,21 +84,21 @@ void machine_restart(char *cmd)
+ 
+ void machine_shutdown(void)
+ {
+-	printk(KERN_NOTICE "Machine shutdown...\n");
++	pr_notice("Machine shutdown...\n");
+ 	while (1)
+ 		;
+ }
+ 
+ void machine_halt(void)
+ {
+-	printk(KERN_NOTICE "Machine halt...\n");
++	pr_notice("Machine halt...\n");
+ 	while (1)
+ 		;
+ }
+ 
+ void machine_power_off(void)
+ {
+-	printk(KERN_NOTICE "Machine power off...\n");
++	pr_notice("Machine power off...\n");
+ 	while (1)
+ 		;
+ }
+diff --git a/arch/microblaze/kernel/setup.c b/arch/microblaze/kernel/setup.c
+index 9dbc9ec..954348f 100644
+--- a/arch/microblaze/kernel/setup.c
++++ b/arch/microblaze/kernel/setup.c
+@@ -69,7 +69,7 @@ void __init setup_arch(char **cmdline_p)
+ 	xilinx_pci_init();
+ 
+ #if defined(CONFIG_SELFMOD_INTC) || defined(CONFIG_SELFMOD_TIMER)
+-	printk(KERN_NOTICE "Self modified code enable\n");
++	pr_notice("Self modified code enable\n");
+ #endif
+ 
+ #ifdef CONFIG_VT
+diff --git a/arch/microblaze/kernel/timer.c b/arch/microblaze/kernel/timer.c
+index edd3f83..aec5020 100644
+--- a/arch/microblaze/kernel/timer.c
++++ b/arch/microblaze/kernel/timer.c
+@@ -116,21 +116,21 @@ static void microblaze_timer_set_mode(enum clock_event_mode mode,
+ {
+ 	switch (mode) {
+ 	case CLOCK_EVT_MODE_PERIODIC:
+-		printk(KERN_INFO "%s: periodic\n", __func__);
++		pr_info("%s: periodic\n", __func__);
+ 		microblaze_timer0_start_periodic(freq_div_hz);
+ 		break;
+ 	case CLOCK_EVT_MODE_ONESHOT:
+-		printk(KERN_INFO "%s: oneshot\n", __func__);
++		pr_info("%s: oneshot\n", __func__);
+ 		break;
+ 	case CLOCK_EVT_MODE_UNUSED:
+-		printk(KERN_INFO "%s: unused\n", __func__);
++		pr_info("%s: unused\n", __func__);
+ 		break;
+ 	case CLOCK_EVT_MODE_SHUTDOWN:
+-		printk(KERN_INFO "%s: shutdown\n", __func__);
++		pr_info("%s: shutdown\n", __func__);
+ 		microblaze_timer0_stop();
+ 		break;
+ 	case CLOCK_EVT_MODE_RESUME:
+-		printk(KERN_INFO "%s: resume\n", __func__);
++		pr_info("%s: resume\n", __func__);
+ 		break;
+ 	}
+ }
+@@ -274,14 +274,14 @@ void __init time_init(void)
+ 	timer_num = be32_to_cpup(of_get_property(timer,
+ 						"xlnx,one-timer-only", NULL));
+ 	if (timer_num) {
+-		printk(KERN_EMERG "Please enable two timers in HW\n");
++		pr_emerg("Please   enable two timers in HW\n");
+ 		BUG();
+ 	}
+ 
+ #ifdef CONFIG_SELFMOD_TIMER
+ 	selfmod_function((int *) arr_func, timer_baseaddr);
+ #endif
+-	printk(KERN_INFO "%s #0 at 0x%08x, irq=%d\n",
++	pr_info("%s #0 at 0x%08x, irq=%d\n",
+ 		timer->name, timer_baseaddr, irq);
+ 
+ 	/* If there is clock-frequency property than use it */
+-- 
+1.7.1
+

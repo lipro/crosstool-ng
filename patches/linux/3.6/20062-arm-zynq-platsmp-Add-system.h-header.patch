@@ -1,0 +1,28 @@
+From 33abc99de81a72044f53f31903dbf15b0cc80cc9 Mon Sep 17 00:00:00 2001
+From: Soren Brinkmann <soren.brinkmann@xilinx.com>
+Date: Mon, 17 Dec 2012 10:26:59 -0800
+Subject: [PATCH] arm: zynq: platsmp: Add system.h header
+
+Adding the header to avoid sparse complaining about undeclared
+functions.
+
+Signed-off-by: Soren Brinkmann <soren.brinkmann@xilinx.com>
+---
+ arch/arm/mach-zynq/platsmp.c |    1 +
+ 1 files changed, 1 insertions(+), 0 deletions(-)
+
+diff --git a/arch/arm/mach-zynq/platsmp.c b/arch/arm/mach-zynq/platsmp.c
+index c8e86de..7e765a5 100644
+--- a/arch/arm/mach-zynq/platsmp.c
++++ b/arch/arm/mach-zynq/platsmp.c
+@@ -24,6 +24,7 @@
+ #include <asm/cacheflush.h>
+ #include <asm/smp_scu.h>
+ #include <asm/hardware/gic.h>
++#include <mach/system.h>
+ #include <mach/zynq_soc.h>
+ #include "common.h"
+ 
+-- 
+1.7.1
+

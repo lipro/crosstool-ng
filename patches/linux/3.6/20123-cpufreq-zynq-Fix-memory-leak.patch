@@ -1,0 +1,27 @@
+From f21886909b64ca05236bf1f5ae04d7cc4986f323 Mon Sep 17 00:00:00 2001
+From: Soren Brinkmann <soren.brinkmann@xilinx.com>
+Date: Wed, 9 Jan 2013 11:19:35 -0800
+Subject: [PATCH] cpufreq: zynq: Fix memory leak
+
+Free the frequency table if there are no more users.
+
+Signed-off-by: Soren Brinkmann <soren.brinkmann@xilinx.com>
+---
+ drivers/cpufreq/zynq-cpufreq.c |    1 +
+ 1 files changed, 1 insertions(+), 0 deletions(-)
+
+diff --git a/drivers/cpufreq/zynq-cpufreq.c b/drivers/cpufreq/zynq-cpufreq.c
+index 5bf14f7..a5c18ff 100644
+--- a/drivers/cpufreq/zynq-cpufreq.c
++++ b/drivers/cpufreq/zynq-cpufreq.c
+@@ -211,6 +211,7 @@ fail_ck:
+ 
+ static int zynq_cpu_exit(struct cpufreq_policy *policy)
+ {
++	freq_table_free();
+ 	clk_put(cpuclk);
+ 	return 0;
+ }
+-- 
+1.7.1
+

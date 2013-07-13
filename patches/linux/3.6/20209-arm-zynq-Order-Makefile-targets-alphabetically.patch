@@ -1,0 +1,28 @@
+From 09f393f701ccc5fd1c6cc709937c1485b89f6791 Mon Sep 17 00:00:00 2001
+From: Soren Brinkmann <soren.brinkmann@xilinx.com>
+Date: Thu, 28 Feb 2013 17:34:40 -0800
+Subject: [PATCH] arm: zynq: Order Makefile targets alphabetically
+
+Signed-off-by: Soren Brinkmann <soren.brinkmann@xilinx.com>
+---
+ arch/arm/mach-zynq/Makefile |    4 ++--
+ 1 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/mach-zynq/Makefile b/arch/arm/mach-zynq/Makefile
+index a63b74b..51d2754 100644
+--- a/arch/arm/mach-zynq/Makefile
++++ b/arch/arm/mach-zynq/Makefile
+@@ -5,8 +5,8 @@
+ # Common support
+ obj-y	:= common.o timer.o slcr.o
+ 
++obj-$(CONFIG_CPU_IDLE) 		+= cpuidle.o
+ obj-$(CONFIG_HOTPLUG_CPU)	+= hotplug.o
++obj-$(CONFIG_PCI_MSI)           += xaxipcie-msi.o
+ obj-$(CONFIG_SMP)		+= platsmp.o
+-obj-$(CONFIG_CPU_IDLE) 		+= cpuidle.o
+ obj-$(CONFIG_XILINX_AXIPCIE)    += xaxipcie.o
+-obj-$(CONFIG_PCI_MSI)           += xaxipcie-msi.o
+-- 
+1.7.1
+

@@ -1,0 +1,51 @@
+From 2530265d0e9c9bec31d9dc0c32604035c38f8fb7 Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Fri, 15 Mar 2013 15:59:14 +0100
+Subject: [PATCH] cfi: Remove CFI_MFR_NMX and use CFI_MFR_INTEL instead
+
+Do not define already defined macro.
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+---
+ drivers/mtd/chips/cfi_probe.c |    4 ++--
+ include/linux/mtd/cfi.h       |    2 --
+ 2 files changed, 2 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/mtd/chips/cfi_probe.c b/drivers/mtd/chips/cfi_probe.c
+index 9eb6abc..d29181f 100644
+--- a/drivers/mtd/chips/cfi_probe.c
++++ b/drivers/mtd/chips/cfi_probe.c
+@@ -202,7 +202,7 @@ static int __xipram cfi_chip_setup(struct map_info *map,
+ 	cfi->id = cfi_read_query16(map, base + ofs_factor);
+ 
+ 	/* Get device ID cycle 1,2,3 for Numonyx/ST devices */
+-	if ((cfi->mfr == CFI_MFR_NMX || cfi->mfr == CFI_MFR_ST)
++	if ((cfi->mfr == CFI_MFR_INTEL || cfi->mfr == CFI_MFR_ST)
+ 		&& ((cfi->id & 0xff) == 0x7e)
+ 		&& (le16_to_cpu(cfi->cfiq->P_ID) == 0x0002)) {
+ 		extendedId1 = cfi_read_query16(map, base + 0x1 * ofs_factor);
+@@ -229,7 +229,7 @@ static int __xipram cfi_chip_setup(struct map_info *map,
+ 	cfi->cfiq->MaxBufWriteSize = le16_to_cpu(cfi->cfiq->MaxBufWriteSize);
+ 
+    /* If the device is a M29EW used in 8-bit mode, adjust buffer size */
+-	if ((cfi->cfiq->MaxBufWriteSize > 0x8) && (cfi->mfr == CFI_MFR_NMX ||
++	if ((cfi->cfiq->MaxBufWriteSize > 0x8) && (cfi->mfr == CFI_MFR_INTEL ||
+ 		 cfi->mfr == CFI_MFR_ST) && (extendedId1 == 0x7E) &&
+ 		 (extendedId2 == 0x22 || extendedId2 == 0x23 || extendedId2 == 0x28) &&
+ 		 (extendedId3 == 0x01)) {
+diff --git a/include/linux/mtd/cfi.h b/include/linux/mtd/cfi.h
+index dbebcca..37ef6b1 100644
+--- a/include/linux/mtd/cfi.h
++++ b/include/linux/mtd/cfi.h
+@@ -552,8 +552,6 @@ struct cfi_fixup {
+ #define CFI_MFR_TOSHIBA		0x0098
+ #define CFI_MFR_WINBOND		0x00DA
+ 
+-#define CFI_MFR_NMX 	0x0089 /* Numonyx */
+-
+ void cfi_fixup(struct mtd_info *mtd, struct cfi_fixup* fixups);
+ 
+ typedef int (*varsize_frob_t)(struct map_info *map, struct flchip *chip,
+-- 
+1.7.1
+

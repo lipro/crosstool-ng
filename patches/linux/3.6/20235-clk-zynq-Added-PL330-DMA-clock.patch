@@ -1,0 +1,44 @@
+From 3e891d315a477116e77389dceb377d63cef3c5ed Mon Sep 17 00:00:00 2001
+From: Naveen Mamindlapalli <naveen.mamindlapalli@xilinx.com>
+Date: Tue, 12 Mar 2013 13:19:50 +0530
+Subject: [PATCH] clk: zynq: Added PL330 DMA clock.
+
+Added PL330 DMA clock.
+
+Signed-off-by: Naveen Mamindlapalli <naveenm@xilinx.com>
+---
+ drivers/clk/zynq/clk.c |   11 ++++++-----
+ 1 files changed, 6 insertions(+), 5 deletions(-)
+
+diff --git a/drivers/clk/zynq/clk.c b/drivers/clk/zynq/clk.c
+index 0a2571a..1506a28 100644
+--- a/drivers/clk/zynq/clk.c
++++ b/drivers/clk/zynq/clk.c
+@@ -558,6 +558,7 @@ void __init zynq_clock_init(void __iomem *slcr_base)
+ 			CLK_IGNORE_UNUSED, SLCR_ARM_CLK_CTRL, 27, 0,
+ 			&armclk_lock);
+ 	zynq_clkdev_add(NULL, "CPU_1X_CLK", clk);
++	clk_register_clkdev(clk, "apb_pclk", NULL);
+ 	clk_prepare(clk);
+ 	clk_enable(clk);
+ 	/* DDR clocks */
+@@ -681,11 +682,11 @@ void __init zynq_clock_init(void __iomem *slcr_base)
+ 	 */
+ 
+ 	/* One gated clock for all APER clocks. */
+-	/*
+-	 * clk = clk_register_gate(NULL, "DMA_CPU2X", "CPU_2X_CLK", 0,
+-	 *		SLCR_APER_CLK_CTRL, 0, 0, &aperclk_lock);
+-	 * zynq_clkdev_add(NULL, "DMA_APER", clk);
+-	 */
++	clk = clk_register_gate(NULL, "DMA_CPU2X", "CPU_2X_CLK", 0,
++			SLCR_APER_CLK_CTRL, 0, 0, &aperclk_lock);
++	clk_register_clkdev(clk, "dma", NULL);
++	/* pl330 driver fix for v3.6 - PM runtime is removed in v3.8 */
++	clk_prepare_enable(clk);
+ 	clk = clk_register_gate(NULL, "USB0_CPU1X", "CPU_1X_CLK", 0,
+ 			SLCR_APER_CLK_CTRL, 2, 0, &aperclk_lock);
+ 	zynq_clkdev_add(NULL, "USB0_APER", clk);
+-- 
+1.7.1
+

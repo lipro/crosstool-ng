@@ -1,0 +1,30 @@
+From c9873c246a2ffbba8009665e5421354ee604fd39 Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Tue, 11 Dec 2012 16:17:17 +0100
+Subject: [PATCH] arm: zynq: Fix sparse errors in common.c
+
+Error log:
+arch/arm/mach-zynq/common.c:210:25: warning: symbol 'xttcpss_sys_timer' shadows an earlier one
+arch/arm/mach-zynq/common.c:90:25: originally declared here
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+---
+ arch/arm/mach-zynq/common.c |    2 --
+ 1 files changed, 0 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/mach-zynq/common.c b/arch/arm/mach-zynq/common.c
+index 52a4816..343b1e6 100644
+--- a/arch/arm/mach-zynq/common.c
++++ b/arch/arm/mach-zynq/common.c
+@@ -207,8 +207,6 @@ static const char *xilinx_dt_match[] = {
+ 	NULL
+ };
+ 
+-extern struct sys_timer xttcpss_sys_timer;
+-
+ MACHINE_START(XILINX_EP107, "Xilinx Zynq Platform")
+ 	.map_io		= xilinx_map_io,
+ 	.init_irq	= xilinx_irq_init,
+-- 
+1.7.1
+

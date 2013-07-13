@@ -1,0 +1,32 @@
+From 2063f7085f1880185a70a71221432f7067b23d4d Mon Sep 17 00:00:00 2001
+From: Soren Brinkmann <soren.brinkmann@xilinx.com>
+Date: Mon, 17 Dec 2012 10:27:00 -0800
+Subject: [PATCH] arm: zynq: platsmp: Release lock in error path
+
+boot_secondary() aquired a spin lock but never released it
+in case of an error.
+
+Signed-off-by: Soren Brinkmann <soren.brinkmann@xilinx.com>
+---
+ arch/arm/mach-zynq/platsmp.c |    4 +++-
+ 1 files changed, 3 insertions(+), 1 deletions(-)
+
+diff --git a/arch/arm/mach-zynq/platsmp.c b/arch/arm/mach-zynq/platsmp.c
+index 7e765a5..672f613 100644
+--- a/arch/arm/mach-zynq/platsmp.c
++++ b/arch/arm/mach-zynq/platsmp.c
+@@ -156,8 +156,10 @@ int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
+ 	spin_lock(&boot_lock);
+ 
+ 	ret = zynq_cpu1_start(virt_to_phys(secondary_startup));
+-	if (ret)
++	if (ret) {
++		spin_unlock(&boot_lock);
+ 		return -1;
++	}
+ 
+ 	/*
+ 	 * now the secondary core is starting up let it run its
+-- 
+1.7.1
+

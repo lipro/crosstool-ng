@@ -1,0 +1,30 @@
+From 33d6f83e7535ac170cfd66183592fa4859526caf Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Mon, 8 Oct 2012 13:49:24 +0200
+Subject: [PATCH] mmc: host: Remove unneeded variable
+
+present variable is not used.
+The problem happened with wrong merge.
+Merge branch 'linus' of ../linux-2.6 into master-3.5-release
+(sha1: c62592053d088f5c52da9c259de425c5e61d2da7)
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ drivers/mmc/host/sdhci.c |    1 -
+ 1 files changed, 0 insertions(+), 1 deletions(-)
+
+diff --git a/drivers/mmc/host/sdhci.c b/drivers/mmc/host/sdhci.c
+index f13556c..9a11dc3 100644
+--- a/drivers/mmc/host/sdhci.c
++++ b/drivers/mmc/host/sdhci.c
+@@ -1970,7 +1970,6 @@ static void sdhci_tasklet_card(unsigned long param)
+ {
+ 	struct sdhci_host *host;
+ 	unsigned long flags;
+-	bool present = true;
+ 
+ 	host = (struct sdhci_host*)param;
+ 
+-- 
+1.7.1
+

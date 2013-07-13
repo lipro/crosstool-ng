@@ -1,0 +1,66 @@
+From 46a44544d4baffc1ac3efa6d38a1ffeffb478029 Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Thu, 13 Dec 2012 12:04:58 +0100
+Subject: [PATCH] arm: zynq: pl330: Remove DRIVER_DESCRIPTION and DRIVER_VERSION
+
+Cleanup driver and remove this macros.
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+---
+ arch/arm/mach-zynq/pl330.c           |    7 ++-----
+ arch/arm/mach-zynq/test/pl330_test.c |   12 ++++--------
+ 2 files changed, 6 insertions(+), 13 deletions(-)
+
+diff --git a/arch/arm/mach-zynq/pl330.c b/arch/arm/mach-zynq/pl330.c
+index 7ec81be..f4edcda 100644
+--- a/arch/arm/mach-zynq/pl330.c
++++ b/arch/arm/mach-zynq/pl330.c
+@@ -97,8 +97,6 @@
+ #include <mach/pl330.h>
+ 
+ #define DRIVER_NAME         "pl330"
+-#define DRIVER_DESCRIPTION  "pl330 driver"
+-#define DRIVER_VERSION      "1.00a"
+ 
+ #define PL330_OPTIMIZE_ICACHE
+ #define PL330_DEFAULT_BURST_SIZE 4
+@@ -2711,7 +2709,6 @@ module_exit(pl330_exit);
+ 
+ 
+ MODULE_LICENSE("GPL");
+-MODULE_DESCRIPTION(DRIVER_DESCRIPTION);
++MODULE_DESCRIPTION("pl330 driver");
+ MODULE_AUTHOR("Xilinx, Inc.");
+-MODULE_VERSION(DRIVER_VERSION);
+-
++MODULE_VERSION("1.00a");
+diff --git a/arch/arm/mach-zynq/test/pl330_test.c b/arch/arm/mach-zynq/test/pl330_test.c
+index c4aa2fb..73d016c 100644
+--- a/arch/arm/mach-zynq/test/pl330_test.c
++++ b/arch/arm/mach-zynq/test/pl330_test.c
+@@ -62,14 +62,6 @@
+  */
+ 
+ #define DRIVER_NAME         "pl330_test"
+-#define DRIVER_DESCRIPTION  "pl330 driver test"
+-#define DRIVER_VERSION      "1.00a"
+-
+-MODULE_LICENSE("GPL");
+-MODULE_DESCRIPTION(DRIVER_DESCRIPTION);
+-MODULE_AUTHOR("Xilinx, Inc.");
+-MODULE_VERSION(DRIVER_VERSION);
+-
+ 
+ /*
+ #define PL330_TEST_DEBUG
+@@ -1995,3 +1987,7 @@ module_init(pl330_test);
+ 
+ module_exit(pl330_test_exit);
+ 
++MODULE_LICENSE("GPL");
++MODULE_DESCRIPTION("pl330 driver test");
++MODULE_AUTHOR("Xilinx, Inc.");
++MODULE_VERSION("1.00a");
+-- 
+1.7.1
+

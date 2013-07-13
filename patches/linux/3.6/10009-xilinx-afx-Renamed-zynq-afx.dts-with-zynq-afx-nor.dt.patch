@@ -1,0 +1,237 @@
+From 7553897f980e3171e1cc746605ad0fe62614cb92 Mon Sep 17 00:00:00 2001
+From: Jagannadha Sutradharudu Teki <jagannadha.sutradharudu-teki@xilinx.com>
+Date: Tue, 6 Nov 2012 16:36:05 +0530
+Subject: [PATCH] xilinx: afx: Renamed zynq-afx.dts with zynq-afx-nor.dts
+
+Renamed afx device tree file.
+
+Signed-off-by: Jagannadha Sutradharudu Teki <jaganna@xilinx.com>
+Acked-by: Michal Simek <michal.simek@xilinx.com>
+---
+ arch/arm/boot/dts/zynq-afx-nor.dts |  103 ++++++++++++++++++++++++++++++++++++
+ arch/arm/boot/dts/zynq-afx.dts     |  103 ------------------------------------
+ 2 files changed, 103 insertions(+), 103 deletions(-)
+ create mode 100644 arch/arm/boot/dts/zynq-afx-nor.dts
+ delete mode 100644 arch/arm/boot/dts/zynq-afx.dts
+
+diff --git a/arch/arm/boot/dts/zynq-afx-nor.dts b/arch/arm/boot/dts/zynq-afx-nor.dts
+new file mode 100644
+index 0000000..3f04969
+--- /dev/null
++++ b/arch/arm/boot/dts/zynq-afx-nor.dts
+@@ -0,0 +1,103 @@
++/dts-v1/;
++
++/ {
++	model = "Xilinx Zynq AFX (NOR Module)";
++	compatible = "xlnx,zynq-zc770";
++	#address-cells = <0x1>;
++	#size-cells = <0x1>;
++	interrupt-parent = <0x1>;
++
++	memory {
++		device_type = "memory";
++		reg = <0x0 0x08000000>;
++	};
++
++	chosen {
++		bootargs = "console=ttyPS0,115200 root=/dev/ram rw earlyprintk";
++		linux,stdout-path = "/amba@0/uart@E0001000";
++	};
++
++	soc {
++		compatible = "xlnx,zynq";
++		clock-frequency = <33333333>;
++	};
++
++	amba@0 {
++		compatible = "simple-bus";
++		#address-cells = <0x1>;
++		#size-cells = <0x1>;
++		ranges;
++
++		gic: intc@f8f01000 {
++			interrupt-controller;
++			compatible = "arm,cortex-a9-gic";
++			#interrupt-cells = <3>;
++			reg = < 0xf8f01000 0x1000 >,
++			      < 0xf8f00100 0x0100 >;
++		};
++
++		pl310@f8f02000 {
++                        compatible = "arm,pl310-cache";
++                        cache-unified;
++                        cache-level = <2>;
++                        reg = <0xf8f02000 0x1000>;
++                        arm,data-latency = <3 2 2>;
++                        arm,tag-latency = <2 2 2>;
++                        interrupts = <0 34 4>;
++                };
++
++		uart@e0001000 {
++			compatible = "xlnx,ps7-uart-1.00.a";
++			reg = <0xE0001000 0x1000>;
++			interrupts = <0 50 0>;
++			interrupt-parent = <&gic>;
++			clock = <50000000>;
++		};
++
++		timer@0xf8001000 {
++			compatible = "xlnx,ps7-ttc-1.00.a";
++			reg = <0xf8001000 0x1000>;
++			interrupts = <0 10 0>,<0 11 0>,<0 12 0>;
++			interrupt-parent = <&gic>;
++			clock-frequency-timer0 = <133000000>;
++			clock-frequency-timer1 = <133000000>;
++			clock-frequency-timer2 = <133000000>;
++		};
++
++		nor: nor@e2000000 {
++			compatible = "cfi-flash";
++			bank-width = <1>;
++			reg = <0xE2000000 0x2000000>; /* 32MB */
++			#address-cells = <1>;
++			#size-cells = <1>;
++			partition@0 {
++				label = "nor-fsbl";
++				reg = <0x0 0x80000>; /* 512K */
++			};
++			partition@1 {
++				label = "nor-u-boot";
++				reg = <0x80000 0x80000>; /* 512K */
++			};
++			partition@2 {
++				label = "nor-linux";
++				reg = <0x100000 0x500000>; /* 5MB */
++			};
++			partition@3 {
++				label = "nor-device-tree";
++				reg = <0x600000 0x20000>; /* 128K */
++			};
++			partition@4 {
++				label = "nor-user";
++				reg = <0x620000 0x8E0000>; /* 8875K */
++			};
++			partition@5 {
++				label = "nor-scratch";
++				reg = <0xF00000 0x100000>; /* 1MB */
++			};
++			partition@6 {
++				label = "nor-rootfs";
++				reg = <0x1000000 0x1000000>; /* 16MB */
++			};
++		};
++	};
++};
+diff --git a/arch/arm/boot/dts/zynq-afx.dts b/arch/arm/boot/dts/zynq-afx.dts
+deleted file mode 100644
+index c472d5e..0000000
+--- a/arch/arm/boot/dts/zynq-afx.dts
++++ /dev/null
+@@ -1,103 +0,0 @@
+-/dts-v1/;
+-
+-/ {
+-	model = "Xilinx Zynq - AFX - minimum)";
+-	compatible = "xlnx,zynq-zc770";
+-	#address-cells = <0x1>;
+-	#size-cells = <0x1>;
+-	interrupt-parent = <0x1>;
+-
+-	memory {
+-		device_type = "memory";
+-		reg = <0x0 0x08000000>;
+-	};
+-
+-	chosen {
+-		bootargs = "console=ttyPS0,115200 root=/dev/ram rw earlyprintk";
+-		linux,stdout-path = "/amba@0/uart@E0001000";
+-	};
+-
+-	soc {
+-		compatible = "xlnx,zynq";
+-		clock-frequency = <33333333>;
+-	};
+-
+-	amba@0 {
+-		compatible = "simple-bus";
+-		#address-cells = <0x1>;
+-		#size-cells = <0x1>;
+-		ranges;
+-
+-		gic: intc@f8f01000 {
+-			interrupt-controller;
+-			compatible = "arm,cortex-a9-gic";
+-			#interrupt-cells = <3>;
+-			reg = < 0xf8f01000 0x1000 >,
+-			      < 0xf8f00100 0x0100 >;
+-		};
+-
+-		pl310@f8f02000 {
+-                        compatible = "arm,pl310-cache";
+-                        cache-unified;
+-                        cache-level = <2>;
+-                        reg = <0xf8f02000 0x1000>;
+-                        arm,data-latency = <3 2 2>;
+-                        arm,tag-latency = <2 2 2>;
+-                        interrupts = <0 34 4>;
+-                };
+-
+-		uart@e0001000 {
+-			compatible = "xlnx,ps7-uart-1.00.a";
+-			reg = <0xE0001000 0x1000>;
+-			interrupts = <0 50 0>;
+-			interrupt-parent = <&gic>;
+-			clock = <50000000>;
+-		};
+-
+-		timer@0xf8001000 {
+-			compatible = "xlnx,ps7-ttc-1.00.a";
+-			reg = <0xf8001000 0x1000>;
+-			interrupts = <0 10 0>,<0 11 0>,<0 12 0>;
+-			interrupt-parent = <&gic>;
+-			clock-frequency-timer0 = <133000000>;
+-			clock-frequency-timer1 = <133000000>;
+-			clock-frequency-timer2 = <133000000>;
+-		};
+-
+-		nor: nor@e2000000 {
+-			compatible = "cfi-flash";
+-			bank-width = <1>;
+-			reg = <0xE2000000 0x2000000>; /* 32MB */
+-			#address-cells = <1>;
+-			#size-cells = <1>;
+-			partition@0 {
+-				label = "nor-fsbl";
+-				reg = <0x0 0x80000>; /* 512K */
+-			};
+-			partition@1 {
+-				label = "nor-u-boot";
+-				reg = <0x80000 0x80000>; /* 512K */
+-			};
+-			partition@2 {
+-				label = "nor-linux";
+-				reg = <0x100000 0x500000>; /* 5MB */
+-			};
+-			partition@3 {
+-				label = "nor-device-tree";
+-				reg = <0x600000 0x20000>; /* 128K */
+-			};
+-			partition@4 {
+-				label = "nor-user";
+-				reg = <0x620000 0x8E0000>; /* 8875K */
+-			};
+-			partition@5 {
+-				label = "nor-scratch";
+-				reg = <0xF00000 0x100000>; /* 1MB */
+-			};
+-			partition@6 {
+-				label = "nor-rootfs";
+-				reg = <0x1000000 0x1000000>; /* 16MB */
+-			};
+-		};
+-	};
+-};
+-- 
+1.7.1
+

@@ -1,0 +1,40 @@
+From 5d112e9543c99b812ed2dbdb9107eb9f545df0cd Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Mon, 12 Dec 2011 14:02:47 +0100
+Subject: [PATCH] microblaze: Added fdt chosen capability for timer
+
+This lets a dts author flag a particular timer in the system as the system timer.
+If the chosen node contains a "system-timer=<&foo>" entry than that handle will
+be used to determine the system timer. In no such entry exists then the first
+found timer will be used (current behaviour).
+
+Signed-off-by: Peter A. G. Crosthwaite <peter.crosthwaite@petalogix.com>
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ arch/microblaze/kernel/timer.c |   10 +++++++++-
+ 1 files changed, 9 insertions(+), 1 deletions(-)
+
+diff --git a/arch/microblaze/kernel/timer.c b/arch/microblaze/kernel/timer.c
+index 522defa..edd3f83 100644
+--- a/arch/microblaze/kernel/timer.c
++++ b/arch/microblaze/kernel/timer.c
+@@ -257,7 +257,15 @@ void __init time_init(void)
+ 				0
+ 			};
+ #endif
+-	timer = of_find_compatible_node(NULL, NULL, "xlnx,xps-timer-1.00.a");
++	prop = of_get_property(of_chosen, "system-timer", NULL);
++	if (prop)
++		timer = of_find_node_by_phandle(be32_to_cpup(prop));
++	else
++		pr_info("No chosen timer found, using default\n");
++
++	if (!timer)
++		timer = of_find_compatible_node(NULL, NULL,
++						"xlnx,xps-timer-1.00.a");
+ 	BUG_ON(!timer);
+ 
+ 	timer_baseaddr = be32_to_cpup(of_get_property(timer, "reg", NULL));
+-- 
+1.7.1
+

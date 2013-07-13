@@ -1,0 +1,31 @@
+From 873bb385cdf440f6e5d936b7e604f43bb0821d98 Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Fri, 1 Feb 2013 13:17:32 +0100
+Subject: [PATCH] xilinx: Remove unused option for gpio
+
+XGPIO_IS_DUAL is not used in the kernel. Let's remove it.
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+---
+ include/linux/xilinx_devices.h |    5 -----
+ 1 files changed, 0 insertions(+), 5 deletions(-)
+
+diff --git a/include/linux/xilinx_devices.h b/include/linux/xilinx_devices.h
+index 84c1402..37dc9bb 100644
+--- a/include/linux/xilinx_devices.h
++++ b/include/linux/xilinx_devices.h
+@@ -95,11 +95,6 @@ struct xlltemac_platform_data {
+ 	u8 mac_addr[6];
+ };
+ 
+-/*- GPIO -*/
+-
+-/* Flags related to XGPIO device features */
+-#define XGPIO_IS_DUAL		0x00000001
+-
+ /*- PS USB Controller IP -*/
+ enum xusbps_usb2_operating_modes {
+ 	XUSBPS_USB2_MPH_HOST,
+-- 
+1.7.1
+

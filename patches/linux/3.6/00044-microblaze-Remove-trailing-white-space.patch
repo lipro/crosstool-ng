@@ -1,0 +1,26 @@
+From 32b5ea953274f7c406d67bec4600d51577bcb3c5 Mon Sep 17 00:00:00 2001
+From: Michal Simek <monstr@monstr.eu>
+Date: Mon, 8 Oct 2012 14:53:55 +0200
+Subject: [PATCH] microblaze: Remove trailing white space
+
+Signed-off-by: Michal Simek <monstr@monstr.eu>
+---
+ arch/microblaze/include/asm/pgtable.h |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/arch/microblaze/include/asm/pgtable.h b/arch/microblaze/include/asm/pgtable.h
+index a104846..a7311cd 100644
+--- a/arch/microblaze/include/asm/pgtable.h
++++ b/arch/microblaze/include/asm/pgtable.h
+@@ -558,7 +558,7 @@ void __init *early_get_page(void);
+ 
+ #endif /* CONFIG_MMU */
+ 
+-#ifndef __ASSEMBLY__ 
++#ifndef __ASSEMBLY__
+ #include <asm-generic/pgtable.h>
+ 
+ extern unsigned long ioremap_bot, ioremap_base;
+-- 
+1.7.1
+
