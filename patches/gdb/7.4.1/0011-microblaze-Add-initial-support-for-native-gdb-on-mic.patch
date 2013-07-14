@@ -1,0 +1,151 @@
+From 71d9fb3a311662ee395d8aa93e01ddb56bb09fd1 Mon Sep 17 00:00:00 2001
+From: David Holsgrove <david.holsgrove@petalogix.com>
+Date: Fri, 20 Jul 2012 15:18:35 +1000
+Subject: [PATCH] microblaze: Add initial support for native gdb on microblaze
+
+Signed-off-by: David Holsgrove <david.holsgrove@petalogix.com>
+---
+ gdb/Makefile.in                |    2 +-
+ gdb/config/microblaze/linux.mh |   11 +++++
+ gdb/microblaze-linux-nat.c     |   98 ++++++++++++++++++++++++++++++++++++++++
+ 3 files changed, 110 insertions(+), 1 deletions(-)
+ create mode 100644 gdb/config/microblaze/linux.mh
+ create mode 100644 gdb/microblaze-linux-nat.c
+
+diff --git a/gdb/Makefile.in b/gdb/Makefile.in
+index 44d76f2..67be910 100644
+--- a/gdb/Makefile.in
++++ b/gdb/Makefile.in
+@@ -1476,7 +1476,7 @@ ALLDEPFILES = \
+ 	m68kbsd-nat.c m68kbsd-tdep.c \
+ 	m68klinux-nat.c m68klinux-tdep.c \
+ 	m88k-tdep.c m88kbsd-nat.c \
+-	microblaze-tdep.c microblaze-linux-tdep.c \
++	microblaze-tdep.c microblaze-linux-nat.c microblaze-linux-tdep.c \
+ 	mingw-hdep.c \
+ 	mips-linux-nat.c mips-linux-tdep.c \
+ 	mips-irix-tdep.c \
+diff --git a/gdb/config/microblaze/linux.mh b/gdb/config/microblaze/linux.mh
+new file mode 100644
+index 0000000..5301943
+--- /dev/null
++++ b/gdb/config/microblaze/linux.mh
+@@ -0,0 +1,11 @@
++# Host: Microblaze, running Linux
++
++XM_CLIBS=
++
++NAT_FILE= config/nm-linux.h
++NATDEPFILES= inf-ptrace.o fork-child.o \
++	microblaze-linux-nat.o proc-service.o linux-thread-db.o \
++	linux-nat.o linux-osdata.o linux-fork.o linux-procfs.o linux-ptrace.o
++NAT_CDEPS = $(srcdir)/proc-service.list
++
++LOADLIBES = -ldl $(RDYNAMIC)
+diff --git a/gdb/microblaze-linux-nat.c b/gdb/microblaze-linux-nat.c
+new file mode 100644
+index 0000000..3720110
+--- /dev/null
++++ b/gdb/microblaze-linux-nat.c
+@@ -0,0 +1,98 @@
++/* Microblaze GNU/Linux native support.
++
++   Copyright (C) 1988-1989, 1991-1992, 1994, 1996, 2000-2012 Free
++   Software Foundation, Inc.
++
++   This file is part of GDB.
++
++   This program is free software; you can redistribute it and/or modify
++   it under the terms of the GNU General Public License as published by
++   the Free Software Foundation; either version 3 of the License, or
++   (at your option) any later version.
++
++   This program is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++   GNU General Public License for more details.
++
++   You should have received a copy of the GNU General Public License
++   along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
++
++#include "defs.h"
++#include "gdb_string.h"
++#include "observer.h"
++#include "frame.h"
++#include "inferior.h"
++#include "gdbthread.h"
++#include "gdbcore.h"
++#include "regcache.h"
++#include "gdb_assert.h"
++#include "target.h"
++#include "linux-nat.h"
++
++#include <stdint.h>
++#include <sys/types.h>
++#include <sys/param.h>
++#include <signal.h>
++#include <sys/user.h>
++#include <sys/ioctl.h>
++#include "gdb_wait.h"
++#include <fcntl.h>
++#include <sys/procfs.h>
++#include <sys/ptrace.h>
++
++/* Prototypes for supply_gregset etc.  */
++#include "gregset.h"
++#include "microblaze-tdep.h"
++
++/* Non-zero if our kernel may support the PTRACE_GETREGS and
++   PTRACE_SETREGS requests, for reading and writing the
++   general-purpose registers.  Zero if we've tried one of
++   them and gotten an error.  */
++int have_ptrace_getsetregs = 1;
++
++const struct microblaze_gregset microblaze_linux_core_gregset;
++
++void
++supply_gregset (struct regcache *regcache, const gdb_gregset_t *gregsetp)
++{
++  microblaze_supply_gregset (&microblaze_linux_core_gregset, regcache,
++                             -1, gregsetp);
++}
++
++void
++fill_gregset (const struct regcache *regcache,
++	      gdb_gregset_t *gregsetp, int regno)
++{
++  if (regno == -1)
++    memset (gregsetp, 0, sizeof (*gregsetp));
++  microblaze_collect_gregset (&microblaze_linux_core_gregset, regcache,
++                              regno, gregsetp);
++}
++
++void
++supply_fpregset (struct regcache *regcache, const gdb_fpregset_t * fpregsetp)
++{
++  /* FIXME. */
++}
++
++void
++fill_fpregset (const struct regcache *regcache,
++	       gdb_fpregset_t *fpregsetp, int regno)
++{
++  /* FIXME. */
++}
++
++void _initialize_microblaze_linux_nat (void);
++
++void
++_initialize_microblaze_linux_nat (void)
++{
++  struct target_ops *t;
++
++  /* Fill in the generic GNU/Linux methods.  */
++  t = linux_target ();
++
++  /* Register the target.  */
++  linux_nat_add_target (t);
++}
+-- 
+1.7.1
+
