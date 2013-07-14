@@ -1,0 +1,26 @@
+From d5e95a6909693526cc610330a7d002db04d11cfe Mon Sep 17 00:00:00 2001
+From: David Holsgrove <david.holsgrove@petalogix.com>
+Date: Wed, 4 Apr 2012 09:45:28 +1000
+Subject: [PATCH] microblaze: add linux-ptrace.o to gdbserver configure
+
+Signed-off-by: David Holsgrove <david.holsgrove@petalogix.com>
+---
+ gdb/gdbserver/configure.srv |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/gdb/gdbserver/configure.srv b/gdb/gdbserver/configure.srv
+index bf2c2a0..e0928bc 100644
+--- a/gdb/gdbserver/configure.srv
++++ b/gdb/gdbserver/configure.srv
+@@ -183,7 +183,7 @@ case "${target}" in
+ 			srv_linux_thread_db=yes
+ 			;;
+   microblaze*-*-linux*)	srv_regobj=reg-microblaze.o
+-			srv_tgtobj="linux-low.o linux-osdata.o linux-microblaze-low.o linux-procfs.o"
++			srv_tgtobj="linux-low.o linux-osdata.o linux-microblaze-low.o linux-procfs.o linux-ptrace.o"
+ 			srv_linux_usrregs=yes
+ 			srv_linux_thread_db=yes
+ 			;;
+-- 
+1.7.1
+
