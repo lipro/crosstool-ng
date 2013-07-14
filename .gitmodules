@@ -1,6 +1,3 @@
-[submodule "local_src/newlib"]
-	path = local_src/newlib
-	url = git://gitorious.org/mbref/newlib-microblaze.git
 [submodule "local_src/eglibc"]
 	path = local_src/eglibc
 	url = git://gitorious.org/mbref/eglibc-microblaze.git
