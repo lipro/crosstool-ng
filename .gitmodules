@@ -1,6 +1,3 @@
-[submodule "local_src/eglibc"]
-	path = local_src/eglibc
-	url = git://gitorious.org/mbref/eglibc-microblaze.git
 [submodule "local_src/linux"]
 	path = local_src/linux
 	url = git://gitorious.org/mbref/linux-mbref-26.git
