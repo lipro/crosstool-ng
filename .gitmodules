@@ -1,3 +1,0 @@
-[submodule "local_src/gdb"]
-	path = local_src/gdb
-	url = git://gitorious.org/mbref/gdb-microblaze.git
