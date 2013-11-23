@@ -30,6 +30,10 @@ config.gen/
 build.log
 .config.old
 
+# Binaries
+*.dep
+*.o
+
 # This is the place where toolchains are built
 .build/
 # .. and the legacy location
