@@ -1,0 +1,27 @@
+From c7dcffb3123dae94e4b02621e4f678993b6f87c8 Mon Sep 17 00:00:00 2001
+From: nagaraju <nmekala@xilix.com>
+Date: Wed, 30 Oct 2013 10:55:24 +0530
+Subject: [PATCH 10/10] microblaze: Modified _exceptional_handler
+
+Modified the _exceptional_handler to support
+the changes made in GCC related to Superviosry call
+
+Signed-off-by:Nagaraju Mekala<nmekala@xilix.com>
+Signed-off-by: Stephan Linz <linz@li-pro.net>
+---
+ libgloss/microblaze/_exception_handler.S | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/libgloss/microblaze/_exception_handler.S b/libgloss/microblaze/_exception_handler.S
+index 59385ad..7a91a78 100644
+--- a/libgloss/microblaze/_exception_handler.S
++++ b/libgloss/microblaze/_exception_handler.S
+@@ -36,5 +36,4 @@
+ 	.type _exception_handler, @function
+ 	
+ 	_exception_handler:
+-	addi r11,r11,8
+ 	bra r11
+-- 
+1.8.3.4
+

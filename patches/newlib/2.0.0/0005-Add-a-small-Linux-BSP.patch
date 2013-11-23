@@ -1,0 +1,462 @@
+From 2d756bd6dafe5a6348851359e4407de7a727204d Mon Sep 17 00:00:00 2001
+From: "Edgar E. Iglesias" <edgar.iglesias@gmail.com>
+Date: Sun, 21 Aug 2011 23:46:05 +0200
+Subject: [PATCH 05/10] Add a small Linux BSP
+
+Provide __init and __fini in linux-crt0.S
+
+This allows the linux version to replace the GCC provided
+crti.S which writes to the stack protection registers
+(a privileged operation).
+
+Avoid the GCC provided crti.o for elf-linux-gloss
+
+Signed-off-by: Edgar E. Iglesias <edgar.iglesias@gmail.com>
+Signed-off-by: Stephan Linz <linz@li-pro.net>
+---
+ libgloss/microblaze/Makefile.in           |  20 +++-
+ libgloss/microblaze/elf-gloss-linux.ld    | 159 ++++++++++++++++++++++++++++++
+ libgloss/microblaze/elf-gloss-linux.specs |  14 +++
+ libgloss/microblaze/linux-crt0.S          |  58 +++++++++++
+ libgloss/microblaze/linux-inbyte.c        |   6 ++
+ libgloss/microblaze/linux-outbyte.c       |   4 +
+ libgloss/microblaze/linux-syscalls-wrap.c |   7 ++
+ libgloss/microblaze/linux-syscalls.S      |  45 +++++++++
+ libgloss/microblaze/linux-syscalls.h      |  28 ++++++
+ 9 files changed, 339 insertions(+), 2 deletions(-)
+ create mode 100644 libgloss/microblaze/elf-gloss-linux.ld
+ create mode 100644 libgloss/microblaze/elf-gloss-linux.specs
+ create mode 100644 libgloss/microblaze/linux-crt0.S
+ create mode 100644 libgloss/microblaze/linux-inbyte.c
+ create mode 100644 libgloss/microblaze/linux-outbyte.c
+ create mode 100644 libgloss/microblaze/linux-syscalls-wrap.c
+ create mode 100644 libgloss/microblaze/linux-syscalls.S
+ create mode 100644 libgloss/microblaze/linux-syscalls.h
+
+diff --git a/libgloss/microblaze/Makefile.in b/libgloss/microblaze/Makefile.in
+index 7c4137f..fe04a08 100644
+--- a/libgloss/microblaze/Makefile.in
++++ b/libgloss/microblaze/Makefile.in
+@@ -84,25 +84,37 @@ OBJS = ${GENOBJS} sbrk.o timer.o _exception_handler.o _hw_exception_handler.o \
+        xil_malloc.o xil_sbrk.o xil_printf.o
+ SCRIPTS	= xilinx.ld
+ 
++# Tiny Linux BSP.
++LINUX_BSP     = libgloss-linux.a
++CRT          += linux-crt0.o
++LINUX_OBJS    = linux-syscalls.o linux-syscalls-wrap.o
++LINUX_OBJS   += linux-outbyte.o linux-inbyte.o
++LINUX_SCRIPTS = elf-gloss-linux.specs
++
+ CPU = @CPU@
+ 
+ #### Host specific Makefile fragment comes in here.
+ @host_makefile_frag@
+ 
+-all: ${CRT} ${LIB}
++all: ${CRT} ${LIB} ${LINUX_BSP}
+ 
+-install: ${CRT} ${LIB}
++install: ${CRT} ${LIB} install-linux
+ 	@for crt in ${CRT}; do \
+ 	$(INSTALL_PROGRAM) $${crt} $(DESTDIR)$(tooldir)/lib${MULTISUBDIR}/$${crt}; \
+ 	done
+ 	$(INSTALL_PROGRAM) ${LIB} $(DESTDIR)$(tooldir)/lib${MULTISUBDIR}
+ 	$(INSTALL_PROGRAM) $(srcdir)/${SCRIPTS} $(DESTDIR)$(tooldir)/lib/
+ 
++install-linux: ${LINUX_BSP}
++	$(INSTALL_PROGRAM) ${LINUX_BSP} $(DESTDIR)$(tooldir)/lib${MULTISUBDIR}
++	set -e; for x in ${LINUX_SCRIPTS}; do ${INSTALL_DATA} ${srcdir}/${objtype}$$x $(DESTDIR)${tooldir}/lib${MULTISUBDIR}/$$x; done
++
+ crt0.o:	crt0.S
+ crt1.o:	crt1.S
+ crt2.o:	crt2.S
+ crt3.o:	crt3.S
+ crt4.o:	crt4.S
++linux-crt0.o: linux-crt0.S
+ crtinit.o: crtinit.S
+ sim-crtinit.o: sim-crtinit.S
+ sim-pgcrtinit.o: sim-pgcrtinit.S
+@@ -120,6 +132,10 @@ ${LIB}:	${OBJS}
+ 	${AR} ${ARFLAGS} $@ ${OBJS}
+ 	${RANLIB} $@
+ 
++${LINUX_BSP}: ${LINUX_OBJS}
++	${AR} ${ARFLAGS} $@ ${LINUX_OBJS}
++	${RANLIB} $@
++
+ .PHONY: info dvi doc install-info clean-info
+ info doc dvi:
+ install-info:
+diff --git a/libgloss/microblaze/elf-gloss-linux.ld b/libgloss/microblaze/elf-gloss-linux.ld
+new file mode 100644
+index 0000000..bb58713
+--- /dev/null
++++ b/libgloss/microblaze/elf-gloss-linux.ld
+@@ -0,0 +1,159 @@
++/* Default linker script, for normal executables */
++/*OUTPUT_FORMAT("elf32-microblaze", "", "") */
++/*SEARCH_DIR("/proj/fv1/gnu_builds/head/mb/release/lin/mb/microblaze-xilinx-elf/lib");*/
++/*SEARCH_DIR("/proj/fv1/gnu_builds/head/mb/release/lin/mb/microblaze-xilinx-elf/lib");*/
++OUTPUT_ARCH(microblaze)
++ENTRY(_start)
++_TEXT_START_ADDR = DEFINED(_TEXT_START_ADDR) ? _TEXT_START_ADDR : 0x50;
++
++PHDRS
++{
++  text PT_LOAD FILEHDR PHDRS;
++  data PT_LOAD;
++  bss PT_LOAD;
++}
++
++SECTIONS
++{
++  . = SIZEOF_HEADERS;
++   _ftext  =  .;
++  .text : {
++    *(.text)
++    *(.text.*)
++    *(.gnu.linkonce.t.*)
++  } : text
++   _etext  =  .;
++  .init : { KEEP (*(.init))	} =0
++  .fini : { KEEP (*(.fini))	} =0
++  PROVIDE (__CTOR_LIST__ = .);
++  PROVIDE (___CTOR_LIST__ = .);
++  .ctors   :
++  {
++    /* gcc uses crtbegin.o to find the start of
++       the constructors, so we make sure it is
++       first.  Because this is a wildcard, it
++       doesn't matter if the user does not
++       actually link against crtbegin.o; the
++       linker won't look for a file to match a
++       wildcard.  The wildcard also means that it
++       doesn't matter which directory crtbegin.o
++       is in.  */
++    KEEP (*crtbegin.o(.ctors))
++    /* We don't want to include the .ctor section from
++       from the crtend.o file until after the sorted ctors.
++       The .ctor section from the crtend file contains the
++       end of ctors marker and it must be last */
++    KEEP (*(EXCLUDE_FILE (*crtend.o) .ctors))
++    KEEP (*(SORT(.ctors.*)))
++    KEEP (*(.ctors))
++  } : text
++  PROVIDE (__CTOR_END__ = .);
++  PROVIDE (___CTOR_END__ = .);
++  PROVIDE (__DTOR_LIST__ = .);
++  PROVIDE (___DTOR_LIST__ = .);
++   .dtors         :
++  {
++    KEEP (*crtbegin.o(.dtors))
++    KEEP (*(EXCLUDE_FILE (*crtend.o) .dtors))
++    KEEP (*(SORT(.dtors.*)))
++    KEEP (*(.dtors))
++  } : text
++  PROVIDE (__DTOR_END__ = .);
++  PROVIDE (___DTOR_END__ = .);
++   . = ALIGN(4);
++    _frodata = . ;
++  .rodata : {
++    *(.rodata)
++    *(.rodata.*)
++    *(.gnu.linkonce.r.*)
++    CONSTRUCTORS; /* Is this needed? */
++  } : text
++  _erodata = .;
++  /* New page.  */
++  . += 0x1000;
++  /* Alignments by 8 to ensure that _SDA2_BASE_ on a word boundary */
++  /* Note that .sdata2 and .sbss2 must be contiguous */
++  . = ALIGN(8);
++   _ssrw = .;
++  .sdata2 : {
++    *(.sdata2)
++    *(.sdata2.*)
++    *(.gnu.linkonce.s2.*)
++  } : data
++  . = ALIGN(4);
++  .sbss2 : {
++    PROVIDE (__sbss2_start = .);
++    *(.sbss2)
++    *(.sbss2.*)
++    *(.gnu.linkonce.sb2.*)
++    PROVIDE (__sbss2_end = .);
++  } : data
++  . = ALIGN(8);
++   _essrw = .;
++   _ssrw_size = _essrw - _ssrw;
++   PROVIDE (_SDA2_BASE_ = _ssrw + (_ssrw_size / 2 ));
++   . = ALIGN(4);
++   _fdata = .;
++  .data : {
++    *(.data)
++    *(.gnu.linkonce.d.*)
++    CONSTRUCTORS; /* Is this needed? */
++    PROVIDE (__bss_start = .);
++  } : data
++   _edata = . ;
++   /* Added to handle pic code */
++  .got : {
++    *(.got)
++  }
++  .got1 : {
++    *(.got1)
++  }
++  .got2 : {
++    *(.got2)
++  }
++  /* Added by Sathya to handle C++ exceptions */
++  .eh_frame : {
++    *(.eh_frame)
++  }
++  .jcr : {
++    *(.jcr)
++  . = ALIGN(4096);
++  }
++  .gcc_except_table : {
++    *(.gcc_except_table)
++  }
++  . = ALIGN(4096);
++  /* Alignments by 8 to ensure that _SDA_BASE_ on a word boundary */
++  /* Note that .sdata and .sbss must be contiguous */
++  . = ALIGN(8);
++   _ssro = .;
++  .sdata : {
++    *(.sdata)
++    *(.sdata.*)
++    *(.gnu.linkonce.s.*)
++  }
++  . = ALIGN(4);
++  .sbss : {
++    PROVIDE (__sbss_start = .);
++    *(.sbss)
++    *(.sbss.*)
++    *(.gnu.linkonce.sb.*)
++    PROVIDE (__sbss_end = .);
++  }
++  . = ALIGN(8);
++   _essro = .;
++   _ssro_size = _essro - _ssro;
++  PROVIDE (_SDA_BASE_ = _ssro + (_ssro_size / 2 ));
++  . = ALIGN(4);
++   _fbss = .;
++  .bss : {
++    PROVIDE (__bss_start = .);
++    *(.bss)
++    *(.bss.*)
++    *(.gnu.linkonce.b.*)
++    *(COMMON)
++    . = ALIGN(4);
++    PROVIDE (__bss_end = .);
++    . = ALIGN(4096);
++  } : bss
++}
+diff --git a/libgloss/microblaze/elf-gloss-linux.specs b/libgloss/microblaze/elf-gloss-linux.specs
+new file mode 100644
+index 0000000..1f7cf9e
+--- /dev/null
++++ b/libgloss/microblaze/elf-gloss-linux.specs
+@@ -0,0 +1,14 @@
++%rename link old_link
++%rename lib libc
++
++*link:
++%(old_link) -defsym _TEXT_START_ADDR=0x10000 -z max-page-size=4096 -z common-page-size=4096 --no-omagic
++
++*libgloss:
++-lgloss-linux
++
++*lib:
++-start-group -lgloss-linux -lxil-linux -lc -lm -end-group
++
++*startfile:
++linux-crt0%O%s crtbegin%O%s
+diff --git a/libgloss/microblaze/linux-crt0.S b/libgloss/microblaze/linux-crt0.S
+new file mode 100644
+index 0000000..8650bb5
+--- /dev/null
++++ b/libgloss/microblaze/linux-crt0.S
+@@ -0,0 +1,58 @@
++/* linux-crt0 -- Startup routines for the Linux BSP.
++ *
++ * Copyright (c) 2011 Edgar E. Iglesias
++ *
++ * The authors hereby grant permission to use, copy, modify, distribute,
++ * and license this software and its documentation for any purpose, provided
++ * that existing copyright notices are retained in all copies and that this
++ * notice is included verbatim in any distributions. No written agreement,
++ * license, or royalty fee is required for any of the authorized uses.
++ * Modifications to this software may be copyrighted by their authors
++ * and need not follow the licensing terms described here, provided that
++ * the new terms are clearly indicated on the first page of each file where
++ * they apply.
++ */
++
++        .section .text
++        .globl _start
++        .ent _start
++        .type _start, @function
++_start:
++	la	r13, r0, _SDA_BASE_
++	la	r2, r0, _SDA2_BASE_
++
++	brlid	r15, __init
++	nop
++
++	lwi	r5, r1, 0
++	addik	r6, r1, 4
++
++	# Add argc * 4.
++	addk	r7, r5, r5
++	addk	r7, r7, r7
++
++	brlid	r15, main
++	# Now add 4 + r1 (i.e r6) in the delayslot.
++	addk	r7, r7, r6
++
++	brlid   r15, exit
++        addik   r5, r3, 0
++	.size _start, . - _start
++        .end _start
++
++	/* Replacement for the GCC provided crti.S. This one avoids the
++	   setup of stack protection regs (which result in privilieged
++	   insn exceptions when running in user-space).  */
++        .section .init, "ax"
++	.global __init
++	.align 2
++__init:
++	addik   r1, r1, -8
++	sw      r15, r0, r1
++
++	.section .fini, "ax"
++	.global __fini
++	.align 2
++__fini:
++	addik   r1, r1, -8
++	sw      r15, r0, r1
+diff --git a/libgloss/microblaze/linux-inbyte.c b/libgloss/microblaze/linux-inbyte.c
+new file mode 100644
+index 0000000..58fdf19
+--- /dev/null
++++ b/libgloss/microblaze/linux-inbyte.c
+@@ -0,0 +1,6 @@
++int inbyte(void)
++{
++	char ch = 0;
++	read(0, &ch, 1);
++	return ch;
++}
+diff --git a/libgloss/microblaze/linux-outbyte.c b/libgloss/microblaze/linux-outbyte.c
+new file mode 100644
+index 0000000..9d7bc48
+--- /dev/null
++++ b/libgloss/microblaze/linux-outbyte.c
+@@ -0,0 +1,4 @@
++void outbyte (unsigned char c)
++{
++	_write(1, &c, 1);
++}
+diff --git a/libgloss/microblaze/linux-syscalls-wrap.c b/libgloss/microblaze/linux-syscalls-wrap.c
+new file mode 100644
+index 0000000..bccb016
+--- /dev/null
++++ b/libgloss/microblaze/linux-syscalls-wrap.c
+@@ -0,0 +1,7 @@
++#include <sys/types.h>
++#include <sys/stat.h>
++#include <fcntl.h>
++
++int isatty (int fd) {
++	return 1;
++}
+diff --git a/libgloss/microblaze/linux-syscalls.S b/libgloss/microblaze/linux-syscalls.S
+new file mode 100644
+index 0000000..506de78
+--- /dev/null
++++ b/libgloss/microblaze/linux-syscalls.S
+@@ -0,0 +1,45 @@
++/* linux-syscalls - Syscall interface to microblaze linux
++ *
++ * Copyright (c) 2011 Edgar E. Iglesias
++ *
++ * The authors hereby grant permission to use, copy, modify, distribute,
++ * and license this software and its documentation for any purpose, provided
++ * that existing copyright notices are retained in all copies and that this
++ * notice is included verbatim in any distributions. No written agreement,
++ * license, or royalty fee is required for any of the authorized uses.
++ * Modifications to this software may be copyrighted by their authors
++ * and need not follow the licensing terms described here, provided that
++ * the new terms are clearly indicated on the first page of each file where
++ * they apply.
++ */
++
++#include "linux-syscalls.h"
++
++#define FUNC(name) .type name, %function; name:
++
++#define GLOBAL(name) .global name; FUNC(name)
++#define SIZE(name) .size name, .-name
++
++# define SYSCALL_BODY(name)		\
++	addik	r12, r0, SYS_ ## name;	\
++	brki    r14, 8;			\
++	rtsd	r15, 8;			\
++	nop;
++
++# define SYSCALL(name)			\
++        GLOBAL(_ ## name);		\
++	SYSCALL_BODY(name);		\
++        SIZE(_ ## name)
++
++SYSCALL(brk)
++SYSCALL(exit)
++SYSCALL(read)
++SYSCALL(write)
++SYSCALL(open)
++SYSCALL(close)
++SYSCALL(lseek)
++SYSCALL(fstat)
++SYSCALL(unlink)
++SYSCALL(getpid)
++SYSCALL(kill)
++SYSCALL(rt_sigaction)
+diff --git a/libgloss/microblaze/linux-syscalls.h b/libgloss/microblaze/linux-syscalls.h
+new file mode 100644
+index 0000000..3bceca3
+--- /dev/null
++++ b/libgloss/microblaze/linux-syscalls.h
+@@ -0,0 +1,28 @@
++/** Linux system call interface for the MicroBlaze processor.
++ * Copyright (c) 2009 Edgar E. Iglesias.
++ *
++ * Permission to use, copy, modify, and distribute this software
++ * is freely granted, provided that this notice is preserved.
++ */
++
++#define SYS_exit	1
++#define SYS_fork	2
++#define SYS_read	3
++#define SYS_write	4
++#define SYS_open	5
++#define SYS_close	6
++#define SYS_waitpid	7
++#define SYS_creat	8
++#define SYS_link	9
++#define SYS_unlink	10
++#define SYS_execve	11
++#define SYS_chdir	12
++#define SYS_time	13
++
++#define SYS_lseek	19
++#define SYS_getpid	20
++#define SYS_kill	37
++#define SYS_brk		45
++#define SYS_fstat	108
++
++#define SYS_rt_sigaction  174
+-- 
+1.8.3.4
+

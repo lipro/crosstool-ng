@@ -1,0 +1,90 @@
+From 3f3d9cb882723bcdd0b3ac7e112a864fc6d58fd9 Mon Sep 17 00:00:00 2001
+From: "Edgar E. Iglesias" <edgar.iglesias@gmail.com>
+Date: Mon, 26 Sep 2011 12:08:44 +0200
+Subject: [PATCH 01/10] Add little-endian support
+
+Signed-off-by: Edgar E. Iglesias <edgar.iglesias@gmail.com>
+Signed-off-by: Stephan Linz <linz@li-pro.net>
+---
+ libgloss/configure                   | 2 +-
+ libgloss/configure.in                | 2 +-
+ newlib/configure.host                | 6 +++---
+ newlib/libc/include/machine/ieeefp.h | 4 ++++
+ 4 files changed, 9 insertions(+), 5 deletions(-)
+
+diff --git a/libgloss/configure b/libgloss/configure
+index 60b8250..d651af5 100755
+--- a/libgloss/configure
++++ b/libgloss/configure
+@@ -2498,7 +2498,7 @@ case "${target}" in
+ 	subdirs="$subdirs moxie"
+ 
+ 	;;
+-  microblaze-*-*)
++  microblaze*-*-*)
+ 	subdirs="$subdirs microblaze"
+ 
+ 	;;
+diff --git a/libgloss/configure.in b/libgloss/configure.in
+index 03acf95..dc5cc79 100644
+--- a/libgloss/configure.in
++++ b/libgloss/configure.in
+@@ -114,7 +114,7 @@ case "${target}" in
+   moxie-*-*)
+ 	AC_CONFIG_SUBDIRS([moxie])
+ 	;;
+-  microblaze-*-*)
++  microblaze*-*-*)
+ 	AC_CONFIG_SUBDIRS([microblaze])
+ 	;;
+   mt-*-*)
+diff --git a/newlib/configure.host b/newlib/configure.host
+index f1e1309..728cc80 100644
+--- a/newlib/configure.host
++++ b/newlib/configure.host
+@@ -203,7 +203,7 @@ case "${host_cpu}" in
+ 	;;
+   mcore)
+ 	;;
+-  microblaze)
++  microblaze*)
+ 	machine_dir=microblaze
+ 	;;
+   mep)
+@@ -464,7 +464,7 @@ case "${host}" in
+ 	default_newlib_io_long_long="yes"
+ 	newlib_cflags="${newlib_cflags} -DMISSING_SYSCALL_NAMES"
+ 	;;
+-  microblaze-*-*)
++  microblaze*-*-*)
+ 	machine_dir=microblaze
+ 	;;
+   mips*-dec-*)
+@@ -678,7 +678,7 @@ case "${host}" in
+   mcore-*-*)
+ 	syscall_dir=syscalls
+ 	;;
+-  microblaze-*-*)
++  microblaze*-*-*)
+    	default_newlib_io_long_long="yes"
+  	newlib_cflags="${newlib_cflags} -DMISSING_SYSCALL_NAMES -DSMALL_MEMORY -D_REENT_SMALL"
+ 	;;
+diff --git a/newlib/libc/include/machine/ieeefp.h b/newlib/libc/include/machine/ieeefp.h
+index f8795c0..963a864 100644
+--- a/newlib/libc/include/machine/ieeefp.h
++++ b/newlib/libc/include/machine/ieeefp.h
+@@ -356,7 +356,11 @@
+ #endif
+ 
+ #ifdef __MICROBLAZE__
++#ifndef __MICROBLAZEEL__
+ #define __IEEE_BIG_ENDIAN
++#else
++#define __IEEE_LITTLE_ENDIAN
++#endif
+ #endif
+ 
+ #ifdef __RL78__
+-- 
+1.8.3.4
+

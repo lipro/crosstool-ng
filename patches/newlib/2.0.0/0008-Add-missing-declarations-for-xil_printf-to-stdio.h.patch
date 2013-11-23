@@ -1,0 +1,30 @@
+From f5622f04aa0de7d04a67d143320e6e62c80cc0b3 Mon Sep 17 00:00:00 2001
+From: David Holsgrove <david.holsgrove@petalogix.com>
+Date: Tue, 29 May 2012 18:03:40 +1000
+Subject: [PATCH 08/10] Add missing declarations for xil_printf to stdio.h
+
+for inclusion in toolchain and use in c++ apps
+
+Signed-off-by: David Holsgrove <david.holsgrove@petalogix.com>
+Signed-off-by: Stephan Linz <linz@li-pro.net>
+---
+ newlib/libc/include/stdio.h | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/newlib/libc/include/stdio.h b/newlib/libc/include/stdio.h
+index 534719a..606fec4 100644
+--- a/newlib/libc/include/stdio.h
++++ b/newlib/libc/include/stdio.h
+@@ -224,6 +224,9 @@ int	_EXFUN(sprintf, (char *, const char *, ...)
+                _ATTRIBUTE ((__format__ (__printf__, 2, 3))));
+ int	_EXFUN(remove, (const char *));
+ int	_EXFUN(rename, (const char *, const char *));
++void    _EXFUN(xil_printf, (const char*, ...));
++void    _EXFUN(putnum, (unsigned int ));
++void    _EXFUN(print, (char* ));
+ #ifdef _COMPILING_NEWLIB
+ int	_EXFUN(_rename, (const char *, const char *));
+ #endif
+-- 
+1.8.3.4
+

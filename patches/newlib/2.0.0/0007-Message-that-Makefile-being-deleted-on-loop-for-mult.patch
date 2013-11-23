@@ -1,0 +1,80 @@
+From e1ac4d3bfde474ea731fac0952b7a9cc797e09f1 Mon Sep 17 00:00:00 2001
+From: David Holsgrove <david.holsgrove@petalogix.com>
+Date: Tue, 18 Oct 2011 17:03:17 +1000
+Subject: [PATCH 07/10] Message that Makefile being deleted on loop for
+ multilibs
+
+should not be set to stderr. Not an error, just info to user
+
+Signed-off-by: David Holsgrove <david.holsgrove@petalogix.com>
+Signed-off-by: Stephan Linz <linz@li-pro.net>
+---
+ configure    | 6 +++---
+ configure.ac | 6 +++---
+ 2 files changed, 6 insertions(+), 6 deletions(-)
+
+diff --git a/configure b/configure
+index c3f421c..63d870f 100755
+--- a/configure
++++ b/configure
+@@ -7024,7 +7024,7 @@ extrasub_build=
+ for module in ${build_configdirs} ; do
+   if test -z "${no_recursion}" \
+      && test -f ${build_subdir}/${module}/Makefile; then
+-    echo 1>&2 "*** removing ${build_subdir}/${module}/Makefile to force reconfigure"
++    echo "*** removing ${build_subdir}/${module}/Makefile to force reconfigure"
+     rm -f ${build_subdir}/${module}/Makefile
+   fi
+   extrasub_build="$extrasub_build
+@@ -7038,7 +7038,7 @@ for module in ${configdirs} ; do
+   if test -z "${no_recursion}"; then
+     for file in stage*-${module}/Makefile prev-${module}/Makefile ${module}/Makefile; do
+       if test -f ${file}; then
+-	echo 1>&2 "*** removing ${file} to force reconfigure"
++	echo "*** removing ${file} to force reconfigure"
+ 	rm -f ${file}
+       fi
+     done
+@@ -7053,7 +7053,7 @@ extrasub_target=
+ for module in ${target_configdirs} ; do
+   if test -z "${no_recursion}" \
+      && test -f ${target_subdir}/${module}/Makefile; then
+-    echo 1>&2 "*** removing ${target_subdir}/${module}/Makefile to force reconfigure"
++    echo "*** removing ${target_subdir}/${module}/Makefile to force reconfigure"
+     rm -f ${target_subdir}/${module}/Makefile
+   fi
+ 
+diff --git a/configure.ac b/configure.ac
+index 02720ee..8abf532 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -2535,7 +2535,7 @@ extrasub_build=
+ for module in ${build_configdirs} ; do
+   if test -z "${no_recursion}" \
+      && test -f ${build_subdir}/${module}/Makefile; then
+-    echo 1>&2 "*** removing ${build_subdir}/${module}/Makefile to force reconfigure"
++    echo "*** removing ${build_subdir}/${module}/Makefile to force reconfigure"
+     rm -f ${build_subdir}/${module}/Makefile
+   fi
+   extrasub_build="$extrasub_build
+@@ -2549,7 +2549,7 @@ for module in ${configdirs} ; do
+   if test -z "${no_recursion}"; then
+     for file in stage*-${module}/Makefile prev-${module}/Makefile ${module}/Makefile; do
+       if test -f ${file}; then
+-	echo 1>&2 "*** removing ${file} to force reconfigure"
++	echo "*** removing ${file} to force reconfigure"
+ 	rm -f ${file}
+       fi
+     done
+@@ -2564,7 +2564,7 @@ extrasub_target=
+ for module in ${target_configdirs} ; do
+   if test -z "${no_recursion}" \
+      && test -f ${target_subdir}/${module}/Makefile; then
+-    echo 1>&2 "*** removing ${target_subdir}/${module}/Makefile to force reconfigure"
++    echo "*** removing ${target_subdir}/${module}/Makefile to force reconfigure"
+     rm -f ${target_subdir}/${module}/Makefile
+   fi
+ 
+-- 
+1.8.3.4
+
