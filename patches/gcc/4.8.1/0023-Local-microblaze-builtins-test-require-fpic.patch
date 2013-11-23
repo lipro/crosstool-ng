@@ -1,0 +1,26 @@
+From 1287d3fea5be91949c16bac276fb8c931c830cdf Mon Sep 17 00:00:00 2001
+From: David Holsgrove <david.holsgrove@xilinx.com>
+Date: Wed, 10 Jul 2013 15:59:33 +1000
+Subject: [PATCH 23/28] [Local, microblaze]: builtins test require fpic
+
+Signed-off-by: David Holsgrove <david.holsgrove@xilinx.com>
+Signed-off-by: Stephan Linz <linz@li-pro.net>
+---
+ gcc/testsuite/gcc.c-torture/execute/builtins/builtins.exp | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/gcc/testsuite/gcc.c-torture/execute/builtins/builtins.exp b/gcc/testsuite/gcc.c-torture/execute/builtins/builtins.exp
+index 47a28c1..106b779 100644
+--- a/gcc/testsuite/gcc.c-torture/execute/builtins/builtins.exp
++++ b/gcc/testsuite/gcc.c-torture/execute/builtins/builtins.exp
+@@ -50,6 +50,7 @@ if { [istarget *-*-eabi*]
+ 
+ if [istarget "microblaze*-*-linux*"] {
+    lappend additional_flags "-Wl,-zmuldefs"
++   lappend additional_flags "-fPIC"
+ }
+ 
+ foreach src [lsort [find $srcdir/$subdir *.c]] {
+-- 
+1.8.3.4
+

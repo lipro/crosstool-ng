@@ -1,0 +1,38 @@
+From f6afd305e22e0241b6a39c7f522295dfd2237de1 Mon Sep 17 00:00:00 2001
+From: David Holsgrove <david.holsgrove@xilinx.com>
+Date: Wed, 21 Nov 2012 12:33:14 +1000
+Subject: [PATCH 19/28] updated gcc.target/microblaze/others/strings1.c
+
+for new scan-assembly output resulting in use of $LC label
+
+Signed-off-by: David Holsgrove <david.holsgrove@xilinx.com>
+Signed-off-by: Stephan Linz <linz@li-pro.net>
+---
+ gcc/testsuite/gcc.target/microblaze/others/strings1.c | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/gcc/testsuite/gcc.target/microblaze/others/strings1.c b/gcc/testsuite/gcc.target/microblaze/others/strings1.c
+index 7a63faf..0403b7b 100644
+--- a/gcc/testsuite/gcc.target/microblaze/others/strings1.c
++++ b/gcc/testsuite/gcc.target/microblaze/others/strings1.c
+@@ -1,13 +1,15 @@
+ /* { dg-options "-O3" } */
+ 
++/* { dg-final { scan-assembler "\.rodata*" } } */
++/* { dg-final { scan-assembler "addik\tr(\[0-9]\|\[1-2]\[0-9]\|3\[0-1]),r(\[0-9]\|\[1-2]\[0-9]\|3\[0-1]),\\\$LC.*" } } */
++/* { dg-final { scan-assembler "\lwi\tr(\[0-9]\|\[1-2]\[0-9]\|3\[0-1]),r(\[0-9]\|\[1-2]\[0-9]\|3\[0-1]),*" } } */
++
+ #include <string.h>
+ 
+-/* { dg-final { scan-assembler "\.rodata*" } } */
+ extern void somefunc (char *);
+ int testfunc ()
+ {
+     char string2[80];
+-/* { dg-final { scan-assembler "\lwi\tr(\[0-9]\|\[1-2]\[0-9]\|3\[0-1]),r0,.LC*" } } */    
+     strcpy (string2, "hello");
+     somefunc (string2);
+ }
+-- 
+1.8.3.4
+

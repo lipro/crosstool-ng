@@ -1,0 +1,40 @@
+From 2faf155a6d6455bf0c445af25c40ca671b63daf2 Mon Sep 17 00:00:00 2001
+From: David Holsgrove <david.holsgrove@xilinx.com>
+Date: Wed, 20 Nov 2013 15:29:20 +0100
+Subject: [PATCH 03/28] Extend jump insn to accept bri to SYMBOL_REFS
+
+Current insn checks if operand is a REG - if so, uses br
+else it bri to %l0 - using a label_ref print operand
+
+Check if operand is a SYMBOL_REF, and if so, use %0
+
+Changelog
+
+2013-03-18  David Holsgrove <david.holsgrove@xilinx.com>
+
+ * gcc/config/microblaze/microblaze.md (jump):
+   Account for jumps to SYMBOL_REFs.
+
+Signed-off-by: David Holsgrove <david.holsgrove@xilinx.com>
+Upstream-Status: Pending
+Signed-off-by: Stephan Linz <linz@li-pro.net>
+---
+ gcc/config/microblaze/microblaze.md | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/gcc/config/microblaze/microblaze.md b/gcc/config/microblaze/microblaze.md
+index 55cc730..49d8f01 100644
+--- a/gcc/config/microblaze/microblaze.md
++++ b/gcc/config/microblaze/microblaze.md
+@@ -1729,6 +1729,8 @@
+   {
+     if (GET_CODE (operands[0]) == REG)
+         return "br%?\t%0";
++    else if (GET_CODE (operands[0]) == SYMBOL_REF)
++        return "bri%?\t%0";
+     else	
+         return "bri%?\t%l0";
+   }
+-- 
+1.8.3.4
+

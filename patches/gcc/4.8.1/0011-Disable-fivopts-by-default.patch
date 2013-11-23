@@ -1,0 +1,37 @@
+From 9a2ddb6a46556eb92162878785b4862958b2f852 Mon Sep 17 00:00:00 2001
+From: David Holsgrove <david.holsgrove@xilinx.com>
+Date: Tue, 24 Apr 2012 20:17:27 +1000
+Subject: [PATCH 11/28] Disable fivopts by default
+
+Turn off ivopts by default. Interferes with cse.
+
+Changelog
+
+2013-03-18  Edgar E. Iglesias <edgar.iglesias@xilinx.com>
+
+ * gcc/common/config/microblaze/microblaze-common.c
+   (microblaze_option_optimization_table): Disable fivopts by default.
+
+Signed-off-by: Edgar E. Iglesias <edgar.iglesias@xilinx.com>
+Signed-off-by: David Holsgrove <david.holsgrove@xilinx.com>
+Signed-off-by: Stephan Linz <linz@li-pro.net>
+---
+ gcc/common/config/microblaze/microblaze-common.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/gcc/common/config/microblaze/microblaze-common.c b/gcc/common/config/microblaze/microblaze-common.c
+index 6c25a76..d5e75fb 100644
+--- a/gcc/common/config/microblaze/microblaze-common.c
++++ b/gcc/common/config/microblaze/microblaze-common.c
+@@ -27,6 +27,8 @@
+ /* Implement TARGET_OPTION_OPTIMIZATION_TABLE.  */
+ static const struct default_options microblaze_option_optimization_table[] =
+   {
++    /* Turn off ivopts by default. It messes up cse. */
++    { OPT_LEVELS_ALL, OPT_fivopts, NULL, 0 },
+     { OPT_LEVELS_1_PLUS, OPT_fomit_frame_pointer, NULL, 1 },
+     { OPT_LEVELS_NONE, 0, NULL, 0 }
+   };
+-- 
+1.8.3.4
+

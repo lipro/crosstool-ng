@@ -1,0 +1,27 @@
+From f64a06ed8fe2af318b901333203e97e57a0f7ba2 Mon Sep 17 00:00:00 2001
+From: "Edgar E. Iglesias" <edgar.iglesias@gmail.com>
+Date: Fri, 27 Apr 2012 00:54:24 +0200
+Subject: [PATCH 16/28] Increase max ailgnment to please the testsuite
+
+Signed-off-by: Edgar E. Iglesias <edgar.iglesias@gmail.com>
+Signed-off-by: Stephan Linz <linz@li-pro.net>
+---
+ gcc/config/microblaze/microblaze.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/gcc/config/microblaze/microblaze.h b/gcc/config/microblaze/microblaze.h
+index be12cb8..07db52f 100644
+--- a/gcc/config/microblaze/microblaze.h
++++ b/gcc/config/microblaze/microblaze.h
+@@ -812,7 +812,7 @@ extern int save_volatiles;
+ #define COMMON_ASM_OP			"\t.comm\t"
+ #define LCOMMON_ASM_OP			"\t.lcomm\t"
+ 
+-#define MAX_OFILE_ALIGNMENT		(32768*8)
++#define MAX_OFILE_ALIGNMENT		((1 << 28) * 8)
+ 
+ #define TYPE_OPERAND_FMT        	"@%s"
+ 
+-- 
+1.8.3.4
+

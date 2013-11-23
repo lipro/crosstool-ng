@@ -1,0 +1,58 @@
+From 7ce445d7bd98574e04eb770657746c67e1fd18da Mon Sep 17 00:00:00 2001
+From: nagaraju <nmekala@xilix.com>
+Date: Tue, 8 Oct 2013 11:08:11 +0530
+Subject: [PATCH 24/28] [Patch, microblaze]: Added load and store reverse
+ patterns
+
+Added the lwr/swr instructions pattern.
+lwr and swr instructions will load/store the data with opposite endianness.
+
+Signed-off-by:Nagaraju <nmekala@xilix.com>
+Signed-off-by:David Holsgrove <david.holsgrove@xilinx.com>
+Signed-off-by: Stephan Linz <linz@li-pro.net>
+---
+ gcc/config/microblaze/microblaze.md | 12 ++++++++++++
+ gcc/config/microblaze/predicates.md |  4 ++++
+ 2 files changed, 16 insertions(+)
+
+diff --git a/gcc/config/microblaze/microblaze.md b/gcc/config/microblaze/microblaze.md
+index 3709cbf..f62cff3 100644
+--- a/gcc/config/microblaze/microblaze.md
++++ b/gcc/config/microblaze/microblaze.md
+@@ -1121,6 +1121,18 @@
+   }
+ )
+ 
++;;Load and store reverse
++(define_insn "movsi4_rev"
++  [(set (match_operand:SI 0 "reg_or_mem_operand" "=r,Q")
++        (bswap:SI (match_operand:SF 1 "reg_or_mem_operand" "Q,r")))]
++  "TARGET_REORDER"
++  "@
++   lwr\t%0,%y1,r0
++   swr\t%1,%y0,r0"
++  [(set_attr "type"     "load,store")
++  (set_attr "mode"      "SI")
++  (set_attr "length"    "4,4")])
++
+ ;; 32-bit floating point moves
+ 
+ (define_expand "movsf"
+diff --git a/gcc/config/microblaze/predicates.md b/gcc/config/microblaze/predicates.md
+index 2c23291..905d46a 100644
+--- a/gcc/config/microblaze/predicates.md
++++ b/gcc/config/microblaze/predicates.md
+@@ -85,6 +85,10 @@
+   (ior (match_operand 0 "const_0_operand")
+        (match_operand 0 "register_operand")))
+ 
++(define_predicate "reg_or_mem_operand"
++  (ior (match_operand 0 "memory_operand")
++       (match_operand 0 "register_operand")))
++
+ ;;  Return if the operand is either the PC or a label_ref.  
+ (define_special_predicate "pc_or_label_operand"
+   (ior (match_code "pc,label_ref")
+-- 
+1.8.3.4
+
