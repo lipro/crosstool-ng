@@ -1,0 +1,54 @@
+From 37b24e7f8b756b668661a2a6fa31ad8acfba8bd8 Mon Sep 17 00:00:00 2001
+From: David Holsgrove <david.holsgrove@xilinx.com>
+Date: Wed, 5 Dec 2012 11:27:59 +1000
+Subject: [PATCH 22/22] [LOCAL]: Add Support for cfi asm insn
+
+Signed-off-by: David Holsgrove <david.holsgrove@xilinx.com>
+Signed-off-by: Stephan Linz <linz@li-pro.net>
+---
+ gas/config/tc-microblaze.c | 7 +++++++
+ gas/config/tc-microblaze.h | 8 ++++++++
+ 2 files changed, 15 insertions(+)
+
+diff --git a/gas/config/tc-microblaze.c b/gas/config/tc-microblaze.c
+index 884819f..cb0e7ba 100644
+--- a/gas/config/tc-microblaze.c
++++ b/gas/config/tc-microblaze.c
+@@ -29,6 +29,7 @@
+ #include "safe-ctype.h"
+ #include <string.h>
+ #include <dwarf2dbg.h>
++#include "dw2gencfi.h"
+ #include "aout/stab_gnu.h"
+ 
+ #ifndef streq
+@@ -2536,3 +2537,9 @@ cons_fix_new_microblaze (fragS * frag,
+     }
+   fix_new_exp (frag, where, size, exp, 0, r);
+ }
++
++void
++microblaze_cfi_frame_initial_instructions (void)
++{
++  cfi_add_CFA_def_cfa (1, 0);
++}
+diff --git a/gas/config/tc-microblaze.h b/gas/config/tc-microblaze.h
+index 0651040..6f74965 100644
+--- a/gas/config/tc-microblaze.h
++++ b/gas/config/tc-microblaze.h
+@@ -113,4 +113,12 @@ extern void 	 md_apply_fix3 		       (fixS *, valueT *, segT);
+ 
+ #define EXTERN_FORCE_RELOC -1
+ 
++#define TARGET_USE_CFIPOP 1
++
++#define tc_cfi_frame_initial_instructions microblaze_cfi_frame_initial_instructions
++extern void microblaze_cfi_frame_initial_instructions (void);
++
++#define DWARF2_DEFAULT_RETURN_COLUMN 15
++#define DWARF2_CIE_DATA_ALIGNMENT (-4)
++
+ #endif /* TC_MICROBLAZE */
+-- 
+1.8.3.4
+
