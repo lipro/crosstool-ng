@@ -1,0 +1,254 @@
+From 61e8158cd6ba1d3b0e014092ef3614851f770cd9 Mon Sep 17 00:00:00 2001
+From: David Holsgrove <david.holsgrove@xilinx.com>
+Date: Wed, 8 May 2013 11:36:22 +1000
+Subject: [PATCH 14/28] Add supervisory call support
+
+A function can be executed in supervisory mode when a function
+is declared with svc_handler attribute.
+
+If a function with svc_handler is called, the processor switches
+to supervisory mode and executes. After executing the function
+it returns to normal mode.
+
+Same feature can also be invoked with svc_table_handler attribute
+but this attribute will accept a service ID, to be used for
+calling the function.
+
+Signed-off-by:nagaraju <nmekala@xilix.com>
+Signed-off-by: David Holsgrove <david.holsgrove@xilinx.com>
+Signed-off-by: Stephan Linz <linz@li-pro.net>
+---
+ gcc/config/microblaze/microblaze-protos.h |  1 +
+ gcc/config/microblaze/microblaze.c        | 90 +++++++++++++++++++++++++++++++
+ gcc/config/microblaze/microblaze.h        |  2 +
+ gcc/config/microblaze/microblaze.md       | 39 ++++++++++++++
+ 4 files changed, 132 insertions(+)
+
+diff --git a/gcc/config/microblaze/microblaze-protos.h b/gcc/config/microblaze/microblaze-protos.h
+index 201390b..9404ee4 100644
+--- a/gcc/config/microblaze/microblaze-protos.h
++++ b/gcc/config/microblaze/microblaze-protos.h
+@@ -40,6 +40,7 @@ extern void print_operand_address (FILE *, rtx);
+ extern void init_cumulative_args (CUMULATIVE_ARGS *,tree, rtx);
+ extern bool microblaze_legitimate_address_p (enum machine_mode, rtx, bool);
+ extern int microblaze_is_interrupt_variant (void);
++extern int microblaze_is_svc_variant (void);
+ extern rtx microblaze_return_addr (int, rtx);
+ extern int simple_memory_operand (rtx, enum machine_mode);
+ extern int double_memory_operand (rtx, enum machine_mode);
+diff --git a/gcc/config/microblaze/microblaze.c b/gcc/config/microblaze/microblaze.c
+index 5a7327f..a0544d1 100644
+--- a/gcc/config/microblaze/microblaze.c
++++ b/gcc/config/microblaze/microblaze.c
+@@ -208,6 +208,11 @@ enum reg_class microblaze_regno_to_class[] =
+ int interrupt_handler;
+ int fast_interrupt;
+ int save_volatiles;
++int svc_table_handler;
++int svc_handler;
++
++static tree svc_table_handler_attribute (tree *, tree, tree, int, bool *);
++HOST_WIDE_INT svc_table_handler_number;
+ 
+ const struct attribute_spec microblaze_attribute_table[] = {
+   /* name         min_len, max_len, decl_req, type_req, fn_type, req_handler,
+@@ -218,6 +223,10 @@ const struct attribute_spec microblaze_attribute_table[] = {
+     false },
+   {"save_volatiles"   , 0,       0,     true,    false,   false,        NULL,
+     false },
++  {"svc_table_handler", 1,       1,     true,    false,   false,
++    svc_table_handler_attribute, false },
++  {"svc_handler",       0,       0,     true,    false,   false,        NULL,
++    false },
+   { NULL,        	0,       0,    false,    false,   false,        NULL,
+     false }
+ };
+@@ -1872,6 +1881,60 @@ microblaze_save_volatiles (tree func)
+   return a != NULL_TREE;
+ }
+ 
++static int
++microblaze_svc_handler_function_p (tree func)
++{
++  tree a;
++  if (TREE_CODE (func) != FUNCTION_DECL)
++    return 0;
++
++  a = lookup_attribute ("svc_handler", DECL_ATTRIBUTES (func));
++  return a != NULL_TREE;
++}
++
++/* Handler for "SVC" attribute;
++   struct attribute_spec.handler.  */
++static tree
++svc_table_handler_attribute (tree *node ATTRIBUTE_UNUSED,
++                                tree name,
++                                tree args,
++                                int flags ATTRIBUTE_UNUSED,
++                                bool *no_add_attrs)
++{
++  tree value = TREE_VALUE (args);
++  if (TREE_CODE (value) != INTEGER_CST)
++    {
++      warning (OPT_Wattributes,
++               "argument of %qE attribute is not a Integer constant",
++               name);
++      *no_add_attrs = true;
++    }
++  return NULL_TREE;
++}
++
++static HOST_WIDE_INT
++microblaze_svc_table_handler_number (tree func)
++{
++  tree attrs,args;
++  if (TREE_CODE (func) != FUNCTION_DECL)
++    return 0;
++
++  attrs=DECL_ATTRIBUTES(func);
++  args=TREE_VALUE(attrs);
++  HOST_WIDE_INT value1 = TREE_INT_CST_LOW (TREE_VALUE (args));
++  return value1;
++}
++
++static int
++microblaze_svc_table_handler_function_p (tree func)
++{
++  tree a;
++  if (TREE_CODE (func) != FUNCTION_DECL)
++    return 0;
++  a = lookup_attribute ("svc_table_handler", DECL_ATTRIBUTES (func));
++  return a != NULL_TREE;
++}
++
+ /* Return whether function is tagged with 'interrupt_handler'
+    or 'fast_interrupt' attribute.  Return true if function
+    should use return from interrupt rather than normal
+@@ -1882,6 +1945,14 @@ microblaze_is_interrupt_variant (void)
+   return (interrupt_handler || fast_interrupt);
+ }
+ 
++/* Return whether function is tagged with 'svc_handler'
++   or 'svc_table_handler' attribute. */
++int
++microblaze_is_svc_variant (void)
++{
++  return (svc_handler || svc_table_handler);
++}
++
+ /* Determine of register must be saved/restored in call.  */
+ static int
+ microblaze_must_save_register (int regno)
+@@ -1999,6 +2070,9 @@ compute_frame_size (HOST_WIDE_INT size)
+   fast_interrupt =
+     microblaze_fast_interrupt_function_p (current_function_decl);
+   save_volatiles = microblaze_save_volatiles (current_function_decl);
++  svc_handler = microblaze_svc_handler_function_p (current_function_decl);
++  svc_table_handler =
++    microblaze_svc_table_handler_function_p (current_function_decl);
+ 
+   gp_reg_size = 0;
+   mask = 0;
+@@ -2869,6 +2943,22 @@ microblaze_expand_prologue (void)
+ 
+   if (fsiz > 0)
+     {
++      if (svc_handler)
++        {
++          rtx reg11 = gen_rtx_REG (SImode, MB_ABI_TEMP1_REGNUM);
++          emit_jump_insn (gen_svc_jump (reg11));
++        }
++      if (svc_table_handler)
++        {
++          svc_table_handler_number =
++            microblaze_svc_table_handler_number (current_function_decl);
++          rtx reg18 = gen_rtx_REG (SImode, MB_ABI_ASM_TEMP_REGNUM);
++          rtx reg0 = gen_rtx_REG (SImode, MB_ABI_BASE_REGNUM);
++          rtx svc_rtx = GEN_INT (svc_table_handler_number);
++          emit_jump_insn (gen_svc_jump1 (svc_rtx));
++          emit_insn (gen_addsi3 (reg18, reg0, svc_rtx));
++          emit_jump_insn (gen_svc_jump2 (reg18));
++        }
+       rtx fsiz_rtx = GEN_INT (fsiz);
+ 
+       rtx insn = NULL;
+diff --git a/gcc/config/microblaze/microblaze.h b/gcc/config/microblaze/microblaze.h
+index 367e986..be12cb8 100644
+--- a/gcc/config/microblaze/microblaze.h
++++ b/gcc/config/microblaze/microblaze.h
+@@ -776,6 +776,8 @@ do {									\
+ /* Handle interrupt attribute.  */
+ extern int interrupt_handler;
+ extern int fast_interrupt;
++extern int svc_handler;
++extern int svc_table_handler;
+ extern int save_volatiles;
+ 
+ #define INTERRUPT_HANDLER_NAME "_interrupt_handler"
+diff --git a/gcc/config/microblaze/microblaze.md b/gcc/config/microblaze/microblaze.md
+index 5e72eda..3709cbf 100644
+--- a/gcc/config/microblaze/microblaze.md
++++ b/gcc/config/microblaze/microblaze.md
+@@ -1792,6 +1792,41 @@
+   }
+ )
+ 
++(define_insn "svc_jump"
++  [(set (pc) (match_operand 0 "register_operand" "d"))]
++  "svc_handler"
++  {
++    return "brki\tr11,0x8\;%#";
++  }
++  [(set_attr "type"	"jump")
++  (set_attr "mode"	"none")
++  (set_attr "length"	"4")])
++
++(define_insn "svc_jump1"
++  [(set (pc) (match_operand:SI 0 "immediate_operand" "I"))]
++  "svc_table_handler"
++  {
++    output_asm_insn ("addi\tr12,r0,0xAD", operands);
++    output_asm_insn ("cmpu\tr12,r11,r12", operands);
++    output_asm_insn ("mfs\tr11,rpc", operands);
++    return "beqi\tr12,0x14\;%#";
++  }
++  [(set_attr "type"	"jump")
++  (set_attr "mode"	"none")
++  (set_attr "length"	"4")])
++
++(define_insn "svc_jump2"
++  [(set (pc) (match_operand:SI 0 "register_operand" "d"))]
++  "svc_table_handler"
++  {
++    output_asm_insn ("addi\tr11,r0,0xAD", operands);
++    output_asm_insn ("brki\tr12,0x8", operands);
++    return "add\tr11,r0,r0\;%#";
++  }
++  [(set_attr "type"	"jump")
++  (set_attr "mode"	"none")
++  (set_attr "length"	"4")])
++
+ ;; Indirect jumps. Jump to register values. Assuming absolute jumps
+ 
+ (define_insn "indirect_jump_internal1"
+@@ -1962,6 +1997,8 @@
+   { 
+     if (microblaze_is_interrupt_variant ())
+         return "rtid\tr14, 0\;%#";
++    else if (microblaze_is_svc_variant ())
++        return "rtbd\tr15, 8\;%#";
+     else
+         return "rtsd\tr15, 8\;%#";
+   }
+@@ -1979,6 +2016,8 @@
+   {	
+     if (microblaze_is_interrupt_variant ())
+         return "rtid\tr14,0 \;%#";
++    else if (microblaze_is_svc_variant ())
++        return "rtbd\tr15, 8\;%#";
+     else
+         return "rtsd\tr15,8 \;%#";
+   }
+-- 
+1.8.3.4
+

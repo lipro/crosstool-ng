@@ -1,0 +1,27 @@
+From 029c604cc924fc2068a98408e19d3740a3d26402 Mon Sep 17 00:00:00 2001
+From: David Holsgrove <david.holsgrove@xilinx.com>
+Date: Wed, 24 Jul 2013 10:44:22 +1000
+Subject: [PATCH 28/28] [LOCAL]: Add microblaze to target-supports for atomic
+ builtin tests
+
+Signed-off-by: David Holsgrove <david.holsgrove@xilinx.com>
+Signed-off-by: Stephan Linz <linz@li-pro.net>
+---
+ gcc/testsuite/lib/target-supports.exp | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/gcc/testsuite/lib/target-supports.exp b/gcc/testsuite/lib/target-supports.exp
+index 483ed5b..86c7fa5 100644
+--- a/gcc/testsuite/lib/target-supports.exp
++++ b/gcc/testsuite/lib/target-supports.exp
+@@ -4374,6 +4374,7 @@ proc check_effective_target_sync_int_long { } {
+ 	     || [istarget arm*-*-linux-*] 
+ 	     || [istarget bfin*-*linux*]
+ 	     || [istarget hppa*-*linux*]
++	     || [istarget microblaze*-*linux*]
+ 	     || [istarget s390*-*-*] 
+ 	     || [istarget powerpc*-*-*]
+ 	     || [istarget crisv32-*-*] || [istarget cris-*-*]
+-- 
+1.8.3.4
+

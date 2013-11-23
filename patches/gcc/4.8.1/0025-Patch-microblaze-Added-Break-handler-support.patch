@@ -1,0 +1,199 @@
+From 2cd698a78441e466f5e4b398747d5937b6f56b1a Mon Sep 17 00:00:00 2001
+From: nagaraju <nmekala@xilix.com>
+Date: Tue, 8 Oct 2013 15:13:59 +0530
+Subject: [PATCH 25/28] [Patch, microblaze]: Added Break handler support
+
+Break handler is used to support a normal hardware break.
+This is similar to interrupt_handler except that RTBD should be used instead of RTID.
+
+Signed-off-by:Nagaraju <nmekala@xilix.com>
+Signed-off-by:David Holsgrove <david.holsgrove@xilinx.com>
+Signed-off-by: Stephan Linz <linz@li-pro.net>
+---
+ gcc/config/microblaze/microblaze-protos.h |  1 +
+ gcc/config/microblaze/microblaze.c        | 38 +++++++++++++++++++++++++++++--
+ gcc/config/microblaze/microblaze.h        |  2 ++
+ gcc/config/microblaze/microblaze.md       | 10 ++++++--
+ 4 files changed, 47 insertions(+), 4 deletions(-)
+
+diff --git a/gcc/config/microblaze/microblaze-protos.h b/gcc/config/microblaze/microblaze-protos.h
+index 9404ee4..f05931e 100644
+--- a/gcc/config/microblaze/microblaze-protos.h
++++ b/gcc/config/microblaze/microblaze-protos.h
+@@ -40,6 +40,7 @@ extern void print_operand_address (FILE *, rtx);
+ extern void init_cumulative_args (CUMULATIVE_ARGS *,tree, rtx);
+ extern bool microblaze_legitimate_address_p (enum machine_mode, rtx, bool);
+ extern int microblaze_is_interrupt_variant (void);
++extern int microblaze_is_break_handler (void);
+ extern int microblaze_is_svc_variant (void);
+ extern rtx microblaze_return_addr (int, rtx);
+ extern int simple_memory_operand (rtx, enum machine_mode);
+diff --git a/gcc/config/microblaze/microblaze.c b/gcc/config/microblaze/microblaze.c
+index 7a298b3..d357f74 100644
+--- a/gcc/config/microblaze/microblaze.c
++++ b/gcc/config/microblaze/microblaze.c
+@@ -206,6 +206,7 @@ enum reg_class microblaze_regno_to_class[] =
+ 		       and epilogue and use appropriate interrupt return.
+    save_volatiles    - Similar to interrupt handler, but use normal return.  */
+ int interrupt_handler;
++int break_handler;
+ int fast_interrupt;
+ int save_volatiles;
+ int svc_table_handler;
+@@ -219,6 +220,8 @@ const struct attribute_spec microblaze_attribute_table[] = {
+      affects_type_identity */
+   {"interrupt_handler", 0,       0,     true,    false,   false,        NULL,
+     false },
++  {"break_handler", 0,       0,     true,    false,   false,        NULL,
++    false },
+   {"fast_interrupt",    0,       0,     true,    false,   false,        NULL,
+     false },
+   {"save_volatiles"   , 0,       0,     true,    false,   false,        NULL,
+@@ -1862,6 +1865,18 @@ microblaze_interrupt_function_p (tree func)
+ }
+ 
+ static int
++microblaze_break_function_p (tree func)
++{
++  tree a;
++
++  if (TREE_CODE (func) != FUNCTION_DECL)
++    return 0;
++
++  a = lookup_attribute ("break_handler", DECL_ATTRIBUTES (func));
++  return a != NULL_TREE;
++}
++
++static int
+ microblaze_fast_interrupt_function_p (tree func)
+ {
+   tree a;
+@@ -1943,7 +1958,7 @@ microblaze_svc_table_handler_function_p (tree func)
+ }
+ 
+ /* Return whether function is tagged with 'interrupt_handler'
+-   or 'fast_interrupt' attribute.  Return true if function
++   or 'fast_interrupt' or 'break_handler' attribute.  Return true if function
+    should use return from interrupt rather than normal
+    function return.  */
+ int
+@@ -1952,6 +1967,13 @@ microblaze_is_interrupt_variant (void)
+   return (interrupt_handler || fast_interrupt);
+ }
+ 
++int
++microblaze_is_break_handler (void)
++{
++  return break_handler;
++}
++
++
+ /* Return whether function is tagged with 'svc_handler'
+    or 'svc_table_handler' attribute. */
+ int
+@@ -2074,12 +2096,16 @@ compute_frame_size (HOST_WIDE_INT size)
+ 
+   interrupt_handler =
+     microblaze_interrupt_function_p (current_function_decl);
++  break_handler =
++    microblaze_break_function_p (current_function_decl);
+   fast_interrupt =
+     microblaze_fast_interrupt_function_p (current_function_decl);
+   save_volatiles = microblaze_save_volatiles (current_function_decl);
+   svc_handler = microblaze_svc_handler_function_p (current_function_decl);
+   svc_table_handler =
+     microblaze_svc_table_handler_function_p (current_function_decl);
++  if(break_handler)
++      interrupt_handler = break_handler;
+ 
+   gp_reg_size = 0;
+   mask = 0;
+@@ -2772,6 +2798,8 @@ microblaze_function_prologue (FILE * file, HOST_WIDE_INT size ATTRIBUTE_UNUSED)
+       fputs ("\t.ent\t", file);
+       if (interrupt_handler && strcmp (INTERRUPT_HANDLER_NAME, fnname))
+ 	fputs ("_interrupt_handler", file);
++      else if (break_handler && strcmp (BREAK_HANDLER_NAME, fnname))
++	fputs ("_break_handler", file);
+       else if (fast_interrupt && strcmp (FAST_INTERRUPT_NAME, fnname))
+ 	fputs ("_fast_interrupt", file);
+       else
+@@ -2786,6 +2814,8 @@ microblaze_function_prologue (FILE * file, HOST_WIDE_INT size ATTRIBUTE_UNUSED)
+ 
+   if (interrupt_handler && strcmp (INTERRUPT_HANDLER_NAME, fnname))
+     fputs ("_interrupt_handler:\n", file);
++  if (break_handler && strcmp (BREAK_HANDLER_NAME, fnname))
++    fputs ("_break_handler:\n", file);
+ 
+   if (!flag_inhibit_size_directive)
+     {
+@@ -3038,8 +3068,10 @@ microblaze_function_epilogue (FILE * file ATTRIBUTE_UNUSED,
+   if (!flag_inhibit_size_directive)
+     {
+       fputs ("\t.end\t", file);
+-      if (interrupt_handler)
++      if (interrupt_handler && !break_handler)
+ 	fputs ("_interrupt_handler", file);
++      else if (break_handler)
++	fputs ("_break_handler", file);
+       else
+ 	assemble_name (file, fnname);
+       fputs ("\n", file);
+@@ -3227,6 +3259,8 @@ microblaze_globalize_label (FILE * stream, const char *name)
+     {
+       if (interrupt_handler && strcmp (name, INTERRUPT_HANDLER_NAME))
+         fputs (INTERRUPT_HANDLER_NAME, stream);
++      else if (break_handler && strcmp (name, BREAK_HANDLER_NAME))
++        fputs (BREAK_HANDLER_NAME, stream);
+       else if (fast_interrupt && strcmp (name, FAST_INTERRUPT_NAME))
+         fputs (FAST_INTERRUPT_NAME, stream);
+       fputs ("\n\t.globl\t", stream);
+diff --git a/gcc/config/microblaze/microblaze.h b/gcc/config/microblaze/microblaze.h
+index e1c6127..5782120 100644
+--- a/gcc/config/microblaze/microblaze.h
++++ b/gcc/config/microblaze/microblaze.h
+@@ -775,12 +775,14 @@ do {									\
+ 
+ /* Handle interrupt attribute.  */
+ extern int interrupt_handler;
++extern int break_handler;
+ extern int fast_interrupt;
+ extern int svc_handler;
+ extern int svc_table_handler;
+ extern int save_volatiles;
+ 
+ #define INTERRUPT_HANDLER_NAME "_interrupt_handler"
++#define BREAK_HANDLER_NAME "_break_handler"
+ #define FAST_INTERRUPT_NAME "_fast_interrupt"
+ 
+ /* The following #defines are used in the headers files. Always retain these.  */
+diff --git a/gcc/config/microblaze/microblaze.md b/gcc/config/microblaze/microblaze.md
+index f62cff3..baf8e6d 100644
+--- a/gcc/config/microblaze/microblaze.md
++++ b/gcc/config/microblaze/microblaze.md
+@@ -2007,7 +2007,10 @@
+   [(any_return)]
+   ""
+   { 
+-    if (microblaze_is_interrupt_variant ())
++    if (microblaze_is_break_handler ())
++        return "rtbd\tr16, 0\;%#";
++    else if (microblaze_is_interrupt_variant ()
++                && (!microblaze_is_break_handler()))
+         return "rtid\tr14, 0\;%#";
+     else if (microblaze_is_svc_variant ())
+         return "rtbd\tr15, 8\;%#";
+@@ -2026,7 +2029,10 @@
+    (use (match_operand:SI 0 "register_operand" ""))]
+   ""
+   {	
+-    if (microblaze_is_interrupt_variant ())
++    if (microblaze_is_break_handler ())
++        return "rtbd\tr16, 0\;%#";
++    else if (microblaze_is_interrupt_variant ()
++                && (!microblaze_is_break_handler()))
+         return "rtid\tr14,0 \;%#";
+     else if (microblaze_is_svc_variant ())
+         return "rtbd\tr15, 8\;%#";
+-- 
+1.8.3.4
+
