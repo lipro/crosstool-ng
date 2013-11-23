@@ -1,0 +1,25 @@
+From 22060932e9481cb4c0cf94da9ae42ec7302136f2 Mon Sep 17 00:00:00 2001
+From: David Holsgrove <david.holsgrove@petalogix.com>
+Date: Thu, 10 Nov 2011 18:28:25 +1000
+Subject: [PATCH 04/10] xilinx.ld Remove OUTPUT_FORMAT
+
+Signed-off-by: David Holsgrove <david.holsgrove@petalogix.com>
+Signed-off-by: Stephan Linz <linz@li-pro.net>
+---
+ libgloss/microblaze/xilinx.ld | 2 --
+ 1 file changed, 2 deletions(-)
+
+diff --git a/libgloss/microblaze/xilinx.ld b/libgloss/microblaze/xilinx.ld
+index 58594c4..7789ea9 100644
+--- a/libgloss/microblaze/xilinx.ld
++++ b/libgloss/microblaze/xilinx.ld
+@@ -1,6 +1,4 @@
+ /* Default linker script, for normal executables */
+-OUTPUT_FORMAT("elf32-microblaze", "",
+-	      "")
+ /*SEARCH_DIR("/proj/fv1/gnu_builds/head/mb/release/lin/mb/microblaze-xilinx-elf/lib");*/
+ /*SEARCH_DIR("/proj/fv1/gnu_builds/head/mb/release/lin/mb/microblaze-xilinx-elf/lib");*/
+ ENTRY(_start)
+-- 
+1.8.3.4
+
