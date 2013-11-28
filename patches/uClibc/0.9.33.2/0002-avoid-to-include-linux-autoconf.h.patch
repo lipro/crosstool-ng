@@ -1,0 +1,31 @@
+From 15020e8410e932c487e6173931ca95d8598fc9ae Mon Sep 17 00:00:00 2001
+From: Stephan Linz <linz@li-pro.net>
+Date: Thu, 28 Nov 2013 21:57:35 +0100
+Subject: [PATCH 2/2] avoid to include linux/autoconf.h
+
+Newer kernel versions no longer generate this header. Instead
+we could use generated/autoconf.h but also newer kernel versions
+no longer define the CONFIG_MICROBLAZE_nnK_PAGES configuration
+option, so we assuming 4K as default.
+
+Signed-off-by: Stephan Linz <linz@li-pro.net>
+---
+ libc/sysdeps/linux/microblaze/bits/uClibc_page.h | 2 --
+ 1 file changed, 2 deletions(-)
+
+diff --git a/libc/sysdeps/linux/microblaze/bits/uClibc_page.h b/libc/sysdeps/linux/microblaze/bits/uClibc_page.h
+index 41b0422..0131ab3 100644
+--- a/libc/sysdeps/linux/microblaze/bits/uClibc_page.h
++++ b/libc/sysdeps/linux/microblaze/bits/uClibc_page.h
+@@ -20,8 +20,6 @@
+ #ifndef _UCLIBC_PAGE_H
+ #define _UCLIBC_PAGE_H
+ 
+-#include <linux/autoconf.h>
+-
+ #if   defined(CONFIG_MICROBLAZE_32K_PAGES)
+ #define PAGE_SHIFT		15
+ #elif defined(CONFIG_MICROBLAZE_16K_PAGES)
+-- 
+1.8.3.4
+

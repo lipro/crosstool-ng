@@ -1,0 +1,33 @@
+From db78866cacf03093870b82a9bfa6244a638d0f8d Mon Sep 17 00:00:00 2001
+From: Stephan Linz <linz@li-pro.net>
+Date: Thu, 28 Nov 2013 21:57:19 +0100
+Subject: [PATCH 1/2] use the __extern_always_inline define from cdefs.h
+
+harmonize with sha1:94fa1bb4
+
+Signed-off-by: Stephan Linz <linz@li-pro.net>
+---
+ libpthread/linuxthreads.old/sysdeps/microblaze/pt-machine.h | 5 +----
+ 1 file changed, 1 insertion(+), 4 deletions(-)
+
+diff --git a/libpthread/linuxthreads.old/sysdeps/microblaze/pt-machine.h b/libpthread/linuxthreads.old/sysdeps/microblaze/pt-machine.h
+index e8c03f9..edb61fb 100644
+--- a/libpthread/linuxthreads.old/sysdeps/microblaze/pt-machine.h
++++ b/libpthread/linuxthreads.old/sysdeps/microblaze/pt-machine.h
+@@ -18,12 +18,9 @@
+ #include <features.h>
+ 
+ #ifndef PT_EI
+-# define PT_EI extern inline
++# define PT_EI __extern_always_inline
+ #endif
+ 
+-extern long int testandset (int *spinlock);
+-extern int __compare_and_swap (long *ptr, long old, long new);
+-
+ /* Get some notion of the current stack.  Need not be exactly the top
+    of the stack, just something somewhere in the current frame.  */
+ #define CURRENT_STACK_FRAME  __stack_pointer
+-- 
+1.8.3.4
+
