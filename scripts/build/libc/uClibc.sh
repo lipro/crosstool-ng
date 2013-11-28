@@ -155,6 +155,7 @@ do_libc_backend_once() {
     local libc_startfiles
     local libc_full
     local -a generic_make_args
+    local glibc_cflags
     local cross_cc
     local cross
     local arg
@@ -166,9 +167,14 @@ do_libc_backend_once() {
     cross_cc=$(CT_Which "${cross}gcc")
     generic_make_args+=("CROSS=${cross}")
     generic_make_args+=("PREFIX=${CT_SYSROOT_DIR}/")
+
+    glibc_cflags+=" ${CT_TARGET_CFLAGS}"
+    generic_make_args+=("UCLIBC_EXTRA_CFLAGS=${glibc_cflags}")
+
     generic_make_args+=("LOCALE_DATA_FILENAME=${uclibc_local_tarball}.tgz")
 
     CT_DoLog DEBUG "Using gcc for target    : '${cross_cc}'"
+    CT_DoLog DEBUG "Extra CC args passed    : '${glibc_cflags}'"
 
     # Force the date of the pregen locale data, as the
     # newer ones that are referenced are not available
