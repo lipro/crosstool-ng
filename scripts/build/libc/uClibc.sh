@@ -386,11 +386,21 @@ mungeuClibcConfig() {
     cat <<-ENDSED
 		s/^DEVEL_PREFIX=".*"/DEVEL_PREFIX="\\/usr\\/"/
 		s/^RUNTIME_PREFIX=".*"/RUNTIME_PREFIX="\\/"/
-		s/^SHARED_LIB_LOADER_PREFIX=.*/SHARED_LIB_LOADER_PREFIX="\\/lib\\/"/
 		s/^KERNEL_SOURCE=".*"/KERNEL_SOURCE="${quoted_kernel_source}"/
 		s/^KERNEL_HEADERS=".*"/KERNEL_HEADERS="${quoted_headers_dir}"/
 		s/^UCLIBC_DOWNLOAD_PREGENERATED_LOCALE=y/\\# UCLIBC_DOWNLOAD_PREGENERATED_LOCALE is not set/
 		ENDSED
+
+    # newer version use MULTILIB_DIR instead of SHARED_LIB_LOADER_PREFIX
+    if [ "${CT_LIBC_UCLIBC_0_9_31_or_later}" = "y" ]; then
+        cat <<-ENDSED
+			s/^MULTILIB_DIR=.*/MULTILIB_DIR="\\lib\\/"/
+			ENDSED
+    else
+        cat <<-ENDSED
+			s/^SHARED_LIB_LOADER_PREFIX=.*/SHARED_LIB_LOADER_PREFIX="\\/lib\\/"/
+			ENDSED
+    fi
 
     if [ "${CT_USE_PIPES}" = "y" ]; then
         if grep UCLIBC_EXTRA_CFLAGS extra/Configs/Config.in >/dev/null 2>&1; then
