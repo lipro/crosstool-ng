@@ -71,31 +71,103 @@ do_libc_check_config() {
 
 # Build and install headers and start files
 do_libc_start_files() {
-    local install_rule
-    local cross
+    # Start files and Headers should be configured the same way as the
+    # final libc, but built and installed differently.
+    do_libc_backend libc_mode=startfiles
+}
 
-    CT_DoStep INFO "Installing C library headers"
+# This function build and install the full uClibc
+do_libc() {
+    do_libc_backend libc_mode=final
+}
+
+# This backend builds the C library once for each multilib
+# variant the compiler gives us
+# Usage: do_libc_backend param=value [...]
+#   Parameter           : Definition                            : Type      : Default
+#   libc_mode           : 'startfiles' or 'final'               : string    : (none)
+do_libc_backend() {
+    local libc_mode
+    local libc_headers
+    local libc_startfiles
+    local libc_full
+    local cross
+    local arg
+
+    for arg in "$@"; do
+        eval "${arg// /\\ }"
+    done
+
+    case "${libc_mode}" in
+        startfiles)
+            CT_DoStep INFO "Installing C library headers & start files"
+            # uClibc uses the CROSS environment variable as a prefix to the
+            # compiler tools to use.  Setting it to the empty string forces
+            # use of the native build host tools, which we need at this
+            # stage, as we don't have target tools yet.
+            # BUT! With NPTL, we need a cross-compiler (and we have it)
+            if [ "${CT_THREADS}" = "nptl" ]; then
+                cross="${CT_TARGET}-"
+            fi
+            libc_headers=y
+            libc_startfiles=y
+            libc_full=
+            ;;
+        final)
+            CT_DoStep INFO "Installing C library"
+            # uClibc uses the CROSS environment variable as a prefix to the
+            # compiler tools to use.  The newly built tools should be in our
+            # path, so we need only give the correct name for them.
+            cross="${CT_TARGET}-"
+            libc_headers=
+            libc_startfiles=
+            libc_full=y
+            ;;
+        *)  CT_Abort "Unsupported (or unset) libc_mode='${libc_mode}'";;
+    esac
 
     # Simply copy files until uClibc has the ability to build out-of-tree
     CT_DoLog EXTRA "Copying sources to build dir"
     CT_DoExecLog ALL cp -av "${CT_SRC_DIR}/uClibc-${CT_LIBC_VERSION}"   \
-                            "${CT_BUILD_DIR}/build-libc-headers"
-    cd "${CT_BUILD_DIR}/build-libc-headers"
+                            "${CT_BUILD_DIR}/build-libc-${libc_mode}"
+    cd "${CT_BUILD_DIR}/build-libc-${libc_mode}"
 
     # Retrieve the config file
     CT_DoExecLog ALL cp "${CT_CONFIG_DIR}/uClibc.config" .config
 
-    # uClibc uses the CROSS environment variable as a prefix to the
-    # compiler tools to use.  Setting it to the empty string forces
-    # use of the native build host tools, which we need at this
-    # stage, as we don't have target tools yet.
-    # BUT! With NPTL, we need a cross-compiler (and we have it)
-    if [ "${CT_THREADS}" = "nptl" ]; then
-        cross="${CT_TARGET}-"
-    fi
+    do_libc_backend_once cross="${cross}"                       \
+                         libc_headers="${libc_headers}"         \
+                         libc_startfiles="${libc_startfiles}"   \
+                         libc_full="${libc_full}"
+
+    CT_EndStep
+}
+
+# This backend builds the C library once
+# Usage: do_libc_backend_once param=value [...]
+#   Parameter           : Definition                            : Type      : Default
+#   cross               : Prefix to the compiler tools to use   : string    : (empty)
+#   libc_headers        : Build libc headers                    : bool      : n
+#   libc_startfiles     : Build libc start-files                : bool      : n
+#   libc_full           : Build full libc                       : bool      : n
+do_libc_backend_once() {
+    local libc_headers
+    local libc_startfiles
+    local libc_full
+    local cross
+    local arg
+
+    for arg in "$@"; do
+        eval "${arg// /\\ }"
+    done
 
     # Force the date of the pregen locale data, as the
     # newer ones that are referenced are not available
+    # Note about CFLAGS: In uClibc, CFLAGS are generated
+    # by Rules.mak, depending  on the configuration of
+    # the library. That is, they are tailored to best fit
+    # the target. So it is useless and seems to be a bad
+    # thing to use LIBC_EXTRA_CFLAGS here.
     CT_DoLog EXTRA "Applying configuration"
     CT_DoYes "" |CT_DoExecLog ALL                                   \
                  make CROSS="${cross}"                              \
@@ -103,133 +175,108 @@ do_libc_start_files() {
                  LOCALE_DATA_FILENAME="${uclibc_local_tarball}.tgz" \
                  oldconfig
 
-    CT_DoLog EXTRA "Building headers"
-    CT_DoExecLog ALL                                        \
-    make ${CT_LIBC_UCLIBC_VERBOSITY}                        \
-         CROSS="${cross}"                                   \
-         PREFIX="${CT_SYSROOT_DIR}/"                        \
-         LOCALE_DATA_FILENAME="${uclibc_local_tarball}.tgz" \
-         headers
+    if [ "${libc_headers}" = "y" ]; then
+        CT_DoLog EXTRA "Building C library headers"
 
-    if [ "${CT_LIBC_UCLIBC_0_9_30_or_later}" = "y" ]; then
-        install_rule=install_headers
-    else
-        install_rule=install_dev
-    fi
-
-    CT_DoLog EXTRA "Installing headers"
-    CT_DoExecLog ALL                                        \
-    make ${CT_LIBC_UCLIBC_VERBOSITY}                        \
-         CROSS="${cross}"                                   \
-         PREFIX="${CT_SYSROOT_DIR}/"                        \
-         LOCALE_DATA_FILENAME="${uclibc_local_tarball}.tgz" \
-         ${install_rule}
-
-    if [ "${CT_THREADS}" = "nptl" ]; then
-        CT_DoLog EXTRA "Building start files"
         CT_DoExecLog ALL                                        \
-        make ${CT_LIBC_UCLIBC_PARALLEL:+${JOBSFLAGS}}           \
+        make ${CT_LIBC_UCLIBC_VERBOSITY}                        \
              CROSS="${cross}"                                   \
+             PREFIX="${CT_SYSROOT_DIR}/"                        \
+             LOCALE_DATA_FILENAME="${uclibc_local_tarball}.tgz" \
+             headers
+
+        CT_DoLog EXTRA "Installing C library headers"
+        if [ "${CT_LIBC_UCLIBC_0_9_30_or_later}" = "y" ]; then
+            install_rule=install_headers
+        else
+            install_rule=install_dev
+        fi
+
+        CT_DoExecLog ALL                                        \
+        make ${CT_LIBC_UCLIBC_VERBOSITY}                        \
+             CROSS="${cross}"                                   \
+             PREFIX="${CT_SYSROOT_DIR}/"                        \
+             LOCALE_DATA_FILENAME="${uclibc_local_tarball}.tgz" \
+             ${install_rule}
+    fi # libc_headers == y
+
+    if [ "${libc_startfiles}" = "y" ]; then
+        if [ "${CT_THREADS}" = "nptl" ]; then
+            CT_DoLog EXTRA "Building C library start files"
+            CT_DoExecLog ALL                                        \
+            make ${CT_LIBC_UCLIBC_PARALLEL:+${JOBSFLAGS}}           \
+                 CROSS="${cross}"                                   \
+                 PREFIX="${CT_SYSROOT_DIR}/"                        \
+                 STRIPTOOL=true                                     \
+                 ${CT_LIBC_UCLIBC_VERBOSITY}                        \
+                 LOCALE_DATA_FILENAME="${uclibc_local_tarball}.tgz" \
+                 lib/crt1.o lib/crti.o lib/crtn.o
+
+            # From:  http://git.openembedded.org/cgit.cgi/openembedded/commit/?id=ad5668a7ac7e0436db92e55caaf3fdf782b6ba3b
+            # libm.so is needed for ppc, as libgcc is linked against libm.so
+            # No problem to create it for other archs.
+            CT_DoLog EXTRA "Building C library dummy shared libs"
+            CT_DoExecLog ALL "${cross}gcc" -nostdlib        \
+                                           -nostartfiles    \
+                                           -shared          \
+                                           -x c /dev/null   \
+                                           -o libdummy.so
+
+            CT_DoLog EXTRA "Installing C library start files"
+            CT_DoExecLog ALL install -m 0644 lib/crt1.o lib/crti.o lib/crtn.o   \
+                                             "${CT_SYSROOT_DIR}/usr/lib"
+
+            CT_DoLog EXTRA "Installing C library dummy shared libs"
+            CT_DoExecLog ALL install -m 0755 libdummy.so "${CT_SYSROOT_DIR}/usr/lib/libc.so"
+            CT_DoExecLog ALL install -m 0755 libdummy.so "${CT_SYSROOT_DIR}/usr/lib/libm.so"
+        fi # threads == nptl
+    fi # libc_headers == y
+
+    if [ "${libc_full}" = "y" ]; then
+        # We do _not_ want to strip anything for now, in case we specifically
+        # asked for a debug toolchain, thus the STRIPTOOL= assignment
+        # /Old/ versions can not build in //
+        CT_DoLog EXTRA "Building C library"
+        CT_DoExecLog ALL                                        \
+        make -j1                                                \
+             CROSS=${CT_TARGET}-                                \
              PREFIX="${CT_SYSROOT_DIR}/"                        \
              STRIPTOOL=true                                     \
              ${CT_LIBC_UCLIBC_VERBOSITY}                        \
              LOCALE_DATA_FILENAME="${uclibc_local_tarball}.tgz" \
-             lib/crt1.o lib/crti.o lib/crtn.o
+             pregen
+        CT_DoExecLog ALL                                        \
+        make ${CT_LIBC_UCLIBC_PARALLEL:+${JOBSFLAGS}}           \
+             CROSS=${CT_TARGET}-                                \
+             PREFIX="${CT_SYSROOT_DIR}/"                        \
+             STRIPTOOL=true                                     \
+             ${CT_LIBC_UCLIBC_VERBOSITY}                        \
+             LOCALE_DATA_FILENAME="${uclibc_local_tarball}.tgz" \
+             all
 
-        # From:  http://git.openembedded.org/cgit.cgi/openembedded/commit/?id=ad5668a7ac7e0436db92e55caaf3fdf782b6ba3b
-        # libm.so is needed for ppc, as libgcc is linked against libm.so
-        # No problem to create it for other archs.
-        CT_DoLog EXTRA "Building dummy shared libs"
-        CT_DoExecLog ALL "${cross}gcc" -nostdlib        \
-                                       -nostartfiles    \
-                                       -shared          \
-                                       -x c /dev/null   \
-                                       -o libdummy.so
-
-        CT_DoLog EXTRA "Installing start files"
-        CT_DoExecLog ALL install -m 0644 lib/crt1.o lib/crti.o lib/crtn.o   \
-                                         "${CT_SYSROOT_DIR}/usr/lib"
-
-        CT_DoLog EXTRA "Installing dummy shared libs"
-        CT_DoExecLog ALL install -m 0755 libdummy.so "${CT_SYSROOT_DIR}/usr/lib/libc.so"
-        CT_DoExecLog ALL install -m 0755 libdummy.so "${CT_SYSROOT_DIR}/usr/lib/libm.so"
-    fi # CT_THREADS == nptl
-
-    CT_EndStep
-}
-
-# This function build and install the full uClibc
-do_libc() {
-    CT_DoStep INFO "Installing C library"
-
-    # Simply copy files until uClibc has the ability to build out-of-tree
-    CT_DoLog EXTRA "Copying sources to build dir"
-    CT_DoExecLog ALL cp -av "${CT_SRC_DIR}/uClibc-${CT_LIBC_VERSION}"   \
-                            "${CT_BUILD_DIR}/build-libc"
-    cd "${CT_BUILD_DIR}/build-libc"
-
-    # Retrieve the config file
-    CT_DoExecLog ALL cp "${CT_CONFIG_DIR}/uClibc.config" .config
-
-    # uClibc uses the CROSS environment variable as a prefix to the compiler
-    # tools to use.  The newly built tools should be in our path, so we need
-    # only give the correct name for them.
-    # Note about CFLAGS: In uClibc, CFLAGS are generated by Rules.mak,
-    # depending  on the configuration of the library. That is, they are tailored
-    # to best fit the target. So it is useless and seems to be a bad thing to
-    # use LIBC_EXTRA_CFLAGS here.
-    CT_DoLog EXTRA "Applying configuration"
-    CT_DoYes "" |CT_DoExecLog CFG                                   \
-                 make CROSS=${CT_TARGET}-                           \
-                 PREFIX="${CT_SYSROOT_DIR}/"                        \
-                 LOCALE_DATA_FILENAME="${uclibc_local_tarball}.tgz" \
-                 oldconfig
-
-    # We do _not_ want to strip anything for now, in case we specifically
-    # asked for a debug toolchain, thus the STRIPTOOL= assignment
-    # /Old/ versions can not build in //
-    CT_DoLog EXTRA "Building C library"
-    CT_DoExecLog ALL                                        \
-    make -j1                                                \
-         CROSS=${CT_TARGET}-                                \
-         PREFIX="${CT_SYSROOT_DIR}/"                        \
-         STRIPTOOL=true                                     \
-         ${CT_LIBC_UCLIBC_VERBOSITY}                        \
-         LOCALE_DATA_FILENAME="${uclibc_local_tarball}.tgz" \
-         pregen
-    CT_DoExecLog ALL                                        \
-    make ${CT_LIBC_UCLIBC_PARALLEL:+${JOBSFLAGS}}           \
-         CROSS=${CT_TARGET}-                                \
-         PREFIX="${CT_SYSROOT_DIR}/"                        \
-         STRIPTOOL=true                                     \
-         ${CT_LIBC_UCLIBC_VERBOSITY}                        \
-         LOCALE_DATA_FILENAME="${uclibc_local_tarball}.tgz" \
-         all
-
-    # YEM-FIXME:
-    # - we want to install 'runtime' files, eg. lib*.{a,so*}, crti.o and
-    #   such files, except the headers as they already are installed
-    # - "make install_dev" installs the headers, the crti.o... and the
-    #   static libs, but not the dynamic libs
-    # - "make install_runtime" installs the dynamic libs only
-    # - "make install" calls install_runtime and install_dev
-    # - so we're left with re-installing the headers... Sigh...
-    #
-    # We do _not_ want to strip anything for now, in case we specifically
-    # asked for a debug toolchain, hence the STRIPTOOL= assignment
-    #
-    # Note: JOBSFLAGS is not usefull for installation.
-    #
-    CT_DoLog EXTRA "Installing C library"
-    CT_DoExecLog ALL                                        \
-    make CROSS=${CT_TARGET}-                                \
-         PREFIX="${CT_SYSROOT_DIR}/"                        \
-         STRIPTOOL=true                                     \
-         ${CT_LIBC_UCLIBC_VERBOSITY}                        \
-         LOCALE_DATA_FILENAME="${uclibc_local_tarball}.tgz" \
-         install
-
-    CT_EndStep
+        # YEM-FIXME:
+        # - we want to install 'runtime' files, eg. lib*.{a,so*}, crti.o and
+        #   such files, except the headers as they already are installed
+        # - "make install_dev" installs the headers, the crti.o... and the
+        #   static libs, but not the dynamic libs
+        # - "make install_runtime" installs the dynamic libs only
+        # - "make install" calls install_runtime and install_dev
+        # - so we're left with re-installing the headers... Sigh...
+        #
+        # We do _not_ want to strip anything for now, in case we specifically
+        # asked for a debug toolchain, hence the STRIPTOOL= assignment
+        #
+        # Note: JOBSFLAGS is not usefull for installation.
+        #
+        CT_DoLog EXTRA "Installing C library"
+        CT_DoExecLog ALL                                        \
+        make CROSS=${CT_TARGET}-                                \
+             PREFIX="${CT_SYSROOT_DIR}/"                        \
+             STRIPTOOL=true                                     \
+             ${CT_LIBC_UCLIBC_VERBOSITY}                        \
+             LOCALE_DATA_FILENAME="${uclibc_local_tarball}.tgz" \
+             install
+    fi # libc_full == y
 }
 
 # Initialises the .config file to sensible values
