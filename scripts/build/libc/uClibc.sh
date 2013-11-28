@@ -88,9 +88,14 @@ do_libc() {
 #   libc_mode           : 'startfiles' or 'final'               : string    : (none)
 do_libc_backend() {
     local libc_mode
-    local libc_headers
-    local libc_startfiles
-    local libc_full
+    local -a multilibs
+    local multilib
+    local multi_dir
+    local extra_flags
+    local extra_dir
+    local build_dir
+    local libc_headers libc_startfiles libc_full
+    local hdr
     local cross
     local arg
 
@@ -109,7 +114,7 @@ do_libc_backend() {
             if [ "${CT_THREADS}" = "nptl" ]; then
                 cross="${CT_TARGET}-"
             fi
-            libc_headers=y
+            hdr=y
             libc_startfiles=y
             libc_full=
             ;;
@@ -119,26 +124,85 @@ do_libc_backend() {
             # compiler tools to use.  The newly built tools should be in our
             # path, so we need only give the correct name for them.
             cross="${CT_TARGET}-"
-            libc_headers=
+            hdr=
             libc_startfiles=
             libc_full=y
             ;;
         *)  CT_Abort "Unsupported (or unset) libc_mode='${libc_mode}'";;
     esac
 
-    # Simply copy files until uClibc has the ability to build out-of-tree
-    CT_DoLog EXTRA "Copying sources to build dir"
-    CT_DoExecLog ALL cp -av "${CT_SRC_DIR}/uClibc-${CT_LIBC_VERSION}"   \
-                            "${CT_BUILD_DIR}/build-libc-${libc_mode}"
-    cd "${CT_BUILD_DIR}/build-libc-${libc_mode}"
+    # If gcc is not configured for multilib, it still prints
+    # a single line for the default settings
+    multilibs=( $("${CT_TARGET}-gcc" -print-multi-lib 2>/dev/null) )
+    for multilib in "${multilibs[@]}"; do
+        multi_dir="${multilib%%;*}"
+        if [ "${multi_dir}" != "." ]; then
+            CT_DoStep INFO "Building for multilib subdir='${multi_dir}'"
 
-    # Retrieve the config file
-    CT_DoExecLog ALL cp "${CT_CONFIG_DIR}/uClibc.config" .config
+            extra_flags="$( echo "${multilib#*;}"       \
+                            |${sed} -r -e 's/@/ -/g;'   \
+                          )"
+            build_dir="/libc_${multi_dir//\//_}"
+            extra_dir="${multi_dir}"
 
-    do_libc_backend_once cross="${cross}"                       \
-                         libc_headers="${libc_headers}"         \
-                         libc_startfiles="${libc_startfiles}"   \
-                         libc_full="${libc_full}"
+            # Prepare some symlinks so uClibc installs in fact in
+            # the proper place.
+            # We do it in the start-files step, so it is not needed
+            # to do it in the final step, as the symlinks will
+            # already exist.
+            if [ "${libc_mode}" = "startfiles" ]; then
+                CT_Pushd "${CT_SYSROOT_DIR}"
+                CT_DoExecLog ALL mkdir -p "lib/${multi_dir}"        \
+                                          "usr/lib/${multi_dir}"
+                CT_Popd
+            fi
+            libc_headers=
+        else
+            build_dir=
+            extra_dir=
+            extra_flags=
+            libc_headers="${hdr}"
+        fi
+
+        # Simply copy files until uClibc has the ability to build out-of-tree
+        CT_DoLog EXTRA "Copying sources to build dir"
+        CT_DoExecLog ALL cp -av "${CT_SRC_DIR}/uClibc-${CT_LIBC_VERSION}"   \
+                                "${CT_BUILD_DIR}/build-libc-${libc_mode}${build_dir//\//_}"
+        CT_Pushd "${CT_BUILD_DIR}/build-libc-${libc_mode}${build_dir//\//_}"
+
+        # Retrieve the config file
+        CT_DoExecLog ALL cp "${CT_CONFIG_DIR}/uClibc.config" .config
+
+        do_libc_backend_once cross="${cross}"                       \
+                             extra_dir="${extra_dir}"               \
+                             extra_flags="${extra_flags}"           \
+                             libc_headers="${libc_headers}"         \
+                             libc_startfiles="${libc_startfiles}"   \
+                             libc_full="${libc_full}"
+
+        CT_Popd
+
+        if [ "${multi_dir}" != "." ]; then
+            if [ "${libc_mode}" = "final" ]; then
+                CT_DoLog EXTRA "Fixing up multilib location"
+
+                # rewrite the library multiplexers
+                for d in "lib/${multi_dir}" "usr/lib/${multi_dir}"; do
+                    for l in libc libpthread libgcc_s; do
+                        if [    -f "${CT_SYSROOT_DIR}/${d}/${l}.so"    \
+                             -a ! -L ${CT_SYSROOT_DIR}/${d}/${l}.so    ]
+                        then
+                            CT_DoExecLog DEBUG ${sed} -r -i                                 \
+                                                      -e "s:/lib/:/lib/${multi_dir}/:g;"    \
+                                                      "${CT_SYSROOT_DIR}/${d}/${l}.so"
+                        fi
+                    done
+                done
+            fi # libc_mode == final
+
+            CT_EndStep
+        fi
+    done
 
     CT_EndStep
 }
@@ -150,11 +214,15 @@ do_libc_backend() {
 #   libc_headers        : Build libc headers                    : bool      : n
 #   libc_startfiles     : Build libc start-files                : bool      : n
 #   libc_full           : Build full libc                       : bool      : n
+#   extra_flags         : Extra CFLAGS to use (for multilib)    : string    : (empty)
+#   extra_dir           : Extra subdir for multilib             : string    : (empty)
 do_libc_backend_once() {
     local libc_headers
     local libc_startfiles
     local libc_full
     local -a generic_make_args
+    local extra_flags
+    local extra_dir
     local glibc_cflags
     local cross_cc
     local cross
@@ -169,12 +237,21 @@ do_libc_backend_once() {
     generic_make_args+=("PREFIX=${CT_SYSROOT_DIR}/")
 
     glibc_cflags+=" ${CT_TARGET_CFLAGS}"
-    generic_make_args+=("UCLIBC_EXTRA_CFLAGS=${glibc_cflags}")
+    extra_cc_args+=" ${extra_flags}"
+    generic_make_args+=("UCLIBC_EXTRA_CFLAGS=${glibc_cflags} ${extra_cc_args}")
+
+
+    if [ "${CT_LIBC_UCLIBC_0_9_31_or_later}" = "y" ]; then
+        generic_make_args+=("MULTILIB_DIR=lib${extra_dir:+/${extra_dir}}")
+    else
+        generic_make_args+=("SHARED_LIB_LOADER_PREFIX=/lib${extra_dir:+/${extra_dir}}")
+    fi
 
     generic_make_args+=("LOCALE_DATA_FILENAME=${uclibc_local_tarball}.tgz")
 
     CT_DoLog DEBUG "Using gcc for target    : '${cross_cc}'"
     CT_DoLog DEBUG "Extra CC args passed    : '${glibc_cflags}'"
+    CT_DoLog DEBUG "Extra flags (multilib)  : '${extra_flags}'"
 
     # Force the date of the pregen locale data, as the
     # newer ones that are referenced are not available
@@ -215,6 +292,7 @@ do_libc_backend_once() {
             CT_DoExecLog ALL                              \
             make "${generic_make_args[@]}"                \
                  ${CT_LIBC_UCLIBC_PARALLEL:+${JOBSFLAGS}} \
+                 ${CT_LIBC_UCLIBC_VERBOSITY}              \
                  STRIPTOOL=true                           \
                  lib/crt1.o lib/crti.o lib/crtn.o
 
@@ -230,11 +308,13 @@ do_libc_backend_once() {
 
             CT_DoLog EXTRA "Installing C library start files"
             CT_DoExecLog ALL install -m 0644 lib/crt1.o lib/crti.o lib/crtn.o   \
-                                             "${CT_SYSROOT_DIR}/usr/lib"
+                                             "${CT_SYSROOT_DIR}${extra_dir}/usr/lib"
 
             CT_DoLog EXTRA "Installing C library dummy shared libs"
-            CT_DoExecLog ALL install -m 0755 libdummy.so "${CT_SYSROOT_DIR}/usr/lib/libc.so"
-            CT_DoExecLog ALL install -m 0755 libdummy.so "${CT_SYSROOT_DIR}/usr/lib/libm.so"
+            CT_DoExecLog ALL install -m 0755 libdummy.so    \
+                                     "${CT_SYSROOT_DIR}${extra_dir}/usr/lib/libc.so"
+            CT_DoExecLog ALL install -m 0755 libdummy.so    \
+                                     "${CT_SYSROOT_DIR}${extra_dir}/usr/lib/libm.so"
         fi # threads == nptl
     fi # libc_headers == y
 
