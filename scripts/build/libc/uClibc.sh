@@ -154,12 +154,21 @@ do_libc_backend_once() {
     local libc_headers
     local libc_startfiles
     local libc_full
+    local -a generic_make_args
+    local cross_cc
     local cross
     local arg
 
     for arg in "$@"; do
         eval "${arg// /\\ }"
     done
+
+    cross_cc=$(CT_Which "${cross}gcc")
+    generic_make_args+=("CROSS=${cross}")
+    generic_make_args+=("PREFIX=${CT_SYSROOT_DIR}/")
+    generic_make_args+=("LOCALE_DATA_FILENAME=${uclibc_local_tarball}.tgz")
+
+    CT_DoLog DEBUG "Using gcc for target    : '${cross_cc}'"
 
     # Force the date of the pregen locale data, as the
     # newer ones that are referenced are not available
@@ -169,20 +178,16 @@ do_libc_backend_once() {
     # the target. So it is useless and seems to be a bad
     # thing to use LIBC_EXTRA_CFLAGS here.
     CT_DoLog EXTRA "Applying configuration"
-    CT_DoYes "" |CT_DoExecLog ALL                                   \
-                 make CROSS="${cross}"                              \
-                 PREFIX="${CT_SYSROOT_DIR}/"                        \
-                 LOCALE_DATA_FILENAME="${uclibc_local_tarball}.tgz" \
+    CT_DoYes "" |CT_DoExecLog ALL               \
+                 make "${generic_make_args[@]}" \
                  oldconfig
 
     if [ "${libc_headers}" = "y" ]; then
         CT_DoLog EXTRA "Building C library headers"
 
-        CT_DoExecLog ALL                                        \
-        make ${CT_LIBC_UCLIBC_VERBOSITY}                        \
-             CROSS="${cross}"                                   \
-             PREFIX="${CT_SYSROOT_DIR}/"                        \
-             LOCALE_DATA_FILENAME="${uclibc_local_tarball}.tgz" \
+        CT_DoExecLog ALL                 \
+        make "${generic_make_args[@]}"   \
+             ${CT_LIBC_UCLIBC_VERBOSITY} \
              headers
 
         CT_DoLog EXTRA "Installing C library headers"
@@ -192,31 +197,26 @@ do_libc_backend_once() {
             install_rule=install_dev
         fi
 
-        CT_DoExecLog ALL                                        \
-        make ${CT_LIBC_UCLIBC_VERBOSITY}                        \
-             CROSS="${cross}"                                   \
-             PREFIX="${CT_SYSROOT_DIR}/"                        \
-             LOCALE_DATA_FILENAME="${uclibc_local_tarball}.tgz" \
+        CT_DoExecLog ALL                 \
+        make "${generic_make_args[@]}"   \
+             ${CT_LIBC_UCLIBC_VERBOSITY} \
              ${install_rule}
     fi # libc_headers == y
 
     if [ "${libc_startfiles}" = "y" ]; then
         if [ "${CT_THREADS}" = "nptl" ]; then
             CT_DoLog EXTRA "Building C library start files"
-            CT_DoExecLog ALL                                        \
-            make ${CT_LIBC_UCLIBC_PARALLEL:+${JOBSFLAGS}}           \
-                 CROSS="${cross}"                                   \
-                 PREFIX="${CT_SYSROOT_DIR}/"                        \
-                 STRIPTOOL=true                                     \
-                 ${CT_LIBC_UCLIBC_VERBOSITY}                        \
-                 LOCALE_DATA_FILENAME="${uclibc_local_tarball}.tgz" \
+            CT_DoExecLog ALL                              \
+            make "${generic_make_args[@]}"                \
+                 ${CT_LIBC_UCLIBC_PARALLEL:+${JOBSFLAGS}} \
+                 STRIPTOOL=true                           \
                  lib/crt1.o lib/crti.o lib/crtn.o
 
             # From:  http://git.openembedded.org/cgit.cgi/openembedded/commit/?id=ad5668a7ac7e0436db92e55caaf3fdf782b6ba3b
             # libm.so is needed for ppc, as libgcc is linked against libm.so
             # No problem to create it for other archs.
             CT_DoLog EXTRA "Building C library dummy shared libs"
-            CT_DoExecLog ALL "${cross}gcc" -nostdlib        \
+            CT_DoExecLog ALL "${cross_cc}" -nostdlib        \
                                            -nostartfiles    \
                                            -shared          \
                                            -x c /dev/null   \
@@ -237,21 +237,17 @@ do_libc_backend_once() {
         # asked for a debug toolchain, thus the STRIPTOOL= assignment
         # /Old/ versions can not build in //
         CT_DoLog EXTRA "Building C library"
-        CT_DoExecLog ALL                                        \
-        make -j1                                                \
-             CROSS=${CT_TARGET}-                                \
-             PREFIX="${CT_SYSROOT_DIR}/"                        \
-             STRIPTOOL=true                                     \
-             ${CT_LIBC_UCLIBC_VERBOSITY}                        \
-             LOCALE_DATA_FILENAME="${uclibc_local_tarball}.tgz" \
+        CT_DoExecLog ALL                 \
+        make "${generic_make_args[@]}"   \
+             -j1                         \
+             ${CT_LIBC_UCLIBC_VERBOSITY} \
+             STRIPTOOL=true              \
              pregen
-        CT_DoExecLog ALL                                        \
-        make ${CT_LIBC_UCLIBC_PARALLEL:+${JOBSFLAGS}}           \
-             CROSS=${CT_TARGET}-                                \
-             PREFIX="${CT_SYSROOT_DIR}/"                        \
-             STRIPTOOL=true                                     \
-             ${CT_LIBC_UCLIBC_VERBOSITY}                        \
-             LOCALE_DATA_FILENAME="${uclibc_local_tarball}.tgz" \
+        CT_DoExecLog ALL                              \
+        make "${generic_make_args[@]}"                \
+             ${CT_LIBC_UCLIBC_PARALLEL:+${JOBSFLAGS}} \
+             ${CT_LIBC_UCLIBC_VERBOSITY}              \
+             STRIPTOOL=true                           \
              all
 
         # YEM-FIXME:
@@ -269,12 +265,10 @@ do_libc_backend_once() {
         # Note: JOBSFLAGS is not usefull for installation.
         #
         CT_DoLog EXTRA "Installing C library"
-        CT_DoExecLog ALL                                        \
-        make CROSS=${CT_TARGET}-                                \
-             PREFIX="${CT_SYSROOT_DIR}/"                        \
-             STRIPTOOL=true                                     \
-             ${CT_LIBC_UCLIBC_VERBOSITY}                        \
-             LOCALE_DATA_FILENAME="${uclibc_local_tarball}.tgz" \
+        CT_DoExecLog ALL                 \
+        make "${generic_make_args[@]}"   \
+             ${CT_LIBC_UCLIBC_VERBOSITY} \
+             STRIPTOOL=true              \
              install
     fi # libc_full == y
 }
