@@ -1,0 +1,34 @@
+From 3d6d91c6f97c41272965577bb3b75dfe59dfa831 Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Tue, 3 Sep 2013 16:22:12 +0200
+Subject: [PATCH] gpio: xilinx: Fix type for irq_base
+
+irq_alloc_descs() returns negative numbers
+on error path. Use int type to capture it.
+
+Bug was introduced by this commit:
+"GPIO: xilinx: Add irq support to the driver"
+(sha1: 796ae5e3e4ae5f550e0ba01ade34604c83b08cfd)
+
+Reported-by: Kester Aernoudt <kestera@xilinx.com>
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+---
+ drivers/gpio/gpio-xilinx.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/gpio/gpio-xilinx.c b/drivers/gpio/gpio-xilinx.c
+index 0f5d221..e004a9b 100644
+--- a/drivers/gpio/gpio-xilinx.c
++++ b/drivers/gpio/gpio-xilinx.c
+@@ -64,7 +64,7 @@ struct xgpio_instance {
+ 	u32 gpio_state;
+ 	u32 gpio_dir;
+ 	u32 offset;
+-	u32 irq_base;
++	int irq_base;
+ 	u32 irq_enable;
+ 	spinlock_t gpio_lock;
+ 	struct irq_domain *irq_domain;
+-- 
+1.8.3.4
+

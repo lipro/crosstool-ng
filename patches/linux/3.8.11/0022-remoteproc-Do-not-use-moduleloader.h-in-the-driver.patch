@@ -1,0 +1,28 @@
+From 713807fe5f406d396e559e1a561e62a669f250d7 Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Fri, 21 Jun 2013 10:13:35 +0200
+Subject: [PATCH] remoteproc: Do not use moduleloader.h in the driver
+
+It is causing compilation failure for multi_v7_defconfig.
+
+Reported-by: Peter Crosthwaite <peter.crosthwaite@xilinx.com>
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+---
+ drivers/remoteproc/mb_remoteproc.c | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/drivers/remoteproc/mb_remoteproc.c b/drivers/remoteproc/mb_remoteproc.c
+index 085fc3b..597b395 100644
+--- a/drivers/remoteproc/mb_remoteproc.c
++++ b/drivers/remoteproc/mb_remoteproc.c
+@@ -21,7 +21,6 @@
+ 
+ #include <linux/kernel.h>
+ #include <linux/module.h>
+-#include <linux/moduleloader.h>
+ #include <linux/err.h>
+ #include <linux/platform_device.h>
+ #include <linux/dma-mapping.h>
+-- 
+1.8.3.4
+

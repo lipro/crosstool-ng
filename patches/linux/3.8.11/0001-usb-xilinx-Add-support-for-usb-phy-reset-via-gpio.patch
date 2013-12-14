@@ -1,0 +1,79 @@
+From 53e868300ad63c52137f47fd762a660071f1fd4e Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Wed, 16 Oct 2013 14:33:23 +0200
+Subject: [PATCH] usb: xilinx: Add support for usb phy reset via gpio
+
+Some USB phys on zynq boards needs to be reset before
+usage. All boards are using reset through ps7_gpio
+but another gpio controller can be used as well.
+This patch adds support for gpio usb phy reset
+which should be decribed in DTS in the format:
+
+ps7_usb_0: ps7-usb@e0002000 {
+	compatible = "xlnx,ps7-usb-1.00.a";
+	usb-reset = <&ps7_gpio_0 7 0>;
+	...
+} ;
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+---
+ drivers/usb/host/Kconfig        |  1 +
+ drivers/usb/host/xusbps-dr-of.c | 16 +++++++++++++++-
+ 2 files changed, 16 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/usb/host/Kconfig b/drivers/usb/host/Kconfig
+index fb9b28d..81597e0 100644
+--- a/drivers/usb/host/Kconfig
++++ b/drivers/usb/host/Kconfig
+@@ -140,6 +140,7 @@ config USB_XUSBPS_DR_OF
+ 	tristate
+ 	select USB_ULPI
+ 	select USB_ULPI_VIEWPORT
++	select GPIO_XILINX_PS
+ 
+ config USB_EHCI_XUSBPS
+ 	bool "Support for Xilinx PS EHCI USB controller"
+diff --git a/drivers/usb/host/xusbps-dr-of.c b/drivers/usb/host/xusbps-dr-of.c
+index 0afd469..08d420b 100644
+--- a/drivers/usb/host/xusbps-dr-of.c
++++ b/drivers/usb/host/xusbps-dr-of.c
+@@ -29,6 +29,7 @@
+ #include <linux/string.h>
+ #include <linux/clk.h>
+ #include <linux/usb/ulpi.h>
++#include <linux/of_gpio.h>
+ 
+ #include "ehci-xilinx-usbps.h"
+ 
+@@ -155,7 +156,7 @@ static int xusbps_dr_of_probe(struct platform_device *ofdev)
+ 	const unsigned char *prop;
+ 	static unsigned int idx;
+ 	struct resource *res;
+-	int i, phy_init;
++	int i, phy_init, reset_gpio;
+ 	int ret;
+ 
+ 	pdata = &data;
+@@ -189,6 +190,19 @@ static int xusbps_dr_of_probe(struct platform_device *ofdev)
+ 		return -EFAULT;
+ 	}
+ 
++	/* Find out reset gpio and reset usb phy */
++	reset_gpio = of_get_named_gpio(ofdev->dev.of_node, "usb-reset", 0);
++	if (reset_gpio >= 0) {
++		ret = devm_gpio_request_one(&ofdev->dev, reset_gpio,
++					    GPIOF_OUT_INIT_HIGH, "usb_reset");
++		if (ret) {
++			dev_err(&ofdev->dev, "Please specify usb reset pin\n");
++			return ret;
++		}
++		gpio_set_value(reset_gpio, 0);
++		gpio_set_value(reset_gpio, 1);
++	}
++
+ 	dev_data = get_dr_mode_data(np);
+ 	pdata->operating_mode = dev_data->op_mode;
+ 
+-- 
+1.8.3.4
+

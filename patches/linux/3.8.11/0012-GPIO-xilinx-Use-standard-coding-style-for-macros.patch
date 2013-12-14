@@ -1,0 +1,30 @@
+From 8ad24c3e7252e9422307c68b19629e7f47890430 Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Wed, 17 Jul 2013 15:22:20 +0200
+Subject: [PATCH] GPIO: xilinx: Use standard coding style for macros
+
+Trivial.
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+---
+ drivers/gpio/gpio-xilinx.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/gpio/gpio-xilinx.c b/drivers/gpio/gpio-xilinx.c
+index 792a05a..12f1247 100644
+--- a/drivers/gpio/gpio-xilinx.c
++++ b/drivers/gpio/gpio-xilinx.c
+@@ -24,8 +24,8 @@
+ #include <linux/slab.h>
+ 
+ /* Register Offset Definitions */
+-#define XGPIO_DATA_OFFSET   (0x0)	/* Data register  */
+-#define XGPIO_TRI_OFFSET    (0x4)	/* I/O direction register  */
++#define XGPIO_DATA_OFFSET	0x0 /* Data register */
++#define XGPIO_TRI_OFFSET	0x4 /* I/O direction register */
+ 
+ #define XGPIO_CHANNEL_OFFSET	0x8
+ 
+-- 
+1.8.3.4
+

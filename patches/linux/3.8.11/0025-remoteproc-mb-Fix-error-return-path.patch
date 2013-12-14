@@ -1,0 +1,46 @@
+From 3c0c5dcf277cd84ee474a3b86895ba32b5ebba7c Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Wed, 10 Jul 2013 11:02:28 +0200
+Subject: [PATCH] remoteproc: mb: Fix error return path
+
+Do not call rproc_put() when rproc_alloc() failed.
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+---
+ drivers/remoteproc/mb_remoteproc.c | 14 +++++---------
+ 1 file changed, 5 insertions(+), 9 deletions(-)
+
+diff --git a/drivers/remoteproc/mb_remoteproc.c b/drivers/remoteproc/mb_remoteproc.c
+index 2d21c6e..8c9cedf 100644
+--- a/drivers/remoteproc/mb_remoteproc.c
++++ b/drivers/remoteproc/mb_remoteproc.c
+@@ -198,21 +198,17 @@ static int mb_remoteproc_probe(struct platform_device *pdev)
+ 				&mb_rproc_ops, prop, sizeof(struct rproc));
+ 		if (!local->rproc) {
+ 			dev_err(&pdev->dev, "rproc allocation failed\n");
+-			goto rproc_fault;
++			return -ENOMEM;
+ 		}
+ 
+ 		ret = rproc_add(local->rproc);
+ 		if (ret) {
+ 			dev_err(&pdev->dev, "rproc registration failed\n");
+-			goto rproc_fault;
++			rproc_put(local->rproc);
++			return ret;
+ 		}
+-
+-		return ret;
+-	} else
+-		ret = -ENODEV;
+-
+-rproc_fault:
+-	rproc_put(local->rproc);
++		return 0;
++	}
+ 
+ 	return -ENODEV;
+ }
+-- 
+1.8.3.4
+

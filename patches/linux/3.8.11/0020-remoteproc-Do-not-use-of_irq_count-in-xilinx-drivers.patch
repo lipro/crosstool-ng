@@ -1,0 +1,65 @@
+From e70f2c6f4731d4a889c21bdc09c55bcc8f87e5d5 Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Fri, 31 May 2013 16:05:38 +0200
+Subject: [PATCH] remoteproc: Do not use of_irq_count in xilinx drivers
+
+Driver resources are already filled and driver can use them.
+The reason is that of_irq_count() is not exported
+for modules in the mainline.
+The next patch which revert this patch which we have in our tree.
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+---
+ drivers/remoteproc/mb_remoteproc.c | 14 ++++++++------
+ 1 file changed, 8 insertions(+), 6 deletions(-)
+
+diff --git a/drivers/remoteproc/mb_remoteproc.c b/drivers/remoteproc/mb_remoteproc.c
+index 470ff9d..bbb678a 100644
+--- a/drivers/remoteproc/mb_remoteproc.c
++++ b/drivers/remoteproc/mb_remoteproc.c
+@@ -135,7 +135,7 @@ static int mb_remoteproc_probe(struct platform_device *pdev)
+ 	struct resource *res; /* IO mem resources */
+ 	int ret = 0;
+ 	struct irq_list *tmp;
+-	int count;
++	int count = 0;
+ 	struct mb_rproc_pdata *local;
+ 
+ 
+@@ -175,9 +175,12 @@ static int mb_remoteproc_probe(struct platform_device *pdev)
+ 	/* Init list for IRQs - it can be long list */
+ 	INIT_LIST_HEAD(&local->mylist.list);
+ 
+-	count = of_irq_count(pdev->dev.of_node);
+ 	/* Alloc IRQ based on DTS to be sure that no other driver will use it */
+-	while (count--) {
++	do {
++		res = platform_get_resource(pdev, IORESOURCE_IRQ, count++);
++		if (!res)
++			break;
++
+ 		tmp = kzalloc(sizeof(struct irq_list), GFP_KERNEL);
+ 		if (!tmp) {
+ 			dev_err(&pdev->dev, "Unable to alloc irq list\n");
+@@ -185,7 +188,7 @@ static int mb_remoteproc_probe(struct platform_device *pdev)
+ 			goto irq_fault;
+ 		}
+ 
+-		tmp->irq = irq_of_parse_and_map(pdev->dev.of_node, count);
++		tmp->irq = res->start;
+ 
+ 		dev_info(&pdev->dev, "%d: Alloc irq: %d\n", count, tmp->irq);
+ 
+@@ -200,8 +203,7 @@ static int mb_remoteproc_probe(struct platform_device *pdev)
+ 		}
+ 
+ 		list_add(&(tmp->list), &(local->mylist.list));
+-	}
+-
++	} while (res);
+ 
+ 	of_prop = of_get_property(pdev->dev.of_node, "reset-gpio", NULL);
+ 	if (!of_prop) {
+-- 
+1.8.3.4
+

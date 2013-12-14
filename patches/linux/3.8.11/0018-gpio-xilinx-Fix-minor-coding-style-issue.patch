@@ -1,0 +1,28 @@
+From f487c338ac03605493fbaeb40590c72178a073c7 Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Tue, 3 Sep 2013 16:43:47 +0200
+Subject: [PATCH] gpio: xilinx: Fix minor coding style issue.
+
+Trivial.
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+---
+ drivers/gpio/gpio-xilinx.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/gpio/gpio-xilinx.c b/drivers/gpio/gpio-xilinx.c
+index e004a9b..ad1eeeb 100644
+--- a/drivers/gpio/gpio-xilinx.c
++++ b/drivers/gpio/gpio-xilinx.c
+@@ -542,7 +542,7 @@ static int xgpio_of_probe(struct device_node *np)
+ 		if (status) {
+ 			kfree(chip);
+ 			pr_err("%s: error in probe function with status %d\n",
+-			np->full_name, status);
++			       np->full_name, status);
+ 			return status;
+ 		}
+ 		pr_info("XGpio: %s: dual channel registered, base is %d\n",
+-- 
+1.8.3.4
+

@@ -1,0 +1,29 @@
+From c35c1bbac1d9c23e993d0d7dd3cb9741709d6c30 Mon Sep 17 00:00:00 2001
+From: Thierry Reding <thierry.reding@avionic-design.de>
+Date: Tue, 22 Jan 2013 22:24:46 +0100
+Subject: [PATCH] lib: devres: Fix build breakage
+
+The ERR_PTR() and IS_ERR() macros used by the devm_ioremap_resource()
+function are defined in the linux/err.h header. On ARM this seems to be
+pulled in by one of the other headers but the build fails at least on
+OpenRISC.
+
+Signed-off-by: Thierry Reding <thierry.reding@avionic-design.de>
+Reported-by: kbuild test robot <fengguang.wu@intel.com>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+---
+ lib/devres.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/lib/devres.c b/lib/devres.c
+index 9c76b3a..88ad759 100644
+--- a/lib/devres.c
++++ b/lib/devres.c
+@@ -1,3 +1,4 @@
++#include <linux/err.h>
+ #include <linux/pci.h>
+ #include <linux/io.h>
+ #include <linux/gfp.h>
+-- 
+1.8.3.4
+

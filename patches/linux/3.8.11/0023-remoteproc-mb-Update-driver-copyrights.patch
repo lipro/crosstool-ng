@@ -1,0 +1,29 @@
+From fa1205e158c210dab9a3989bbef59563e031af2e Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Wed, 10 Jul 2013 11:08:15 +0200
+Subject: [PATCH] remoteproc: mb: Update driver copyrights
+
+Trivial.
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+---
+ drivers/remoteproc/mb_remoteproc.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/remoteproc/mb_remoteproc.c b/drivers/remoteproc/mb_remoteproc.c
+index 597b395..2c4a1e8 100644
+--- a/drivers/remoteproc/mb_remoteproc.c
++++ b/drivers/remoteproc/mb_remoteproc.c
+@@ -1,7 +1,8 @@
+ /*
+  * Microblaze Remote Processor driver
+  *
+- * Copyright (C) 2012 Michal Simek <monstr@monstr.eu>
++ * Copyright (C) 2012 - 2013 Michal Simek <monstr@monstr.eu>
++ * Copyright (C) 2013 Xilinx, Inc.
+  * Copyright (C) 2012 PetaLogix
+  *
+  * Based on origin OMAP Remote Processor driver
+-- 
+1.8.3.4
+

@@ -1,0 +1,28 @@
+From e8e1b4e0b1f347bb144b151b60d5d7bf727a6015 Mon Sep 17 00:00:00 2001
+From: Michal Simek <michal.simek@xilinx.com>
+Date: Thu, 13 Jun 2013 09:48:38 +0200
+Subject: [PATCH] remoteproc: mb: Remove not used zynq_cpun_start extern
+
+Just clean up.
+
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+---
+ drivers/remoteproc/mb_remoteproc.c | 2 --
+ 1 file changed, 2 deletions(-)
+
+diff --git a/drivers/remoteproc/mb_remoteproc.c b/drivers/remoteproc/mb_remoteproc.c
+index bbb678a..085fc3b 100644
+--- a/drivers/remoteproc/mb_remoteproc.c
++++ b/drivers/remoteproc/mb_remoteproc.c
+@@ -37,8 +37,6 @@
+ 
+ #include "remoteproc_internal.h"
+ 
+-extern int __cpuinit zynq_cpun_start(u32 address, int cpu);
+-
+ /* Module parameter */
+ static char *firmware;
+ 
+-- 
+1.8.3.4
+
